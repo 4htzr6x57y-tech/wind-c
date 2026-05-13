@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1117">
 <title>COIL DESIGNER</title>
+<link rel="manifest" href="./manifest-cd.webmanifest">
+<link rel="icon" href="./icons/icon-cd.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-cd-180.png">
 <style>
 :root {
   --bg:#0d1117;
@@ -4829,6 +4833,12 @@ const UI = (() => {
 
   return ({ init, pick, pickRole, toggleTurnMode, saveInputValue, pickGlobalFerriteMaterial, updateTuning, toggleTuning, saveTuningCorrection, resetTuningCorrection, updateRolePreviewFromInput, loadEctJson, clearEctJson, reflectCableFromDesign, calculateCable, calculate, calcMeasured, switchMainTab, switchDesignSubTab, toggleMeasuredMode, addTargetZTunerPoint, deleteTargetZTunerPoint, clearTargetZTuner, copyMeasuredToTuner, openStep1Modal, openStep2Modal, closeModal, backToStep1, finishStep2 });
 })();
+
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
 
 UI.init();
 </script>

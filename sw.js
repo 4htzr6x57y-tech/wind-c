@@ -1,13 +1,30 @@
-const CACHE_NAME = 'winding-calibrator-pwa-v1';
+const CACHE_NAME = 'coil-tools-pwa-v2';
 const APP_ASSETS = [
   './',
   './index.html',
   './winding-calibrator.html',
+  './coil-designer.html',
+  './ect-designer.html',
   './manifest.webmanifest',
+  './manifest-wc.webmanifest',
+  './manifest-cd.webmanifest',
+  './manifest-ectd.webmanifest',
   './icons/icon.svg',
   './icons/icon-180.png',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/icon-wc.svg',
+  './icons/icon-wc-180.png',
+  './icons/icon-wc-192.png',
+  './icons/icon-wc-512.png',
+  './icons/icon-cd.svg',
+  './icons/icon-cd-180.png',
+  './icons/icon-cd-192.png',
+  './icons/icon-cd-512.png',
+  './icons/icon-ectd.svg',
+  './icons/icon-ectd-180.png',
+  './icons/icon-ectd-192.png',
+  './icons/icon-ectd-512.png'
 ];
 
 self.addEventListener('install', event => {
