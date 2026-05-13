@@ -1,0 +1,4836 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COIL DESIGNER</title>
+<style>
+:root {
+  --bg:#0d1117;
+  --surface:#161b22;
+  --surface2:#1c2333;
+  --surface3:#202a3a;
+  --surface-soft:#121923;
+  --border:#30363d;
+  --border-strong:#445166;
+  --accent:#58a6ff;
+  --accent2:#3fb950;
+  --accent3:#f78166;
+  --accent4:#d2a8ff;
+  --gold:#e3b341;
+  --text:#e6edf3;
+  --muted:#8b949e;
+  --input-bg:#0d1117;
+}
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { scrollbar-gutter:stable; }
+body {
+  min-height:100vh;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Noto Sans JP', sans-serif;
+  font-size:14px;
+}
+
+.header {
+  position:sticky; top:0; z-index:10;
+  display:flex; align-items:center; gap:10px;
+  padding:10px 16px;
+  background:linear-gradient(135deg, #1a2744 0%, #0d1117 100%);
+  border-bottom:1px solid var(--border);
+}
+.header-icon { font-size:20px; color:var(--gold); }
+.header h1 {
+  font-family:'Rajdhani', sans-serif;
+  font-size:18px; letter-spacing:1px; color:var(--accent);
+}
+.header-sub {
+  margin-left:auto; text-align:right; color:var(--muted);
+  font-size:10px; line-height:1.45;
+}
+
+.tabs {
+  display:flex;
+  max-width:860px;
+  margin:0 auto;
+  background:var(--surface);
+  border-bottom:2px solid var(--border);
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar { display:none; }
+.tab {
+  flex:1;
+  min-width:120px;
+  padding:10px 8px;
+  border:0;
+  border-bottom:2px solid transparent;
+  background:transparent;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  transition:.18s ease;
+}
+.tab:hover { color:var(--text); background:var(--surface2); }
+.tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-icon { display:block; margin-bottom:2px; font-size:15px; }
+
+.app { max-width:860px; margin:0 auto; padding:14px; }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+.design-subtabs {
+  display:flex;
+  gap:6px;
+  margin-bottom:10px;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.design-subtabs::-webkit-scrollbar { display:none; }
+.design-subtab {
+  flex:0 0 auto;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:var(--surface2);
+  color:var(--muted);
+  padding:8px 10px;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.design-subtab:hover { color:var(--text); border-color:var(--accent); }
+.design-subtab.active {
+  color:var(--accent);
+  border-color:var(--accent);
+  background:rgba(88,166,255,.13);
+}
+.design-subpanel { display:none; }
+.design-subpanel.active { display:block; }
+.compact-summary {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:8px;
+}
+.summary-chip {
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--surface2);
+  color:var(--muted);
+  padding:5px 8px;
+  font-size:11px;
+  line-height:1.35;
+}
+.summary-chip strong { color:var(--text); }
+.spec-view {
+  display:grid;
+  gap:10px;
+}
+.spec-block {
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:var(--surface-soft);
+  padding:10px 12px;
+}
+.spec-block h3 {
+  color:var(--accent);
+  font-size:12px;
+  margin-bottom:7px;
+  letter-spacing:.5px;
+}
+.spec-block ul {
+  margin:0;
+  padding-left:18px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.65;
+}
+.spec-block strong { color:var(--text); }
+.section {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:13px;
+  margin-bottom:12px;
+}
+.section-title {
+  display:flex; align-items:center; gap:7px;
+  margin-bottom:11px;
+  color:var(--accent);
+  font-family:'Rajdhani', sans-serif;
+  font-size:12px; font-weight:700; letter-spacing:1px;
+  text-transform:uppercase;
+}
+.step-badge {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:21px; height:21px;
+  border-radius:50%;
+  background:var(--accent);
+  color:white;
+  font-size:11px;
+}
+.section-note {
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.6;
+  margin-top:-4px;
+  margin-bottom:10px;
+}
+
+.choice-grid {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:8px;
+}
+.choice-grid.two { grid-template-columns:repeat(2, 1fr); }
+.choice-btn {
+  min-height:48px;
+  padding:10px 8px;
+  border:2px solid var(--border);
+  border-radius:8px;
+  background:var(--surface2);
+  color:var(--muted);
+  font-size:12px; font-weight:700;
+  text-align:center;
+  cursor:pointer;
+  transition:.18s ease;
+}
+.choice-btn:hover { border-color:var(--accent); color:var(--text); }
+.choice-btn.sel {
+  border-color:var(--accent);
+  color:var(--accent);
+  background:rgba(88,166,255,.15);
+}
+
+.input-grid {
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:10px;
+}
+.input-group {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+  padding:9px;
+  border:1px solid rgba(68,81,102,.72);
+  border-radius:8px;
+  background:var(--surface-soft);
+}
+.input-group.full { grid-column:1 / -1; }
+.input-label {
+  font-size:11px;
+  color:var(--text);
+  font-weight:700;
+  line-height:1.35;
+}
+.input-row {
+  display:flex; align-items:center;
+  background:var(--input-bg);
+  border:1px solid var(--border-strong);
+  border-radius:6px;
+  overflow:hidden;
+}
+.input-subhead {
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:22px;
+  margin:4px 0 -1px;
+  color:var(--accent);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.4px;
+}
+.input-subhead::before {
+  content:"";
+  width:4px;
+  height:16px;
+  border-radius:999px;
+  background:var(--accent);
+  flex-shrink:0;
+}
+.input-subhead-title {
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  min-width:0;
+}
+.input-subhead-title span {
+  color:var(--muted);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:0;
+}
+.input-subhead-action {
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+}
+.input-subhead-action .turn-mode-switch {
+  min-height:22px;
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:0 3px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--surface2);
+  white-space:nowrap;
+}
+.input-subhead-action .mini-check {
+  min-height:20px;
+  padding:2px 5px;
+  gap:3px;
+  font-size:10px;
+}
+.input-subhead-action .mini-check .mode-mark {
+  font-size:10px;
+}
+.role-card {
+  grid-column:1 / -1;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-left:4px solid var(--accent);
+  border-radius:8px;
+  padding:12px;
+  text-align:left;
+}
+.role-summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin:-12px -12px 12px;
+  padding:11px 12px;
+  border-radius:8px 8px 0 0;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(135deg, rgba(230,237,243,.14), rgba(230,237,243,.04));
+  cursor:pointer;
+  list-style:none;
+}
+.role-summary::-webkit-details-marker { display:none; }
+.role-summary::before {
+  content:"";
+  width:9px;
+  height:32px;
+  border-radius:999px;
+  background:var(--accent);
+  box-shadow:0 0 16px rgba(88,166,255,.35);
+  flex-shrink:0;
+}
+.role-card[data-role="detect"] .role-summary {
+  background:linear-gradient(135deg, rgba(230,237,243,.16), rgba(230,237,243,.05));
+}
+.role-summary-title {
+  color:#fff;
+  font-family:'Rajdhani', sans-serif;
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:1px;
+  text-shadow:0 1px 12px rgba(230,237,243,.18);
+}
+.coil-type-label {
+  margin-left:auto;
+  color:var(--text);
+  font-size:11px;
+  font-weight:600;
+  white-space:nowrap;
+  padding:3px 7px;
+  border:1px solid var(--border-strong);
+  border-radius:999px;
+  background:var(--surface3);
+}
+.mini-check {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border:0;
+  background:transparent;
+  padding:4px 6px;
+  font-family:'Noto Sans JP', sans-serif;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.mini-check.selected {
+  color:var(--accent);
+  font-weight:700;
+}
+.mini-check .mode-mark {
+  font-family:'Noto Sans JP', sans-serif;
+  font-size:11px;
+  line-height:1;
+}
+.mini-check.selected .mode-mark {
+  color:var(--accent);
+}
+.turn-mode-switch {
+  gap:4px;
+}
+.mini-check input {
+  appearance:none;
+  -webkit-appearance:none;
+  width:7px;
+  height:7px;
+  border:1px solid #6e7681;
+  border-radius:50%;
+  background:transparent;
+  margin:0;
+  flex-shrink:0;
+}
+.mini-check input:hover {
+  border-color:var(--accent);
+}
+.mini-check input:checked {
+  background:var(--accent);
+  border-color:var(--accent);
+}
+.mini-check-grid {
+  justify-content:flex-end;
+}
+.mini-check-grid .mini-check {
+  min-height:32px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+}
+.mini-check-grid .turn-mode-switch {
+  min-height:32px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 6px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:var(--surface2);
+  white-space:nowrap;
+}
+.input-row:focus-within { border-color:var(--accent); }
+.input-row input, .input-row select {
+  flex:1;
+  min-width:0;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--text);
+  padding:8px 9px;
+  font-family:'Rajdhani', 'Noto Sans JP', sans-serif;
+  font-size:15px;
+  font-weight:600;
+}
+.input-row select {
+  font-family:'Noto Sans JP', sans-serif;
+  font-size:13px;
+  appearance:none;
+}
+.textarea-input {
+  width:100%;
+  min-height:96px;
+  resize:vertical;
+  border:1px solid var(--border-strong);
+  border-radius:6px;
+  background:var(--input-bg);
+  color:var(--text);
+  padding:9px;
+  font-family:'Rajdhani', 'Noto Sans JP', sans-serif;
+  font-size:12px;
+  line-height:1.5;
+  outline:0;
+}
+.textarea-input:focus { border-color:var(--accent); }
+.textarea-input:disabled {
+  opacity:.72;
+  cursor:not-allowed;
+}
+.input-row input[type="number"] { -moz-appearance:textfield; appearance:textfield; }
+.input-row input[type="number"]::-webkit-outer-spin-button,
+.input-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.input-unit {
+  align-self:stretch;
+  display:flex; align-items:center;
+  padding:0 9px;
+  border-left:1px solid var(--border);
+  background:var(--surface3);
+  color:var(--accent);
+  font-size:10px; font-weight:800;
+}
+
+.calc-btn {
+  width:100%;
+  margin-bottom:12px;
+  padding:12px;
+  border:0;
+  border-radius:8px;
+  background:linear-gradient(135deg, #1f6feb, #388bfd);
+  color:white;
+  font-family:'Rajdhani', sans-serif;
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:1px;
+  cursor:pointer;
+  box-shadow:0 2px 10px rgba(56,139,253,.3);
+}
+.calc-btn:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(56,139,253,.4); }
+.calc-btn:disabled { transform:none; }
+#tab-cable .calc-btn:hover { transform:none; }
+.calc-btn.loading {
+  opacity:.7;
+  cursor:wait;
+}
+.result-grid {
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:9px;
+}
+.result-card {
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:11px;
+  text-align:center;
+}
+.result-card.full { grid-column:1 / -1; text-align:left; }
+.result-card.highlight {
+  border-color:var(--gold);
+  background:linear-gradient(135deg, #1a1500, #1c2333);
+}
+.result-label { font-size:9px; color:var(--muted); margin-bottom:3px; }
+.result-value {
+  color:var(--text);
+  font-family:'Rajdhani', sans-serif;
+  font-size:20px;
+  font-weight:700;
+  line-height:1.2;
+}
+.result-value.big { color:var(--gold); font-size:30px; }
+.result-unit { color:var(--accent); font-size:10px; font-weight:700; }
+.result-card.warn .result-value,
+.result-card.warn .result-unit { color:var(--gold); }
+.result-card.bad .result-value,
+.result-card.bad .result-unit { color:var(--accent3); }
+.result-list {
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.8;
+  padding-left:1.1em;
+}
+.result-list strong { color:var(--text); }
+
+.data-table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+.data-table th {
+  background:var(--surface2);
+  border-bottom:1px solid var(--border);
+  padding:7px;
+  color:var(--muted);
+  text-align:left;
+  font-size:10px;
+}
+.data-table td {
+  border-bottom:1px solid var(--border);
+  padding:7px;
+  font-family:'Rajdhani', sans-serif;
+  font-size:13px;
+  font-weight:600;
+}
+.data-table tr:last-child td { border-bottom:0; }
+.z-val { color:var(--accent); }
+.ok { color:var(--accent2); }
+.warn { color:var(--gold); }
+.bad { color:var(--accent3); }
+.text-good { color:var(--accent2); font-weight:700; }
+.text-warn { color:var(--gold); font-weight:700; }
+.text-bad { color:var(--accent3); font-weight:700; }
+.text-info { color:var(--accent); font-weight:700; }
+.text-muted { color:var(--muted); }
+.tuning-actions {
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+.tuning-actions .calc-btn {
+  margin:0;
+}
+.tuning-inline-results {
+  min-width:0;
+}
+.tuning-inline-results.result-grid {
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:6px;
+}
+.tuning-inline-results .result-card {
+  padding:8px;
+}
+.tuning-inline-results .result-card:first-child:last-child {
+  grid-column:1 / -1;
+}
+.tuning-inline-results .result-label { font-size:8px; }
+.tuning-inline-results .result-value { font-size:17px; }
+.tuning-inline-results .result-unit {
+  font-size:9px;
+  line-height:1.35;
+}
+.action-row {
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.action-row .calc-btn {
+  margin:0;
+}
+.action-row .calc-btn.secondary {
+  background:var(--surface2);
+  border:1px solid var(--border-strong);
+  box-shadow:none;
+}
+.tuner-point-list {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+}
+.compact-help {
+  margin:-2px 0 8px;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.45;
+}
+.compact-help-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin:-2px 0 8px;
+}
+.compact-help-row .compact-help {
+  margin:0;
+}
+.mode-toggle-btn {
+  flex-shrink:0;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--surface2);
+  color:var(--accent);
+  padding:4px 10px;
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.mode-toggle-btn.l-mode {
+  color:var(--gold);
+  border-color:rgba(227,179,65,.45);
+  background:rgba(227,179,65,.08);
+}
+.tuner-entry-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr minmax(130px, .8fr) minmax(120px, .8fr);
+  gap:8px;
+}
+.tuner-point-item {
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+  align-items:center;
+  padding:7px 8px;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:var(--surface-soft);
+  color:var(--muted);
+  font-size:11px;
+}
+.tuner-point-main { color:var(--text); font-weight:700; }
+.tuner-delete-btn {
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:var(--surface2);
+  color:var(--accent3);
+  padding:5px 8px;
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+}
+.tuner-canvas-wrap {
+  position:relative;
+  margin-top:12px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#05080d;
+  overflow:hidden;
+}
+#targetZTunerCanvas {
+  display:block;
+  width:100%;
+  height:320px;
+}
+.tuner-chart-popover {
+  position:absolute;
+  z-index:2;
+  min-width:112px;
+  padding:7px 9px;
+  border:1px solid rgba(63,185,80,.55);
+  border-radius:7px;
+  background:rgba(5,8,13,.94);
+  box-shadow:0 8px 20px rgba(0,0,0,.32);
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.45;
+  pointer-events:none;
+  transform:translate(-50%, calc(-100% - 10px));
+}
+.tuner-chart-popover.hidden { display:none; }
+.tuner-chart-popover strong {
+  color:var(--text);
+  font-size:12px;
+}
+.tuner-output {
+  margin-top:12px;
+}
+.tuner-quick-result {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:8px;
+  padding:7px 10px;
+  border:1px solid rgba(227,179,65,.35);
+  border-radius:7px;
+  background:rgba(227,179,65,.08);
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.35;
+}
+.tuner-quick-result strong {
+  color:var(--gold);
+  font-size:16px;
+  font-family:'Rajdhani', sans-serif;
+}
+.compact-result-list {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px 14px;
+  margin:10px 0 0;
+  padding:8px 10px 8px 24px;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:var(--surface-soft);
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.45;
+}
+.compact-result-list li {
+  min-width:138px;
+  padding-right:4px;
+}
+.compact-result-list strong {
+  color:var(--text);
+  font-weight:800;
+}
+.tuner-warning-list {
+  margin-top:10px;
+}
+.live-preview {
+  margin-top:8px;
+  padding:8px 9px;
+  border:1px solid rgba(88,166,255,.25);
+  border-radius:6px;
+  background:rgba(88,166,255,.06);
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.6;
+}
+.live-preview strong { color:var(--accent); }
+.preview-separator {
+  display:block;
+  margin:6px 0;
+  border-top:1px solid rgba(139,148,158,.28);
+}
+.live-preview.warn {
+  border-color:rgba(227,179,65,.45);
+  background:rgba(227,179,65,.08);
+}
+.live-preview.bad {
+  border-color:rgba(247,129,102,.45);
+  background:rgba(247,129,102,.08);
+  color:var(--accent3);
+}
+
+.info-box, .warn-box {
+  border-radius:6px;
+  padding:9px 11px;
+  font-size:11px;
+  line-height:1.65;
+  margin-bottom:11px;
+}
+.info-box {
+  border:1px solid rgba(88,166,255,.25);
+  background:rgba(88,166,255,.08);
+  color:var(--muted);
+}
+.info-box strong { color:var(--accent); }
+.warn-box {
+  border:1px solid rgba(247,129,102,.3);
+  background:rgba(247,129,102,.08);
+  color:var(--accent3);
+}
+.error-box {
+  border:1px solid rgba(247,129,102,.45);
+  background:rgba(247,129,102,.10);
+  color:var(--accent3);
+  border-radius:8px;
+  padding:10px 12px;
+  margin-bottom:10px;
+  font-size:12px;
+  line-height:1.6;
+  font-weight:700;
+}
+.hidden { display:none !important; }
+
+.modal {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+  padding:16px;
+}
+.modal-box {
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:20px;
+  width:90%;
+  max-width:420px;
+  max-height:90vh;
+  overflow:auto;
+}
+.modal.hidden { display:none; }
+.modal-actions {
+  display:flex;
+  justify-content:flex-end;
+  margin-top:14px;
+}
+
+@media (max-width:640px) {
+  .app { padding:10px; }
+  .choice-grid, .choice-grid.two { grid-template-columns:repeat(2, 1fr); }
+  .input-grid, .result-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
+  .header-sub { display:none; }
+  .design-subtabs { gap:5px; margin-bottom:8px; }
+  .design-subtab { padding:7px 8px; font-size:10px; border-radius:6px; }
+  .compact-summary { gap:5px; }
+  .summary-chip { padding:4px 7px; font-size:10px; }
+  .spec-block { padding:8px 10px; }
+  .spec-block ul { font-size:11px; line-height:1.55; }
+  .section { padding:8px; margin-bottom:8px; border-radius:6px; }
+  .section-title { margin-bottom:7px; gap:5px; font-size:11px; letter-spacing:.5px; }
+  .section-note { font-size:10px; line-height:1.45; margin-bottom:6px; }
+  .step-badge { width:18px; height:18px; font-size:10px; }
+  .choice-grid { gap:6px; }
+  .choice-btn { min-height:34px; padding:6px 5px; border-radius:6px; font-size:11px; }
+  .input-group { gap:4px; padding:7px; border-radius:7px; }
+  .input-label { font-size:10px; }
+  .input-subhead { margin-top:3px; font-size:10px; gap:6px; }
+  .input-subhead-title { gap:5px; }
+  .input-subhead-title span { display:none; }
+  .input-subhead-action .mini-check { font-size:9px; padding:2px 4px; }
+  .input-subhead-action .mini-check .mode-mark { font-size:9px; }
+  .role-card { padding:9px; border-radius:7px; }
+  .role-summary { margin:-9px -9px 9px; padding:9px; }
+  .role-summary::before { width:7px; height:28px; }
+  .input-row { border-radius:5px; }
+  .input-row input, .input-row select { padding:5px 6px; font-size:13px; }
+  .input-row select { font-size:11px; }
+  .textarea-input { min-height:82px; font-size:11px; }
+  .input-unit { padding:0 6px; font-size:9px; }
+  .role-summary-title { font-size:11px; }
+  .mini-check { font-size:9px; gap:3px; padding:3px 4px; }
+  .mini-check .mode-mark { font-size:9px; }
+  .mini-check input { width:6px; height:6px; }
+  .mini-check-grid .mini-check { min-height:26px; }
+  .mini-check-grid .turn-mode-switch { min-height:26px; padding:0 4px; gap:2px; }
+  .calc-btn { margin-bottom:8px; padding:9px; border-radius:6px; font-size:12px; }
+  .action-row { flex-direction:column; align-items:stretch; gap:6px; }
+  .tuning-actions { flex-direction:column; gap:6px; }
+  .tuning-inline-results.result-grid { gap:4px; }
+  .tuning-inline-results .result-card { padding:6px; }
+  .tuning-inline-results .result-value { font-size:15px; }
+  .tuning-inline-results .result-unit { font-size:8px; }
+  .tuner-entry-grid {
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+  }
+  .tuner-entry-grid .calc-btn { min-height:34px; padding:8px 6px; }
+  .tuner-canvas-wrap { margin-top:8px; }
+  .tuner-quick-result { margin-top:7px; padding:6px 8px; font-size:10px; }
+  .tuner-quick-result strong { font-size:15px; }
+  .tuner-output { margin-top:8px; }
+  .tuner-point-item { grid-template-columns:1fr auto; }
+  #targetZTunerCanvas { height:220px; }
+  .result-grid { gap:6px; }
+  .result-card { padding:7px; border-radius:6px; }
+  .result-label { font-size:8px; margin-bottom:2px; }
+  .result-value { font-size:16px; }
+  .result-value.big { font-size:24px; }
+  .result-unit { font-size:9px; }
+  .info-box, .warn-box { padding:7px 8px; font-size:10px; line-height:1.45; margin-bottom:8px; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-icon">◎</span>
+  <h1>COIL DESIGNER</h1>
+  <span class="header-sub">渦電流探傷プローブ用<br>コイル設計ツール</span>
+</div>
+
+<nav class="tabs" aria-label="COIL DESIGNER tabs">
+  <button class="tab active" id="tabBtn-coil" onclick="UI.switchMainTab('coil')"><span class="tab-icon">◁</span>コイル設計</button>
+  <button class="tab" id="tabBtn-cable" onclick="UI.switchMainTab('cable')"><span class="tab-icon">≋</span>ケーブル選定</button>
+  <button class="tab" id="tabBtn-measured" onclick="UI.switchMainTab('measured')"><span class="tab-icon">↻</span>実測逆算</button>
+</nav>
+
+<main class="app">
+  <div id="tab-coil" class="tab-panel active">
+    <nav class="design-subtabs" aria-label="コイル設計 小タブ">
+      <button class="design-subtab active" id="designSubtabBtn-config" type="button" onclick="UI.switchDesignSubTab('config')">構成</button>
+      <button class="design-subtab" id="designSubtabBtn-detect" type="button" onclick="UI.switchDesignSubTab('detect')">検出</button>
+      <button class="design-subtab" id="designSubtabBtn-excitation" type="button" onclick="UI.switchDesignSubTab('excitation')">励磁条件</button>
+      <button class="design-subtab" id="designSubtabBtn-result" type="button" onclick="UI.switchDesignSubTab('result')">結果</button>
+    </nav>
+
+    <div class="design-subpanel active" id="designSubtab-config">
+      <details class="section" id="ectJsonSection">
+        <summary class="section-title" style="margin-bottom:0"><span class="step-badge">ECT</span>ECT JSON読み込み</summary>
+        <div class="section-note" style="margin-top:10px">ECT DESIGNERの「JSONコピー」を貼り付けると、構成・差動距離・ケーブル推奨を反映します。</div>
+        <textarea class="textarea-input" id="ectJsonInput" placeholder='{"mode":"flaw","needDifferential":true,"needExcitation":false}'></textarea>
+        <div class="action-row" style="margin-top:8px">
+          <button class="calc-btn" type="button" onclick="UI.loadEctJson()">読み込み</button>
+          <button class="calc-btn secondary" type="button" onclick="UI.clearEctJson()">クリア</button>
+        </div>
+        <div id="ectJsonStatus" class="hidden"></div>
+      </details>
+
+      <section class="section">
+        <div class="section-title"><span class="step-badge">P</span>プローブ形式</div>
+        <div class="choice-grid" id="probeStyleChoices"></div>
+      </section>
+
+      <button class="calc-btn" type="button" onclick="UI.openStep1Modal()">コイル構成を選ぶ</button>
+
+      <section class="section">
+        <div class="section-title"><span class="step-badge">S</span>選択中の構成</div>
+        <div id="configSummary"></div>
+      </section>
+
+      <section class="section hidden">
+        <div class="section-title"><span class="step-badge">1</span>STEP 1 / コイル構成</div>
+        <div class="choice-grid"></div>
+      </section>
+
+      <section class="section hidden">
+        <div class="section-title"><span class="step-badge">2</span>STEP 2 / 役割別コイルタイプ</div>
+        <div class="section-note"></div>
+        <div class="choice-grid"></div>
+      </section>
+    </div>
+
+    <div class="design-subpanel" id="designSubtab-detect">
+      <section class="section">
+        <div class="section-title"><span class="step-badge">D</span>検出コイル</div>
+        <div class="input-grid" id="detectRoleInputs"></div>
+      </section>
+      <section class="section hidden" id="detectEstimateSection">
+        <div class="section-title">検出推定Z</div>
+        <div class="result-grid" id="detectEstimatedResults"></div>
+      </section>
+      <section class="section" id="couplingSection">
+        <div class="section-title"><span class="step-badge">Δ</span>差動条件</div>
+        <div id="diffEmptyMessage" class="info-box hidden">差動構成ではないため、差動距離の設定は不要です。</div>
+        <div class="input-grid" id="couplingInputs"></div>
+      </section>
+      <section class="section hidden" id="diffResultsSection">
+        <div class="section-title">差動距離まとめ</div>
+        <div class="result-grid" id="diffResults"></div>
+      </section>
+      <section class="section" id="tuningSection">
+        <div class="section-title">検出コイル 実測補正・学習</div>
+        <div id="tuningArea"></div>
+      </section>
+    </div>
+
+    <div class="design-subpanel" id="designSubtab-excitation">
+      <section class="section" id="excitationRoleSection">
+        <div class="section-title"><span class="step-badge">E</span>励磁条件</div>
+        <div id="excitationEmptyMessage" class="info-box hidden">励磁構成ではないため、励磁条件の設定は不要です。</div>
+        <div class="input-grid" id="excitationRoleInputs"></div>
+      </section>
+      <section class="section" id="excitationCouplingSection">
+        <div class="section-title">励磁距離・結合条件</div>
+        <div class="input-grid" id="excitationCouplingInputs"></div>
+      </section>
+      <section class="section hidden" id="excitationEstimateSection">
+        <div class="section-title">励磁推定Z・結合</div>
+        <div class="result-grid" id="excitationEstimatedResults"></div>
+      </section>
+    </div>
+
+    <div class="design-subpanel" id="designSubtab-result">
+      <section id="resultArea" class="hidden">
+        <div class="section">
+          <div class="section-title">設計仕様まとめ</div>
+          <div id="designSpecResults"></div>
+        </div>
+
+        <div class="section" id="cableReflectSection">
+          <div class="section-title">ケーブルへの反映候補</div>
+          <button class="calc-btn secondary" type="button" onclick="UI.reflectCableFromDesign()">現在のコイル設計からケーブル選定へ反映</button>
+        </div>
+
+        <div class="section">
+          <div class="section-title">注意メッセージ</div>
+          <div id="noticeResults"></div>
+        </div>
+      </section>
+    </div>
+
+    <button class="calc-btn" id="designCalcBtn" onclick="UI.calculate()">構成込み結果を更新</button>
+    <div id="errorArea" class="hidden"></div>
+  </div>
+
+  <div id="tab-measured" class="tab-panel">
+    <section class="section">
+      <div class="compact-help-row">
+        <div class="compact-help" id="measuredModeHelp">①試し巻き → ②Z実測 → ③入力 → ④目標巻数推定</div>
+        <button type="button" class="mode-toggle-btn" id="measuredModeToggle" onclick="UI.toggleMeasuredMode()">Z</button>
+      </div>
+      <div class="input-grid">
+        <div class="input-group"><div class="input-label">試し巻き数 N1</div><div class="input-row"><input type="number" id="m-n1" value="50"><span class="input-unit">T</span></div></div>
+        <div class="input-group"><div class="input-label" id="m-z1-label">実測 Z1</div><div class="input-row"><input type="number" id="m-z1" value="25"><span class="input-unit" id="m-z1-unit">Ω</span></div></div>
+        <div class="input-group"><div class="input-label">測定周波数</div><div class="input-row"><input type="number" id="m-f" value="100"><span class="input-unit">kHz</span></div></div>
+        <div class="input-group"><div class="input-label" id="m-zt-label">目標 Z</div><div class="input-row"><input type="number" id="m-zt" value="100"><span class="input-unit" id="m-zt-unit">Ω</span></div></div>
+      </div>
+      <button class="calc-btn" style="margin-top:12px" onclick="UI.calcMeasured()">実測から逆算</button>
+      <div id="measuredErrorArea" class="hidden"></div>
+      <div id="measuredResults" class="hidden"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title"><span class="step-badge" id="targetTunerBadge">Z</span><span id="targetTunerTitle">TARGET Z TUNER</span> <small id="targetTunerSubtitle">目標Zチューナー</small></div>
+      <div class="compact-help" id="targetTunerHelp">実測点を追加すると、グラフから目標巻数を推定します。</div>
+      <div class="tuner-entry-grid" style="margin-top:8px">
+        <div class="input-group"><div class="input-label">巻数 N</div><div class="input-row"><input type="number" id="tz-entry-n" min="0" step="1"><span class="input-unit">T</span></div></div>
+        <div class="input-group"><div class="input-label" id="tz-entry-z-label">実測Z</div><div class="input-row"><input type="number" id="tz-entry-z" min="0" step="0.1"><span class="input-unit" id="tz-entry-z-unit">Ω</span></div></div>
+        <button type="button" class="calc-btn" style="margin:0" onclick="UI.addTargetZTunerPoint()">点を追加</button>
+        <button type="button" class="calc-btn secondary" style="margin:0" onclick="UI.clearTargetZTuner()">クリア</button>
+      </div>
+      <div class="tuner-quick-result" id="targetZTunerQuick">点を追加すると推定巻数を表示します。</div>
+      <div class="tuner-canvas-wrap">
+        <canvas id="targetZTunerCanvas"></canvas>
+        <div class="tuner-chart-popover hidden" id="targetZTunerPopover"></div>
+      </div>
+      <div class="tuner-output" id="targetZTunerOutput"></div>
+      <div class="tuner-warning-list" id="targetZTunerWarnings"></div>
+      <div class="tuner-point-list" id="targetZTunerRows"></div>
+    </section>
+  </div>
+
+  <div id="tab-cable" class="tab-panel">
+    <section class="section">
+      <div class="section-title">ケーブル選定</div>
+      <div class="info-box"><strong>初期設計用の簡易評価です。</strong> 最終仕様は実機ノイズ、LCRメータ、使用環境で確認してください。</div>
+      <div class="input-grid">
+        <div class="input-group">
+          <div class="input-label">コイル構成</div>
+          <div class="input-row"><select id="cable-config"></select></div>
+        </div>
+        <div class="input-group">
+          <div class="input-label">使用周波数</div>
+          <div class="input-row"><input type="number" id="cable-freq" value="100" step="10" min="0.001"><span class="input-unit">kHz</span></div>
+        </div>
+        <div class="input-group">
+          <div class="input-label">ケーブル長さ</div>
+          <div class="input-row"><input type="number" id="cable-length" value="1.0" step="0.1" min="0.1"><span class="input-unit">m</span></div>
+        </div>
+        <div class="input-group">
+          <div class="input-label">使用環境</div>
+          <div class="input-row">
+            <select id="cable-env">
+              <option value="normal">通常</option>
+              <option value="oil">耐油</option>
+              <option value="heat">耐熱</option>
+              <option value="flex">高屈曲</option>
+              <option value="noise">高ノイズ</option>
+            </select>
+          </div>
+        </div>
+        <div class="input-group full">
+          <div class="input-label">計測器側入力インピーダンス / 負荷目安</div>
+          <div class="input-row">
+            <select id="cable-load">
+              <option value="standard">標準</option>
+              <option value="highZ">高インピーダンス</option>
+              <option value="lowZ">低インピーダンス</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="action-row" style="margin-top:12px">
+        <button class="calc-btn secondary" type="button" onclick="UI.reflectCableFromDesign()">現在のコイル設計から反映</button>
+        <button class="calc-btn" type="button" onclick="UI.calculateCable()">ケーブル選定を計算</button>
+      </div>
+      <div id="cableErrorArea" class="hidden"></div>
+    </section>
+
+    <section class="section hidden" id="cableResultArea">
+      <div class="section-title">ケーブル選定結果</div>
+      <div id="cableResults"></div>
+    </section>
+
+    <section class="section hidden" id="cableReasonSection">
+      <div class="section-title">理由</div>
+      <div id="cableReasons"></div>
+    </section>
+
+    <section class="section hidden" id="cableNoticeSection">
+      <div class="section-title">注意事項</div>
+      <div id="cableNotices"></div>
+    </section>
+  </div>
+</main>
+
+<div class="modal hidden" id="step1Modal">
+  <div class="modal-box">
+    <div class="section-title"><span class="step-badge">1</span>STEP 1 / コイル構成</div>
+    <div class="choice-grid" id="configChoices"></div>
+    <div class="modal-actions">
+      <button class="calc-btn" type="button" onclick="UI.closeModal('step1Modal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="step2Modal">
+  <div class="modal-box">
+    <div class="section-title"><span class="step-badge">2</span>STEP 2 / 役割別コイルタイプ</div>
+    <div class="section-note" id="typeNote"></div>
+    <div id="typeChoices"></div>
+    <div class="modal-actions">
+      <button class="calc-btn" type="button" onclick="UI.backToStep1()">🔙 STEP1へ戻る</button>
+      <button class="calc-btn" type="button" onclick="UI.finishStep2()">決定して閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* CONFIG layer */
+const CONFIG = {
+  roles: {
+    detect: { label: '検出コイル', prefix: '検出 ', defaultTargetZ: 100 },
+    excitation: { label: '励磁コイル', prefix: '励磁 ', defaultTargetZ: 100 },
+    excitation1: { label: '励磁1コイル', prefix: '励磁1 ', defaultTargetZ: 100 },
+    excitation2: { label: '励磁2コイル', prefix: '励磁2 ', defaultTargetZ: 100 },
+  },
+  coilConfigs: [
+    { value: 'single', label: '単独検出', roles: ['detect'], differential: false, excitation: false, dual: false },
+    { value: 'differential', label: '差動', roles: ['detect'], differential: true, excitation: false, dual: false },
+    { value: 'excitationDetect', label: '励磁＋検出', roles: ['detect', 'excitation'], differential: false, excitation: true, dual: false },
+    { value: 'excitationDifferential', label: '励磁＋差動', roles: ['detect', 'excitation'], differential: true, excitation: true, dual: false },
+    { value: 'dualExcitationDetect', label: '2励磁＋検出', roles: ['detect', 'excitation1', 'excitation2'], differential: false, excitation: true, dual: true },
+    { value: 'dualExcitationDifferential', label: '2励磁＋差動', roles: ['detect', 'excitation1', 'excitation2'], differential: true, excitation: true, dual: true },
+  ],
+  coilTypes: [
+    { value: 'air', label: '空芯' },
+    { value: 'insert', label: '空芯＋中心フェライト' },
+    { value: 'ferrite', label: 'フェライト直巻き' },
+  ],
+  differentialDetectCoilTypes: [
+    { value: 'air', label: '空芯' },
+    { value: 'insert', label: '空芯＋中心フェライト' },
+    { value: 'ferrite', label: 'フェライト直巻き' },
+    { value: 'cross', label: 'クロス差動' },
+    { value: 'crossFerrite', label: 'クロス差動＋フェライト' },
+  ],
+  shapes: [
+    { value: 'cyl', label: '円筒コイル' },
+    { value: 'rect', label: '角形コイル' },
+  ],
+  ferriteShapes: [
+    { value: 'round', label: '丸フェライト' },
+    { value: 'bar', label: '角フェライト' },
+  ],
+  insertShapes: [
+    { value: 'round', label: '丸棒' },
+    { value: 'bar', label: '角棒' },
+  ],
+  excitationPositions: [
+    { value: 'outer', label: '励磁外側・検出内側' },
+    { value: 'inner', label: '励磁内側・検出外側' },
+    { value: 'separate', label: '励磁・検出 分離' },
+  ],
+  excitationPolarities: [
+    { value: 'same', label: '同相' },
+    { value: 'reverse', label: '逆相' },
+  ],
+  /* 物理定数 */
+  physics: {
+    mu0: 4 * Math.PI * 1e-7,
+    copperConductivity: 5.8e7,
+  },
+  /* ケーブル選定用定数 */
+  cable: {
+    capacitancePfPerM: {
+      coaxial: 100,
+      twistedPairShield: 70,
+      multiCoreShield: 120,
+      twistedPairCompositeMultiCore: 80,
+    },
+    structureLabels: {
+      coaxial: '同軸',
+      twistedPairShield: 'ツイストペア＋シールド',
+      multiCoreShield: 'マルチコアシールド',
+      twistedPairCompositeMultiCore: 'ツイストペア複合マルチコア',
+    },
+    defaultLengthM: 1.0,
+    capacitanceImpactFormula: {
+      freqBaseKHz: 1000,
+      capBasePf: 100,
+      multiplier: 10,
+    },
+    maxRecommendedLengthM: {
+      default: 5,
+      highFrequency: 1,
+      midHighFrequency: 2,
+      midFrequency: 3,
+    },
+    highNoiseLengthFactor: 0.8,
+  },
+  /* フェライト補正 */
+  ferrite: {
+    factors: {
+      '2H1': 6.0,
+      '2G4': 4.5,
+      '2G8': 3.8,
+      '2H6': 3.0,
+      '3A8': 3.2,
+      '3A7': 3.4,
+      '3A4': 2.8,
+      '4A3': 2.3,
+      '4D4': 2.2,
+      '5K': 1.9,
+      '6D8': 1.5,
+      '6B2': 1.3,
+      '7B2': 1.2,
+      manual: null,
+    },
+    materials: [
+      { value: '2H1', label: '2H1' },
+      { value: '2G4', label: '2G4' },
+      { value: '2G8', label: '2G8' },
+      { value: '2H6', label: '2H6' },
+      { value: '3A8', label: '3A8' },
+      { value: '3A7', label: '3A7' },
+      { value: '3A4', label: '3A4' },
+      { value: '4A3', label: '4A3' },
+      { value: '4D4', label: '4D4' },
+      { value: '5K', label: '5K' },
+      { value: '6D8', label: '6D8' },
+      { value: '6B2', label: '6B2' },
+      { value: '7B2', label: '7B2' },
+      { value: 'manual', label: '手動' },
+    ],
+  },
+  /* 補正係数 */
+  correction: {
+    tuningFactorMin: 0.2,
+    tuningFactorMax: 5.0,
+    detectCrossFerriteFactor: 1.8,
+    distanceCoupling: {
+      farMm: 3,
+      midMm: 1,
+      nearMm: 0.5,
+    },
+  },
+  /* 判定しきい値 */
+  thresholds: {
+    cable: {
+      lowImpactPercent: 10,
+      cautionImpactPercent: 30,
+      highFrequencyKHz: 1000,
+      midHighFrequencyKHz: 500,
+      midFrequencyKHz: 100,
+      longCableM: 2,
+    },
+    differential: {
+      surfaceDepthMm: 0.1,
+      shallowDepthMm: 1.0,
+      highFrequencyKHz: 1000,
+      lowFrequencyKHz: 100,
+    },
+  },
+  /* 初期値 */
+  defaults: {
+    frequencyKHz: 100,
+    cableLengthM: 1.0,
+    measuredTurns: 50,
+    measuredZ: 25,
+    measuredTargetZ: 100,
+    measuredTolerancePercent: 10,
+  },
+  defaultRoleState: {
+    type: 'air',
+    shape: 'cyl',
+    ferriteShape: 'round',
+    insertShape: 'round',
+    turnMode: 'targetZ',
+  },
+};
+CONFIG.ferriteFactors = CONFIG.ferrite.factors;
+CONFIG.ferriteMaterials = CONFIG.ferrite.materials;
+
+/* State layer */
+const AppState = (() => {
+  const PROBE_STYLES = {
+    surface: '上置型',
+    insert: '内挿型',
+    through: '貫通型',
+  };
+  const TUNING_STORAGE_KEY = 'coilDesigner.tuningCorrection.v1';
+  const roleState = () => ({ ...CONFIG.defaultRoleState });
+  const defaultTuningCorrection = () => ({
+    detect: 1,
+    excitation: 1,
+    excitation1: 1,
+    excitation2: 1,
+  });
+
+  function isValidTuningFactor(value) {
+    return Number.isFinite(value) &&
+      value >= CONFIG.correction.tuningFactorMin &&
+      value <= CONFIG.correction.tuningFactorMax;
+  }
+
+  function readStoredTuningCorrection() {
+    const fallback = { values: defaultTuningCorrection(), updatedAt: '' };
+    try {
+      if (typeof localStorage === 'undefined') return fallback;
+      const raw = localStorage.getItem(TUNING_STORAGE_KEY);
+      if (!raw) return fallback;
+      const saved = JSON.parse(raw);
+      const values = defaultTuningCorrection();
+      Object.keys(values).forEach(role => {
+        const value = Number(saved[role]);
+        values[role] = isValidTuningFactor(value) ? value : 1;
+      });
+      return { values, updatedAt: saved.updatedAt || '' };
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  const storedTuning = readStoredTuningCorrection();
+  const state = {
+    probeStyle: 'surface',
+    config: 'single',
+    diffDistanceMode: 'recommend',
+    detailsOpen: {
+      detect: true,
+      excitation: false,
+      excitation1: false,
+      excitation2: false,
+    },
+    roles: {
+      detect: roleState(),
+      excitation: roleState(),
+      excitation1: roleState(),
+      excitation2: roleState(),
+    },
+    tuningCorrection: storedTuning.values,
+    tuningEnabled: false,
+    tuningUpdatedAt: storedTuning.updatedAt,
+    ectImport: null,
+    inputs: {},
+  };
+
+  const getConfig = () => CONFIG.coilConfigs.find(item => item.value === state.config) || CONFIG.coilConfigs[0];
+  const activeRoles = () => getConfig().roles;
+  const isDifferential = () => getConfig().differential;
+  const hasExcitation = () => getConfig().excitation;
+  const hasDualExcitation = () => getConfig().dual;
+  const isSimpleExcitationDetect = () => state.config === 'excitationDetect';
+  const isCross = () => isDifferential() && ['cross', 'crossFerrite'].includes(state.roles.detect.type);
+  const hasCrossFerrite = () => isDifferential() && state.roles.detect.type === 'crossFerrite';
+
+  function resetDifferentialDistanceInputs() {
+    state.diffDistanceMode = 'recommend';
+    ['diffDistance', 'diffX', 'diffY', 'crossAngle'].forEach(key => delete state.inputs[key]);
+  }
+
+  function setConfig(value) {
+    state.config = value;
+    if (!isDifferential() && ['cross', 'crossFerrite'].includes(state.roles.detect.type)) {
+      state.roles.detect.type = 'air';
+      resetDifferentialDistanceInputs();
+    }
+  }
+
+  function setValue(key, value) {
+    if (key === 'config') setConfig(value);
+    else if (key === 'probeStyle' && Object.prototype.hasOwnProperty.call(PROBE_STYLES, value)) state.probeStyle = value;
+    else state[key] = value;
+  }
+
+  function setRoleValue(role, key, value) {
+    if (key === 'type') {
+      const crossType = ['cross', 'crossFerrite'].includes(value);
+      if (role !== 'detect' && crossType) value = 'air';
+      if (role === 'detect' && crossType && !isDifferential()) value = 'air';
+    }
+    state.roles[role][key] = value;
+    if (role === 'detect' && key === 'type' && ['cross', 'crossFerrite'].includes(value)) resetDifferentialDistanceInputs();
+  }
+
+  function setInputValue(id, value) {
+    state.inputs[id] = value;
+  }
+
+  function syncDualExcitationCommon() {
+    if (!hasDualExcitation()) return;
+    state.roles.excitation2 = { ...state.roles.excitation1 };
+    Object.keys(state.inputs).forEach(key => {
+      if (key.startsWith('excitation1_')) {
+        state.inputs['excitation2_' + key.slice('excitation1_'.length)] = state.inputs[key];
+      }
+    });
+  }
+
+  function setTuningEnabled(enabled) {
+    state.tuningEnabled = !!enabled;
+  }
+
+  function setTuningCorrection(role, value) {
+    if (!Object.prototype.hasOwnProperty.call(state.tuningCorrection, role)) return;
+    const factor = Number(value);
+    state.tuningCorrection[role] = isValidTuningFactor(factor) ? factor : 1;
+  }
+
+  function saveTuningCorrection() {
+    const values = defaultTuningCorrection();
+    for (const role of Object.keys(values)) {
+      const value = Number(state.tuningCorrection[role]);
+      if (!isValidTuningFactor(value)) return false;
+      values[role] = value;
+    }
+    const updatedAt = new Date().toISOString();
+    state.tuningCorrection = values;
+    state.tuningUpdatedAt = updatedAt;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(TUNING_STORAGE_KEY, JSON.stringify({ ...values, updatedAt }));
+      }
+    } catch (error) {
+      return false;
+    }
+    return true;
+  }
+
+  function resetTuningCorrection() {
+    state.tuningCorrection = defaultTuningCorrection();
+    state.tuningUpdatedAt = '';
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(TUNING_STORAGE_KEY);
+    } catch (error) {}
+  }
+
+  return ({
+    state,
+    PROBE_STYLES,
+    TUNING_STORAGE_KEY,
+    getConfig,
+    activeRoles,
+    isDifferential,
+    hasExcitation,
+    hasDualExcitation,
+    isSimpleExcitationDetect,
+    isCross,
+    hasCrossFerrite,
+    setValue,
+    setRoleValue,
+    setInputValue,
+    setTuningEnabled,
+    setTuningCorrection,
+    saveTuningCorrection,
+    resetTuningCorrection,
+    syncDualExcitationCommon,
+    isValidTuningFactor,
+    resetDifferentialDistanceInputs,
+  });
+})();
+
+/* Calculation layer */
+const Physics = (() => {
+  const MU0 = CONFIG.physics.mu0;
+
+  function skinDepth_mm(f_Hz, mur, sigma) {
+    if (f_Hz <= 0 || mur <= 0 || sigma <= 0) return Infinity;
+    const omega = 2 * Math.PI * f_Hz;
+    return Math.sqrt(2 / (omega * MU0 * mur * sigma)) * 1000;
+  }
+
+  return ({ MU0, skinDepth_mm });
+})();
+
+const Coil = (() => {
+  function nagaokaK(radius_m, length_m) {
+    if (radius_m <= 0 || length_m <= 0) return 1;
+    return length_m / (length_m + 0.9 * radius_m);
+  }
+
+  function inductanceCyl_H(N, radius_m, length_m) {
+    if (N <= 0 || radius_m <= 0 || length_m <= 0) return 0;
+    const area = Math.PI * radius_m ** 2;
+    return Physics.MU0 * N ** 2 * area * nagaokaK(radius_m, length_m) / length_m;
+  }
+
+  function inductanceRect_H(N, avgH_m, avgW_m, length_m) {
+    if (N <= 0 || avgH_m <= 0 || avgW_m <= 0 || length_m <= 0) return 0;
+    const area = avgH_m * avgW_m;
+    const equivR = Math.sqrt(area / Math.PI);
+    return Physics.MU0 * N ** 2 * area * nagaokaK(equivR, length_m) / length_m;
+  }
+
+  function impedance_ohm(f_Hz, L_H) {
+    return 2 * Math.PI * f_Hz * L_H;
+  }
+
+  function buildLayerTurns(baseTurns, maxLayers, windingMode) {
+    if (!Number.isFinite(baseTurns) || !Number.isFinite(maxLayers) || baseTurns <= 0 || maxLayers <= 0) return [];
+    const layers = [];
+    for (let i = 0; i < maxLayers; i++) {
+      layers.push(layerTurnCount(baseTurns, i, windingMode));
+    }
+    return layers;
+  }
+
+  function layerTurnCount(baseTurns, layerIndex, windingMode) {
+    if (baseTurns <= 0) return 0;
+    if (windingMode === 'bobbin') return Math.max(1, baseTurns - (layerIndex % 2));
+    if (windingMode === 'direct') return Math.max(1, baseTurns - layerIndex);
+    return baseTurns;
+  }
+
+  function countRequiredLayers(baseTurns, targetTurns, windingMode, maxLayers = Infinity) {
+    if (baseTurns <= 0 || targetTurns <= 0) return 0;
+    let total = 0;
+    let usedLayers = 0;
+    while (total < targetTurns && usedLayers < maxLayers) {
+      total += layerTurnCount(baseTurns, usedLayers, windingMode);
+      usedLayers++;
+    }
+    return usedLayers;
+  }
+
+  function calcCylForward(p) {
+    const { innerDia_mm, outerDia_mm, length_mm, wireDia_mm, turns, freq_Hz, windingMode, layerHeightFactor = 1 } = p;
+    const windingHeight = (outerDia_mm - innerDia_mm) / 2;
+    const layerHeight_mm = wireDia_mm * layerHeightFactor;
+    const maxLayers = Math.floor(windingHeight / layerHeight_mm);
+    const baseTurns = Math.floor(length_mm / wireDia_mm);
+    const layerTurns = buildLayerTurns(baseTurns, maxLayers, windingMode);
+    const maxTurns = layerTurns.reduce((a, b) => a + b, 0);
+    const turnsPerLayer = baseTurns;
+    const overCapacity = turns > maxTurns;
+    const requiredLayers = overCapacity ? maxLayers + 1 : countRequiredLayers(baseTurns, turns, windingMode, maxLayers);
+    const calcLayers = Math.min(maxLayers, requiredLayers);
+    const coilOD_mm = innerDia_mm + 2 * calcLayers * layerHeight_mm;
+    const avgRadius_m = ((innerDia_mm / 2 + coilOD_mm / 2) / 2) / 1000;
+    const length_m = length_mm / 1000;
+    const L_H = inductanceCyl_H(turns, avgRadius_m, length_m);
+    const Z = impedance_ohm(freq_Hz, L_H);
+    const skinD_mm = Physics.skinDepth_mm(freq_Hz, 1, CONFIG.physics.copperConductivity);
+    const gap_mm = (outerDia_mm - coilOD_mm) / 2;
+    const fill_pct = windingHeight > 0 ? (requiredLayers * layerHeight_mm / windingHeight) * 100 : 0;
+    return {
+      windingHeight, maxLayers, baseTurns, turnsPerLayer, layerTurns, maxTurns,
+      usedLayers: requiredLayers, calcLayers, coilOD_mm, avgRadius_m, length_m,
+      L_H, L_uH: L_H * 1e6, Z, skinD_mm, gap_mm, fill_pct,
+      overCapacity,
+    };
+  }
+
+  function calcCylInverse(p) {
+    const { innerDia_mm, outerDia_mm, length_mm, wireDia_mm, targetZ_ohm, freq_Hz, maxLayers, turnsPerLayer, maxTurns, windingMode, layerHeightFactor = 1 } = p;
+    const layerHeight_mm = wireDia_mm * layerHeightFactor;
+    const length_m = length_mm / 1000;
+    const area0 = Math.PI * ((innerDia_mm / 2 + outerDia_mm / 2) / 2 / 1000) ** 2;
+    const N0 = Math.sqrt(targetZ_ohm * length_m / (2 * Math.PI * freq_Hz * Physics.MU0 * area0));
+    const usedL0 = Math.min(maxLayers, Math.ceil(N0 / turnsPerLayer));
+    const coilOD0 = innerDia_mm + 2 * usedL0 * layerHeight_mm;
+    const avgR0 = ((innerDia_mm / 2 + coilOD0 / 2) / 2) / 1000;
+    const K0 = nagaokaK(avgR0, length_m);
+    const area1 = Math.PI * avgR0 ** 2;
+    const Nt = Math.round(Math.sqrt(targetZ_ohm * length_m / (2 * Math.PI * freq_Hz * Physics.MU0 * area1 * K0)));
+    if (!isFinite(Nt) || Nt <= 0) return null;
+    const requiredLayers = Nt > maxTurns ? maxLayers + 1 : countRequiredLayers(turnsPerLayer, Nt, windingMode, maxLayers);
+    const calcLayers = Math.min(maxLayers, requiredLayers);
+    const coilOD_mm = innerDia_mm + 2 * calcLayers * layerHeight_mm;
+    const gap_mm = (outerDia_mm - coilOD_mm) / 2;
+    const windingHeight = (outerDia_mm - innerDia_mm) / 2;
+    const fill_pct = windingHeight > 0 ? (requiredLayers * layerHeight_mm / windingHeight) * 100 : 0;
+    return { Nt, usedLayers: requiredLayers, calcLayers, coilOD_mm, gap_mm, fill_pct, fits: Nt <= maxTurns };
+  }
+
+  function calcRectForward(p) {
+    const { ih, iw, oh, ow, len, wd, N, freq_Hz, windingMode, layerHeightFactor = 1 } = p;
+    const eff = Math.min((oh - ih) / 2, (ow - iw) / 2);
+    const layerHeight_mm = wd * layerHeightFactor;
+    const maxLayers = Math.floor(eff / layerHeight_mm);
+    const baseTurns = Math.floor(len / wd);
+    const layerTurns = buildLayerTurns(baseTurns, maxLayers, windingMode);
+    const maxTurns = layerTurns.reduce((a, b) => a + b, 0);
+    const turnsPerLayer = baseTurns;
+    const overCapacity = N > maxTurns;
+    const requiredLayers = overCapacity ? maxLayers + 1 : countRequiredLayers(baseTurns, N, windingMode, maxLayers);
+    const calcLayers = Math.min(maxLayers, requiredLayers);
+    const coilH = ih + 2 * calcLayers * layerHeight_mm;
+    const coilW = iw + 2 * calcLayers * layerHeight_mm;
+    const avgH_m = ((ih + coilH) / 2) / 1000;
+    const avgW_m = ((iw + coilW) / 2) / 1000;
+    const len_m = len / 1000;
+    const L_H = inductanceRect_H(N, avgH_m, avgW_m, len_m);
+    const Z = impedance_ohm(freq_Hz, L_H);
+    const skinD_mm = Physics.skinDepth_mm(freq_Hz, 1, CONFIG.physics.copperConductivity);
+    const gap_mm = Math.min((oh - coilH) / 2, (ow - coilW) / 2);
+    const fill_pct = eff > 0 ? (requiredLayers * layerHeight_mm / eff) * 100 : 0;
+    return {
+      eff, maxLayers, baseTurns, turnsPerLayer, layerTurns, maxTurns,
+      usedLayers: requiredLayers, calcLayers, coilH, coilW, avgH_m, avgW_m, len_m,
+      L_H, L_uH: L_H * 1e6, Z, skinD_mm, gap_mm, fill_pct,
+      overCapacity,
+    };
+  }
+
+  function calcRectInverse(p) {
+    const { ih, iw, oh, ow, wd, targetZ_ohm, freq_Hz, maxLayers, turnsPerLayer, maxTurns, avgH_m, avgW_m, len_m, windingMode, layerHeightFactor = 1 } = p;
+    const layerHeight_mm = wd * layerHeightFactor;
+    const area = avgH_m * avgW_m;
+    const equivR = Math.sqrt(area / Math.PI);
+    const K = nagaokaK(equivR, len_m);
+    const denom = 2 * Math.PI * freq_Hz * Physics.MU0 * area * K;
+    const Nt = Math.round(Math.sqrt(targetZ_ohm * len_m / denom));
+    if (!isFinite(Nt) || Nt <= 0) return null;
+    const requiredLayers = Nt > maxTurns ? maxLayers + 1 : countRequiredLayers(turnsPerLayer, Nt, windingMode, maxLayers);
+    const calcLayers = Math.min(maxLayers, requiredLayers);
+    const coilH = ih + 2 * calcLayers * layerHeight_mm;
+    const coilW = iw + 2 * calcLayers * layerHeight_mm;
+    const gap_mm = Math.min((oh - coilH) / 2, (ow - coilW) / 2);
+    const eff = Math.min((oh - ih) / 2, (ow - iw) / 2);
+    const fill_pct = eff > 0 ? (requiredLayers * layerHeight_mm / eff) * 100 : 0;
+    return { Nt, usedLayers: requiredLayers, calcLayers, coilH, coilW, gap_mm, fill_pct, fits: Nt <= maxTurns };
+  }
+
+  function calcMeasuredInverse(N1, V1, Vt, f_Hz, mode = 'z') {
+    if (N1 <= 0 || V1 <= 0 || Vt <= 0 || f_Hz <= 0) return null;
+    const Nraw = N1 * Math.sqrt(Vt / V1);
+    if (!isFinite(Nraw) || Nraw <= 0) return null;
+    const omega = 2 * Math.PI * f_Hz;
+    const isL = mode === 'l';
+    const L1_uH = isL ? V1 : (V1 / omega) * 1e6;
+    const Lt_uH = isL ? Vt : (Vt / omega) * 1e6;
+    const Nt = Math.round(Nraw);
+    const Vv = V1 * (Nt / N1) ** 2;
+    const Zv = isL ? omega * Vv / 1e6 : Vv;
+    const Lv_uH = isL ? Vv : (Vv / omega) * 1e6;
+    const err = Math.abs(Vv - Vt) / Vt * 100;
+    return { Nt, Vv, Zv, Lv_uH, err, L1_uH, Lt_uH };
+  }
+
+  return ({
+    nagaokaK, inductanceCyl_H, inductanceRect_H, impedance_ohm,
+    buildLayerTurns,
+    calcCylForward, calcCylInverse, calcRectForward, calcRectInverse,
+    calcMeasuredInverse,
+  });
+})();
+
+const Calculation = (() => {
+  const { state } = AppState;
+
+  function clamp(value, low, high) {
+    return Math.min(high, Math.max(low, value));
+  }
+
+  function readNumber(id, fallback = null) {
+    const element = document.getElementById(id);
+    const raw = element ? element.value : state.inputs[id];
+    const value = parseFloat(raw);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function readValue(id, fallback = '') {
+    const element = document.getElementById(id);
+    return element && element.value !== undefined ? element.value : (state.inputs[id] ?? fallback);
+  }
+
+  function roleLabel(role) {
+    return CONFIG.roles[role].label;
+  }
+
+  function assertPositive(value, message) {
+    if (!Number.isFinite(value) || value <= 0) throw Error(message);
+  }
+
+  function directInverseResult(turns, fwd) {
+    return {
+      Nt: turns,
+      usedLayers: fwd.usedLayers,
+      coilOD_mm: fwd.coilOD_mm,
+      coilH: fwd.coilH,
+      coilW: fwd.coilW,
+      gap_mm: fwd.gap_mm,
+      fill_pct: fwd.fill_pct,
+      fits: turns <= fwd.maxTurns,
+    };
+  }
+
+  function refineInverseTurns(Nt, targetZ_ohm, makeForward, maxTurns = Infinity) {
+    const safeNt = Math.min(Math.max(1, Nt), maxTurns);
+    let best = null;
+    const center = Math.round(safeNt);
+    for (let i = -5; i <= 5; i++) {
+      const turns = center + i;
+      if (turns < 1 || turns > maxTurns) continue;
+      const fwd = makeForward(turns);
+      const error = Math.abs(fwd.Z - targetZ_ohm);
+      if (!best || error < best.error) best = { turns, fwd, error };
+    }
+    return best;
+  }
+
+  function occupancyLayerFactor(role) {
+    return role === 'detect' && AppState.isCross() ? 2 : 1;
+  }
+
+  function calculateCylindricalRole(role, wireDia_mm, targetZ_ohm, freq_Hz, windingMode, requestedTurns, turnMode, layerHeightFactor) {
+    const prefix = role + '_';
+    const innerDia_mm = readNumber(prefix + 'innerDia', 1);
+    const outerDia_mm = readNumber(prefix + 'outerDia', 3);
+    const length_mm = readNumber(prefix + 'length', 2);
+    assertPositive(innerDia_mm, roleLabel(role) + 'の内径は0より大きくしてください。');
+    assertPositive(outerDia_mm, roleLabel(role) + 'の外径は0より大きくしてください。');
+    assertPositive(length_mm, roleLabel(role) + 'の巻線長は0より大きくしてください。');
+    if (outerDia_mm <= innerDia_mm) throw Error(roleLabel(role) + 'の外径は内径より大きくしてください。');
+    const base = Coil.calcCylForward({ innerDia_mm, outerDia_mm, length_mm, wireDia_mm, turns: 1, freq_Hz, windingMode, layerHeightFactor });
+    if (turnMode === 'turns') {
+      const fwd = Coil.calcCylForward({ innerDia_mm, outerDia_mm, length_mm, wireDia_mm, turns: requestedTurns, freq_Hz, windingMode, layerHeightFactor });
+      return { base, inv: directInverseResult(requestedTurns, fwd), fwd };
+    }
+    const inv = Coil.calcCylInverse({
+      innerDia_mm, outerDia_mm, length_mm, wireDia_mm, targetZ_ohm, freq_Hz,
+      maxLayers: base.maxLayers, turnsPerLayer: base.turnsPerLayer, maxTurns: base.maxTurns, windingMode, layerHeightFactor,
+    });
+    if (inv && inv.Nt > base.maxTurns) {
+      const fwd = Coil.calcCylForward({ innerDia_mm, outerDia_mm, length_mm, wireDia_mm, turns: inv.Nt, freq_Hz, windingMode, layerHeightFactor });
+      return { base, inv: directInverseResult(inv.Nt, fwd), fwd };
+    }
+    const refined = inv ? refineInverseTurns(inv.Nt, targetZ_ohm, turns => Coil.calcCylForward({ innerDia_mm, outerDia_mm, length_mm, wireDia_mm, turns, freq_Hz, windingMode, layerHeightFactor }), base.maxTurns) : null;
+    return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd), fwd: refined.fwd } : { base, inv, fwd: null };
+  }
+
+  function calculateRectangularRole(role, wireDia_mm, targetZ_ohm, freq_Hz, windingMode, requestedTurns, turnMode, layerHeightFactor) {
+    const prefix = role + '_';
+    const ih = readNumber(prefix + 'innerH', 4);
+    const iw = readNumber(prefix + 'innerW', 8);
+    const oh = readNumber(prefix + 'outerH', 6);
+    const ow = readNumber(prefix + 'outerW', 10);
+    const len = readNumber(prefix + 'length', 6);
+    assertPositive(ih, roleLabel(role) + 'の内側高さは0より大きくしてください。');
+    assertPositive(iw, roleLabel(role) + 'の内側幅は0より大きくしてください。');
+    assertPositive(oh, roleLabel(role) + 'の外側高さは0より大きくしてください。');
+    assertPositive(ow, roleLabel(role) + 'の外側幅は0より大きくしてください。');
+    assertPositive(len, roleLabel(role) + 'の巻線長は0より大きくしてください。');
+    if (oh <= ih || ow <= iw) throw Error(roleLabel(role) + 'の外側寸法は内側寸法より大きくしてください。');
+    const base = Coil.calcRectForward({ ih, iw, oh, ow, len, wd: wireDia_mm, N: 1, freq_Hz, windingMode, layerHeightFactor });
+    if (turnMode === 'turns') {
+      const fwd = Coil.calcRectForward({ ih, iw, oh, ow, len, wd: wireDia_mm, N: requestedTurns, freq_Hz, windingMode, layerHeightFactor });
+      return { base, inv: directInverseResult(requestedTurns, fwd), fwd };
+    }
+    const inv = Coil.calcRectInverse({
+      ih, iw, oh, ow, wd: wireDia_mm, targetZ_ohm, freq_Hz,
+      maxLayers: base.maxLayers, turnsPerLayer: base.turnsPerLayer, maxTurns: base.maxTurns,
+      avgH_m: base.avgH_m, avgW_m: base.avgW_m, len_m: base.len_m, windingMode, layerHeightFactor,
+    });
+    if (inv && inv.Nt > base.maxTurns) {
+      const fwd = Coil.calcRectForward({ ih, iw, oh, ow, len, wd: wireDia_mm, N: inv.Nt, freq_Hz, windingMode, layerHeightFactor });
+      return { base, inv: directInverseResult(inv.Nt, fwd), fwd };
+    }
+    const refined = inv ? refineInverseTurns(inv.Nt, targetZ_ohm, turns => Coil.calcRectForward({ ih, iw, oh, ow, len, wd: wireDia_mm, N: turns, freq_Hz, windingMode, layerHeightFactor }), base.maxTurns) : null;
+    return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd), fwd: refined.fwd } : { base, inv, fwd: null };
+  }
+
+  function calculateFerriteRole(role, wireDia_mm, targetZ_ohm, freq_Hz, windingMode, requestedTurns, turnMode) {
+    const roleState = state.roles[role];
+    const prefix = role + '_';
+    const length_mm = readNumber(prefix + 'length', 5);
+    const clearance = Math.max(wireDia_mm * 8, 0.4);
+    assertPositive(length_mm, roleLabel(role) + 'の巻線長は0より大きくしてください。');
+
+    if (roleState.ferriteShape === 'round') {
+      const coreD = readNumber(prefix + 'ferriteDia', 1);
+      assertPositive(coreD, roleLabel(role) + 'のフェライト径は0より大きくしてください。');
+      const outerDia_mm = coreD + clearance * 2;
+      const base = Coil.calcCylForward({ innerDia_mm: coreD, outerDia_mm, length_mm, wireDia_mm, turns: 1, freq_Hz, windingMode });
+      if (turnMode === 'turns') {
+        const fwd = Coil.calcCylForward({ innerDia_mm: coreD, outerDia_mm, length_mm, wireDia_mm, turns: requestedTurns, freq_Hz, windingMode });
+        return { base, inv: directInverseResult(requestedTurns, fwd), fwd };
+      }
+      const inv = Coil.calcCylInverse({
+        innerDia_mm: coreD, outerDia_mm, length_mm, wireDia_mm, targetZ_ohm, freq_Hz,
+        maxLayers: base.maxLayers, turnsPerLayer: base.turnsPerLayer, maxTurns: base.maxTurns, windingMode,
+      });
+      if (inv && inv.Nt > base.maxTurns) {
+        const fwd = Coil.calcCylForward({ innerDia_mm: coreD, outerDia_mm, length_mm, wireDia_mm, turns: inv.Nt, freq_Hz, windingMode });
+        return { base, inv: directInverseResult(inv.Nt, fwd), fwd };
+      }
+      const refined = inv ? refineInverseTurns(inv.Nt, targetZ_ohm, turns => Coil.calcCylForward({ innerDia_mm: coreD, outerDia_mm, length_mm, wireDia_mm, turns, freq_Hz, windingMode }), base.maxTurns) : null;
+      return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd), fwd: refined.fwd } : { base, inv, fwd: null };
+    }
+
+    const ih = readNumber(prefix + 'ferriteH', 3);
+    const iw = readNumber(prefix + 'ferriteW', 5);
+    assertPositive(ih, roleLabel(role) + 'のフェライト高さは0より大きくしてください。');
+    assertPositive(iw, roleLabel(role) + 'のフェライト幅は0より大きくしてください。');
+    const oh = ih + clearance * 2;
+    const ow = iw + clearance * 2;
+    const base = Coil.calcRectForward({ ih, iw, oh, ow, len: length_mm, wd: wireDia_mm, N: 1, freq_Hz, windingMode });
+    if (turnMode === 'turns') {
+      const fwd = Coil.calcRectForward({ ih, iw, oh, ow, len: length_mm, wd: wireDia_mm, N: requestedTurns, freq_Hz, windingMode });
+      return { base, inv: directInverseResult(requestedTurns, fwd), fwd };
+    }
+    const inv = Coil.calcRectInverse({
+      ih, iw, oh, ow, wd: wireDia_mm, targetZ_ohm, freq_Hz,
+      maxLayers: base.maxLayers, turnsPerLayer: base.turnsPerLayer, maxTurns: base.maxTurns,
+      avgH_m: base.avgH_m, avgW_m: base.avgW_m, len_m: base.len_m, windingMode,
+    });
+    if (inv && inv.Nt > base.maxTurns) {
+      const fwd = Coil.calcRectForward({ ih, iw, oh, ow, len: length_mm, wd: wireDia_mm, N: inv.Nt, freq_Hz, windingMode });
+      return { base, inv: directInverseResult(inv.Nt, fwd), fwd };
+    }
+    const refined = inv ? refineInverseTurns(inv.Nt, targetZ_ohm, turns => Coil.calcRectForward({ ih, iw, oh, ow, len: length_mm, wd: wireDia_mm, N: turns, freq_Hz, windingMode }), base.maxTurns) : null;
+    return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd), fwd: refined.fwd } : { base, inv, fwd: null };
+  }
+
+  function calculateRole(role) {
+    const roleState = state.roles[role];
+    const prefix = role + '_';
+    const wireDia_mm = readNumber(prefix + 'wireDia', 0.05);
+    const turnMode = roleState.turnMode || 'targetZ';
+    const targetZ_ohm = readNumber(prefix + 'targetZ', CONFIG.roles[role].defaultTargetZ);
+    const requestedTurns = readNumber(prefix + 'turns', 50);
+    const freq_kHz = readNumber('freq', CONFIG.defaults.frequencyKHz);
+    const freq_Hz = freq_kHz * 1000;
+    const windingMode = roleState.type === 'ferrite' ? 'direct' : 'bobbin';
+    const layerHeightFactor = occupancyLayerFactor(role);
+    assertPositive(wireDia_mm, roleLabel(role) + 'の線径は0より大きくしてください。');
+    assertPositive(freq_Hz, '周波数は0より大きくしてください。');
+    if (turnMode === 'targetZ') assertPositive(targetZ_ohm, roleLabel(role) + 'の目標Zは0より大きくしてください。');
+    const designTargetZ_ohm =
+      turnMode === 'targetZ' && ['insert', 'ferrite', 'crossFerrite'].includes(roleState.type)
+        ? targetZ_ohm / typeFactor(role)
+        : targetZ_ohm;
+    if (turnMode === 'turns' && (!Number.isFinite(requestedTurns) || requestedTurns <= 0)) throw Error(roleLabel(role) + 'の希望巻数を1T以上で入力してください。');
+    const result = roleState.type === 'ferrite'
+      ? calculateFerriteRole(role, wireDia_mm, designTargetZ_ohm, freq_Hz, windingMode, requestedTurns, turnMode)
+      : roleState.shape === 'cyl'
+        ? calculateCylindricalRole(role, wireDia_mm, designTargetZ_ohm, freq_Hz, windingMode, requestedTurns, turnMode, layerHeightFactor)
+        : calculateRectangularRole(role, wireDia_mm, designTargetZ_ohm, freq_Hz, windingMode, requestedTurns, turnMode, layerHeightFactor);
+
+    if (!result.base || result.base.maxLayers <= 0 || result.base.turnsPerLayer <= 0) throw Error(roleLabel(role) + 'の巻線スペースが小さすぎます。');
+    if (!result.inv || !result.fwd) throw Error(roleLabel(role) + 'の巻数を解けませんでした。');
+    return {
+      role,
+      fwd: result.fwd,
+      inv: result.inv,
+      wireDia_mm,
+      targetZ_ohm,
+      turnMode,
+      fits: result.inv.fits !== false && result.inv.Nt <= result.fwd.maxTurns,
+    };
+  }
+
+  function typeFactor(role) {
+    const roleState = state.roles[role];
+    if (role === 'detect' && AppState.isDifferential()) {
+      if (roleState.type === 'cross') return 1.0;
+      if (roleState.type === 'crossFerrite') return CONFIG.correction.detectCrossFerriteFactor;
+    }
+    if (roleState.type === 'insert') return effectiveFerriteFactor(role, 'insert');
+    if (roleState.type === 'ferrite') return effectiveFerriteFactor(role, 'ferrite');
+    return 1;
+  }
+
+  function getTypeFactor(role) {
+    return typeFactor(role);
+  }
+
+  function shapeFactor(shape) {
+    return shape === 'bar' ? 0.85 : 1.0;
+  }
+
+  function ferriteFrequencyFactor(material, freq_kHz) {
+    const mnzn = ['2H1', '2G4', '2G8', '2H6'].includes(material);
+    if (mnzn) {
+      if (freq_kHz <= 10) return 1.20;
+      if (freq_kHz <= 100) return 1.00;
+      if (freq_kHz <= 500) return 0.60;
+      if (freq_kHz <= 1000) return 0.35;
+      return 0.20;
+    }
+    if (freq_kHz <= 10) return 0.90;
+    if (freq_kHz <= 100) return 1.00;
+    if (freq_kHz <= 500) return 0.90;
+    if (freq_kHz <= 1000) return 0.75;
+    return 0.60;
+  }
+
+  function ferriteSizeFactor(role, kind) {
+    const roleState = state.roles[role];
+    const prefix = role + '_';
+    if (kind === 'insert') {
+      let sizeRatio = 0;
+      if (roleState.shape === 'rect') {
+        const coreArea = readNumber(prefix + 'insertH', 2.0) * readNumber(prefix + 'insertW', 2.0);
+        const coilArea = readNumber(prefix + 'innerH', 4.0) * readNumber(prefix + 'innerW', 8.0);
+        sizeRatio = coilArea > 0 ? coreArea / coilArea : 0;
+      } else {
+        const coreDia = readNumber(prefix + 'insertDia', 1.0);
+        const innerDia = readNumber(prefix + 'innerDia', 1.0);
+        const coreArea = Math.PI * (coreDia / 2) ** 2;
+        const coilArea = Math.PI * (innerDia / 2) ** 2;
+        sizeRatio = coilArea > 0 ? coreArea / coilArea : 0;
+      }
+      return clamp(0.6 + 0.4 * sizeRatio, 0.6, 1.3);
+    }
+
+    if (roleState.ferriteShape === 'bar') {
+      const area = readNumber(prefix + 'ferriteH', 3.0) * readNumber(prefix + 'ferriteW', 5.0);
+      const equivDia = Math.sqrt(4 * area / Math.PI);
+      return equivDia < 1.0 ? 0.8 : 1.0;
+    }
+    return readNumber(prefix + 'ferriteDia', 1.0) < 1.0 ? 0.8 : 1.0;
+  }
+
+  function ferriteLengthFactor(role, kind) {
+    const prefix = role + '_';
+    const ferriteLength = readNumber(prefix + (kind === 'insert' ? 'insertLength' : 'ferriteLength'), 8.0);
+    const windingLength = readNumber(prefix + 'length', kind === 'ferrite' ? 5.0 : 2.0);
+    return windingLength > 0 ? clamp(ferriteLength / windingLength, 0.7, 1.2) : 1.0;
+  }
+
+  function ferriteFactorModel(role, kind) {
+    const roleState = state.roles[role];
+    const material = readValue('globalFerriteMaterial', '2G4');
+    const materialFactor = material === 'manual'
+      ? readNumber('globalFerriteFactor', CONFIG.ferrite.factors['2G4'])
+      : (CONFIG.ferrite.factors[material] ?? CONFIG.ferrite.factors['2G4']);
+    const freqFactor = ferriteFrequencyFactor(material, readNumber('freq', CONFIG.defaults.frequencyKHz));
+    const sizeFactor = ferriteSizeFactor(role, kind);
+    const lengthFactor = ferriteLengthFactor(role, kind);
+    const shape = kind === 'insert' ? roleState.insertShape : roleState.ferriteShape;
+    const shapeAdj = shapeFactor(shape);
+    const raw = materialFactor * freqFactor * sizeFactor * lengthFactor * shapeAdj;
+    const effective = kind === 'insert' ? clamp(raw, 1.1, 6.0) : clamp(raw, 1.2, 10.0);
+    return { material, materialFactor, freqFactor, sizeFactor, lengthFactor, shapeFactor: shapeAdj, raw, effective };
+  }
+
+  function effectiveFerriteFactor(role, kind) {
+    return ferriteFactorModel(role, kind).effective;
+  }
+
+  function correctionLabel(factor) {
+    if (factor <= 1.1) return '弱';
+    if (factor < 4.0) return '標準';
+    return '強';
+  }
+
+  function couplingByDistance(distance_mm) {
+    const { farMm, midMm, nearMm } = CONFIG.correction.distanceCoupling;
+    if (distance_mm >= farMm) return 1;
+    if (distance_mm >= midMm) return 1.1 + (farMm - distance_mm) / 2 * 0.2;
+    if (distance_mm >= nearMm) return 1.3 + (midMm - distance_mm) / nearMm * 0.2;
+    return clamp(1.5 + (nearMm - distance_mm) / nearMm * 0.3, 1.5, 1.8);
+  }
+
+  function loadFactor() {
+    return 1.0;
+  }
+
+  function excitationPositionFactor() {
+    const position = readValue('excitationPosition', 'outer');
+    if (position === 'inner') return 0.90;
+    if (position === 'separate') return 0.70;
+    return 1.15;
+  }
+
+  function estimateConfiguredZ(singles) {
+    const result = {
+      detectTypeFactor: typeFactor('detect'),
+      loadFactor: loadFactor(),
+      warnings: [],
+    };
+    result.detectCorrectionLabel = correctionLabel(result.detectTypeFactor);
+    result.detectEstimated = singles.detect.fwd.Z * result.detectTypeFactor * result.loadFactor;
+
+    if (AppState.hasDualExcitation()) {
+      const d1 = readNumber('ex1Distance', 1);
+      const d2 = readNumber('ex2Distance', 1);
+      const gap = readNumber('excitationGap', 2);
+      result.couplingFactor1 = couplingByDistance(d1);
+      result.couplingFactor2 = couplingByDistance(d2);
+      result.excitation1TypeFactor = typeFactor('excitation1');
+      result.excitation2TypeFactor = typeFactor('excitation2');
+      result.excitation1CorrectionLabel = correctionLabel(result.excitation1TypeFactor);
+      result.excitation2CorrectionLabel = correctionLabel(result.excitation2TypeFactor);
+      result.excitation1Estimated = singles.excitation1.fwd.Z * result.excitation1TypeFactor * result.couplingFactor1;
+      result.excitation2Estimated = singles.excitation2.fwd.Z * result.excitation2TypeFactor * result.couplingFactor2;
+      result.balanceDelta = Math.abs(d1 - d2);
+      result.excitationGap = gap;
+      if (result.balanceDelta > 0.5) result.warnings.push('励磁1と励磁2の距離差が大きいため、磁気バランスが崩れる可能性があります。');
+      if (readValue('excitationPolarity', 'same') === 'reverse') result.warnings.push('逆相励磁では磁界分布が変わります。実測確認を推奨します。');
+      if (Math.min(d1, d2) < 0.2) result.warnings.push('結合が強すぎる可能性があります。共振・飽和・信号漏れに注意してください。');
+    } else if (AppState.hasExcitation()) {
+      const distance = readNumber('exciteDetectDistance', 1);
+      result.positionFactor = AppState.isSimpleExcitationDetect() ? excitationPositionFactor() : 1;
+      result.couplingFactor = couplingByDistance(distance) * result.positionFactor;
+      if (AppState.isSimpleExcitationDetect()) result.detectEstimated *= result.positionFactor;
+      result.excitationTypeFactor = typeFactor('excitation');
+      result.excitationCorrectionLabel = correctionLabel(result.excitationTypeFactor);
+      result.excitationEstimated = singles.excitation.fwd.Z * result.excitationTypeFactor * result.couplingFactor;
+      if (distance < 0.2) result.warnings.push('結合が強すぎる可能性があります。共振・飽和・信号漏れに注意してください。');
+    }
+    return result;
+  }
+
+  function optimizeDifferential() {
+    if (!AppState.isDifferential()) return null;
+    if (AppState.isCross()) return null;
+    const width = Math.max(0.001, readNumber('flawWidth', 0.5));
+    const depth = Math.max(0, readNumber('inspectDepth', 0.05));
+    const freq_kHz = readNumber('freq', CONFIG.defaults.frequencyKHz);
+    let className = '表面きず';
+    let lo = 0.5;
+    let hi = 1;
+    if (depth >= CONFIG.thresholds.differential.surfaceDepthMm && depth < CONFIG.thresholds.differential.shallowDepthMm) {
+      className = '浅いきず';
+      lo = 1;
+      hi = 1.5;
+    }
+    if (depth >= CONFIG.thresholds.differential.shallowDepthMm) {
+      className = '深いきず';
+      lo = 1.5;
+      hi = 2.5;
+    }
+    if (freq_kHz >= CONFIG.thresholds.differential.highFrequencyKHz) hi *= 0.8;
+    if (freq_kHz < CONFIG.thresholds.differential.lowFrequencyKHz) hi *= 1.2;
+
+    const recLo = width * lo;
+    const recHi = width * hi;
+    const allowLo = recLo * 0.8;
+    const allowHi = recHi * 1.2;
+    const mode = state.diffDistanceMode || 'recommend';
+    const warnings = [];
+    const judgeDistance = value => {
+      if (value < allowLo) return '狭すぎる';
+      if (value > allowHi) return '広すぎる';
+      return 'OK';
+    };
+    let used = null;
+    let status = '推奨';
+
+    if (mode === 'check') {
+      used = readNumber('diffDistance', recLo);
+      status = judgeDistance(used);
+      if (status !== 'OK') warnings.push('差動距離が' + status + 'です。推奨範囲を確認してください。');
+    }
+    return {
+      mode,
+      className,
+      recLo,
+      recHi,
+      allowLo,
+      allowHi,
+      used,
+      usedX: null,
+      usedY: null,
+      crossAngle: null,
+      status,
+      statusX: null,
+      statusY: null,
+      angleStatus: null,
+      reasons: [
+        'きず幅 ' + Render.format(width, 2) + ' mm を基準',
+        className + ' 条件',
+        '通常差動は一軸方向の距離を使用します',
+      ],
+      warnings,
+    };
+  }
+
+  function optimizeDifferentialByProbeStyle() {
+    if (!AppState.isDifferential()) return null;
+    if (AppState.isCross()) return null;
+    const probeStyle = AppState.state.probeStyle || 'surface';
+    const probeLabel = AppState.PROBE_STYLES[probeStyle] || AppState.PROBE_STYLES.surface;
+    const coilLength = Math.max(0.001, readNumber('detect_length', 2));
+    const ratioRanges = ({
+      surface: { sensitivity: [0.2, 0.5], balance: [0.5, 1.0], deep: [1.0, 1.5] },
+      insert: { sensitivity: [0.3, 0.6], balance: [0.6, 1.0], deep: [1.0, 1.8] },
+      through: { sensitivity: [0.5, 1.0], balance: [1.0, 2.0], deep: [2.0, 3.0] },
+    })[probeStyle] || {
+      sensitivity: [0.2, 0.5], balance: [0.5, 1.0], deep: [1.0, 1.5],
+    };
+    const gapRange = range => ({ lo: range[0] * coilLength, hi: range[1] * coilLength });
+    const sensitivity = gapRange(ratioRanges.sensitivity);
+    const balance = gapRange(ratioRanges.balance);
+    const deep = gapRange(ratioRanges.deep);
+    const mode = state.diffDistanceMode || 'recommend';
+    const positionLabel = gap => {
+      if (gap < sensitivity.lo) return gap < 0 ? '感度寄り（重なり気味）' : '感度寄り';
+      if (gap <= sensitivity.hi) return '感度寄り';
+      if (gap <= balance.hi) return '標準';
+      if (gap <= deep.hi) return '深部寄り';
+      return 'やや広め';
+    };
+    let used = null;
+    let centerDistance = null;
+    let status = probeLabel + 'として標準';
+    if (mode === 'check') {
+      used = readNumber('diffDistance', balance.lo);
+      centerDistance = coilLength + used;
+      status = probeLabel + 'として' + positionLabel(used);
+    }
+    return {
+      mode,
+      className: probeLabel,
+      probeStyle,
+      probeLabel,
+      coilLength,
+      sensitivityLo: sensitivity.lo,
+      sensitivityHi: sensitivity.hi,
+      balanceLo: balance.lo,
+      balanceHi: balance.hi,
+      deepLo: deep.lo,
+      deepHi: deep.hi,
+      recLo: balance.lo,
+      recHi: balance.hi,
+      allowLo: sensitivity.lo,
+      allowHi: deep.hi,
+      used,
+      centerDistance,
+      edgeGap: used,
+      usedX: null,
+      usedY: null,
+      crossAngle: null,
+      status,
+      statusX: null,
+      statusY: null,
+      angleStatus: null,
+      reasons: [
+        'プローブ形式: ' + probeLabel,
+        'コイル長 ' + Render.format(coilLength, 2) + ' mm を基準',
+        '端面ギャップをプローブ形式別の倍率で評価',
+      ],
+      warnings: [],
+    };
+  }
+
+  function optimizeDifferentialByProbeStyleV2() {
+    if (!AppState.isDifferential()) return null;
+    if (AppState.isCross()) return null;
+
+    const probeStyle = AppState.state.probeStyle || 'surface';
+    const probeLabel = AppState.PROBE_STYLES[probeStyle] || AppState.PROBE_STYLES.surface;
+    const coilLength = Math.max(0.001, readNumber('detect_length', 2));
+    const ratiosByStyle = {
+      surface: { sensitivity: [0.2, 0.5], standard: [0.5, 1.0], deep: [1.0, 1.5] },
+      insert: { sensitivity: [0.3, 0.6], standard: [0.6, 1.0], deep: [1.0, 1.8] },
+      through: { sensitivity: [0.5, 1.0], standard: [1.0, 2.0], deep: [2.0, 3.0] },
+    };
+    const ratios = ratiosByStyle[probeStyle] || ratiosByStyle.surface;
+    const scale = ([lo, hi]) => ({ lo: lo * coilLength, hi: hi * coilLength });
+    const sensitivity = scale(ratios.sensitivity);
+    const standard = scale(ratios.standard);
+    const deep = scale(ratios.deep);
+    const mode = 'check';
+
+    const currentPosition = gap => {
+      if (gap < 0) return '推奨範囲外';
+      if (gap < sensitivity.lo) return '感度寄り';
+      if (gap <= sensitivity.hi) return '感度寄り';
+      if (gap <= standard.hi) return 'バランス範囲';
+      if (gap <= deep.hi) return '深部寄り';
+      if (gap <= deep.hi * 1.2) return 'やや広め';
+      return '推奨範囲外';
+    };
+    const judgment = position => {
+      if (position === 'バランス範囲') return probeLabel + 'としてバランス範囲';
+      if (position === '感度寄り') return probeLabel + 'として感度寄り';
+      if (position === '深部寄り') return probeLabel + 'として深部探傷寄り';
+      if (position === 'やや広め') return probeLabel + 'としてやや広め';
+      return probeLabel + 'として推奨範囲外';
+    };
+
+    const edgeGap = readNumber('diffDistance', standard.lo);
+    const centerDistance = coilLength / 2 + edgeGap + coilLength / 2;
+    const position = currentPosition(edgeGap);
+
+    return {
+      version: 2,
+      mode,
+      probeStyle,
+      probeLabel,
+      coilLength,
+      centerDistance,
+      edgeGap,
+      position,
+      judgment: judgment(position),
+      sensitivityLo: sensitivity.lo,
+      sensitivityHi: sensitivity.hi,
+      standardLo: standard.lo,
+      standardHi: standard.hi,
+      deepLo: deep.lo,
+      deepHi: deep.hi,
+      recLo: standard.lo,
+      recHi: standard.hi,
+      allowLo: sensitivity.lo,
+      allowHi: deep.hi,
+      used: edgeGap,
+      status: judgment(position),
+      reasons: [
+        'プローブ形式: ' + probeLabel,
+        'コイル長 ' + Render.format(coilLength, 2) + ' mm を基準',
+        '中心間距離と端面ギャップを分けて評価',
+      ],
+      warnings: [],
+    };
+  }
+
+  function calculateDesign() {
+    AppState.syncDualExcitationCommon();
+    const singles = Object.fromEntries(AppState.activeRoles().map(role => [role, calculateRole(role)]));
+    return {
+      singles,
+      estimated: estimateConfiguredZ(singles),
+      differential: optimizeDifferentialByProbeStyleV2(),
+    };
+  }
+
+  return ({
+    readNumber,
+    readValue,
+    ferriteFactorModel,
+    effectiveFerriteFactor,
+    getTypeFactor,
+    calculateRole,
+    calculateDesign,
+  });
+})();
+
+const ECTBridge = (() => {
+  function toHzFromKHz(kHz) {
+    const v = Number(kHz);
+    return Number.isFinite(v) ? v * 1000 : null;
+  }
+
+  function toKHzFromText(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const text = String(value).trim();
+    const num = parseFloat(text.replace(',', ''));
+    if (!Number.isFinite(num) || num <= 0) return null;
+    if (/MHz/i.test(text)) return num * 1000;
+    if (/kHz/i.test(text)) return num;
+    if (/Hz/i.test(text) && !/kHz/i.test(text)) return num / 1000;
+    return num;
+  }
+
+  function normalizeFrequencyKHz(recordOrJson) {
+    const candidates = [
+      recordOrJson.frequency_kHz,
+      recordOrJson.freq_kHz,
+      recordOrJson.frequencyKHz,
+      recordOrJson.fOpt_kHz,
+      recordOrJson.recommendedFrequency_kHz,
+      recordOrJson.frequency
+    ];
+    for (const c of candidates) {
+      const v = toKHzFromText(c);
+      if (v !== null) return v;
+    }
+    return null;
+  }
+
+  function hasDualConfig(text) {
+    return /励磁2個|2励磁|dual/i.test(String(text || ''));
+  }
+
+  function configFromJson(data) {
+    const differential = data.needDifferential === true;
+    const excitation = data.needExcitation === true;
+    const dual = hasDualConfig(data.config);
+    if (dual && differential) return 'dualExcitationDifferential';
+    if (dual) return 'dualExcitationDetect';
+    if (differential && excitation) return 'excitationDifferential';
+    if (differential) return 'differential';
+    if (excitation) return 'excitationDetect';
+    return 'single';
+  }
+
+  function parseDistanceMm(value) {
+    const numbers = String(value || '').match(/\d+(?:\.\d+)?/g)?.map(Number).filter(Number.isFinite) || [];
+    if (!numbers.length) return null;
+    return numbers.length >= 2 ? (numbers[0] + numbers[1]) / 2 : numbers[0];
+  }
+
+  function parseAverageNumber(value) {
+    const numbers = String(value || '').match(/\d+(?:\.\d+)?/g)?.map(Number).filter(Number.isFinite) || [];
+    if (!numbers.length) return null;
+    return numbers.length >= 2 ? (numbers[0] + numbers[1]) / 2 : numbers[0];
+  }
+
+  function parseFrequencyKHz(data) {
+    return normalizeFrequencyKHz(data)
+      ?? normalizeFrequencyKHz(data.initialCoilDesign || {})
+      ?? toKHzFromText(data.optimalFrequency_kHz)
+      ?? toKHzFromText(data.recommendedFrequency);
+  }
+
+  function apply(jsonText) {
+    const applied = [];
+    const skipped = [];
+    let data = null;
+    try {
+      data = JSON.parse(jsonText);
+    } catch (error) {
+      return { ok: false, message: 'JSONを読み込めませんでした。形式を確認してください。', applied, skipped };
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return { ok: false, message: 'JSONの中身がオブジェクトではありません。', applied, skipped };
+    }
+    if (data.probeStyle && AppState.PROBE_STYLES[data.probeStyle]) {
+      AppState.setValue('probeStyle', data.probeStyle);
+      applied.push('プローブ形式: ' + AppState.PROBE_STYLES[data.probeStyle]);
+    }
+
+    const nextConfig = configFromJson(data);
+    AppState.setValue('config', nextConfig);
+    applied.push('コイル構成: ' + (CONFIG.coilConfigs.find(item => item.value === nextConfig)?.label || nextConfig));
+
+    const ferriteRecommended = String(data.ferrite || '').includes('推奨');
+    if (data.needCross === true && AppState.isDifferential()) {
+      AppState.setRoleValue('detect', 'type', ferriteRecommended ? 'crossFerrite' : 'cross');
+      applied.push('検出コイルタイプ: ' + (ferriteRecommended ? 'クロス差動＋フェライト' : 'クロス差動'));
+    } else if (data.needCross === true) {
+      skipped.push('needCross: 差動構成ではないため未反映');
+    }
+
+    const distance = parseDistanceMm(data.recommendedDiffSpacing);
+    if (distance !== null && AppState.isDifferential()) {
+      AppState.setInputValue('diffDistance', String(Number(distance.toFixed(3))));
+      applied.push('端面ギャップ: ' + Number(distance.toFixed(3)) + ' mm');
+    } else if (data.recommendedDiffSpacing) {
+      skipped.push('recommendedDiffSpacing: 差動構成ではないため未反映');
+    } else {
+      skipped.push('recommendedDiffSpacing: JSON内に数値がありません');
+    }
+
+    const freqKHz = parseFrequencyKHz(data);
+    if (freqKHz !== null) {
+      AppState.setInputValue('freq', String(Number(freqKHz.toFixed(3))));
+      applied.push('周波数: ' + Number(freqKHz.toFixed(3)) + ' kHz');
+    } else {
+      skipped.push('周波数: JSON内に読み取れる周波数キーがありません');
+    }
+
+    const initial = data.initialCoilDesign || {};
+    const wireDia = parseAverageNumber(initial.wireHint);
+    const detectTargetZ = parseAverageNumber(initial.detectTargetZ);
+    const excitationTargetZ = parseAverageNumber(initial.excitationTargetZ);
+    const activeRoles = AppState.activeRoles();
+    if (wireDia !== null) {
+      activeRoles.forEach(role => AppState.setInputValue(role + '_wireDia', String(Number(wireDia.toFixed(3)))));
+      applied.push('線径初期値: ' + Number(wireDia.toFixed(3)) + ' mm');
+    }
+    if (detectTargetZ !== null && activeRoles.includes('detect')) {
+      AppState.setInputValue('detect_targetZ', String(Number(detectTargetZ.toFixed(3))));
+      applied.push('検出コイル目標Z: ' + Number(detectTargetZ.toFixed(3)) + ' Ω');
+    }
+    if (excitationTargetZ !== null) {
+      activeRoles.filter(role => role !== 'detect').forEach(role => {
+        AppState.setInputValue(role + '_targetZ', String(Number(excitationTargetZ.toFixed(3))));
+      });
+      if (activeRoles.some(role => role !== 'detect')) {
+        applied.push('励磁コイル目標Z: ' + Number(excitationTargetZ.toFixed(3)) + ' Ω');
+      }
+    }
+
+    if (data.recommendedCable) {
+      AppState.state.ectImport = { ...(AppState.state.ectImport || {}), recommendedCable: String(data.recommendedCable), raw: data };
+      applied.push('ケーブル初期推奨: ' + data.recommendedCable);
+    } else {
+      AppState.state.ectImport = { ...(AppState.state.ectImport || {}), raw: data };
+      skipped.push('recommendedCable: JSON内にありません');
+    }
+
+    if (data.ferrite) {
+      AppState.setInputValue('ectFerriteMemo', String(data.ferrite));
+      applied.push('フェライトメモ: ' + data.ferrite);
+      if (ferriteRecommended && !['cross', 'crossFerrite'].includes(AppState.state.roles.detect.type)) {
+        AppState.setRoleValue('detect', 'type', 'insert');
+        applied.push('検出コイルタイプ: 空芯＋中心フェライト');
+      } else if (ferriteRecommended && AppState.state.roles.detect.type === 'cross') {
+        skipped.push('フェライト推奨: クロス差動指定を優先したため中心フェライトへは変更しませんでした');
+      }
+    } else {
+      skipped.push('ferrite: JSON内にありません');
+    }
+
+    return { ok: true, data, applied, skipped };
+  }
+
+  return ({ apply, toHzFromKHz, toKHzFromText, normalizeFrequencyKHz });
+})();
+
+const CableSelection = (() => {
+  const CAP_PF_PER_M = CONFIG.cable.capacitancePfPerM;
+  const STRUCTURE_LABELS = CONFIG.cable.structureLabels;
+  const STRUCTURE_KEY_BY_LABEL = Object.fromEntries(
+    Object.entries(STRUCTURE_LABELS).map(([key, label]) => [label, key])
+  );
+
+  const ENV_LABELS = {
+    normal: '通常',
+    oil: '耐油',
+    heat: '耐熱',
+    flex: '高屈曲',
+    noise: '高ノイズ',
+  };
+
+  const LOAD_LABELS = {
+    standard: '標準',
+    highZ: '高インピーダンス',
+    lowZ: '低インピーダンス',
+  };
+
+  function clamp(value, low, high) {
+    return Math.min(high, Math.max(low, value));
+  }
+
+  function getCableStructureKey(labelOrKey) {
+    return Object.prototype.hasOwnProperty.call(CAP_PF_PER_M, labelOrKey)
+      ? labelOrKey
+      : STRUCTURE_KEY_BY_LABEL[labelOrKey];
+  }
+
+  function getCableStructureLabel(labelOrKey) {
+    const key = getCableStructureKey(labelOrKey);
+    return STRUCTURE_LABELS[key] || labelOrKey;
+  }
+
+  function getCableCapacitance(labelOrKey) {
+    const key = getCableStructureKey(labelOrKey);
+    return CAP_PF_PER_M[key] || CAP_PF_PER_M.coaxial;
+  }
+
+  function configInfo(configValue) {
+    const cfg = CONFIG.coilConfigs.find(item => item.value === configValue) || CONFIG.coilConfigs[0];
+    const map = {
+      single: { cores: '2芯 + シールド', coreCount: 2, note: '検出2芯' },
+      differential: { cores: '4芯（2ペア） + シールド', coreCount: 4, note: '差動A/Bを2ペア' },
+      excitationDetect: { cores: '4芯 + シールド', coreCount: 4, note: '励磁2芯 + 検出2芯' },
+      excitationDifferential: { cores: '6芯 + シールド', coreCount: 6, note: '励磁2芯 + 差動検出4芯' },
+      dualExcitationDetect: { cores: '6芯 + シールド', coreCount: 6, note: '励磁1 2芯 + 励磁2 2芯 + 検出2芯' },
+      dualExcitationDifferential: { cores: '8芯 + シールド', coreCount: 8, note: '励磁1 2芯 + 励磁2 2芯 + 差動検出4芯' },
+    };
+    return { ...cfg, ...(map[configValue] || map.single) };
+  }
+
+  function maxCableLength(freq_kHz, env) {
+    let max = CONFIG.cable.maxRecommendedLengthM.default;
+    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz) max = CONFIG.cable.maxRecommendedLengthM.highFrequency;
+    else if (freq_kHz >= CONFIG.thresholds.cable.midHighFrequencyKHz) max = CONFIG.cable.maxRecommendedLengthM.midHighFrequency;
+    else if (freq_kHz >= CONFIG.thresholds.cable.midFrequencyKHz) max = CONFIG.cable.maxRecommendedLengthM.midFrequency;
+    if (env === 'noise') max *= CONFIG.cable.highNoiseLengthFactor;
+    return max;
+  }
+
+  function chooseStructure(info, freq_kHz, length_m, env) {
+    if (env === 'noise') return STRUCTURE_LABELS.twistedPairCompositeMultiCore;
+    if (info.dual || (info.differential && info.excitation)) return STRUCTURE_LABELS.twistedPairCompositeMultiCore;
+    if (info.differential) return STRUCTURE_LABELS.twistedPairShield;
+    if (info.excitation) return STRUCTURE_LABELS.twistedPairCompositeMultiCore;
+    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz && length_m <= CONFIG.cable.defaultLengthM) return STRUCTURE_LABELS.coaxial;
+    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz) return STRUCTURE_LABELS.twistedPairShield;
+    if (length_m <= 1.5 && env === 'normal') return STRUCTURE_LABELS.multiCoreShield;
+    return STRUCTURE_LABELS.twistedPairShield;
+  }
+
+  function chooseAwg(info, freq_kHz, length_m, env) {
+    if (length_m >= 3 || info.excitation) return 'AWG26';
+    if (env === 'flex') return 'AWG28〜30';
+    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz) return 'AWG28';
+    return 'AWG28';
+  }
+
+  function candidates(structure, env, info) {
+    const items = [];
+    const structureKey = getCableStructureKey(structure);
+    if (structureKey === 'coaxial') items.push('モガミ 2929', '相当低容量同軸');
+    if (structureKey === 'twistedPairShield') items.push('モガミ 2929', '協和ハーモネット KRTSW 系', '相当品');
+    if (structureKey === 'multiCoreShield') items.push('モガミ 2930', 'タツタ PCPVV-SW 系', '相当品');
+    if (structureKey === 'twistedPairCompositeMultiCore') items.push('モガミ 2930', '協和ハーモネット KRTSW 系', 'タツタ PCPVV-SW 系', '相当品');
+    if (env === 'oil') items.push('耐油シース相当品');
+    if (env === 'heat') items.push('耐熱シース相当品');
+    if (env === 'flex') items.push('高屈曲ロボットケーブル相当品');
+    if (info.coreCount >= 6 && !items.includes('モガミ 2930')) items.unshift('モガミ 2930');
+    return [...new Set(items)].join(' / ');
+  }
+
+  function capJudge(percent) {
+    if (percent <= CONFIG.thresholds.cable.lowImpactPercent) return '影響小';
+    if (percent <= CONFIG.thresholds.cable.cautionImpactPercent) return '注意';
+    return '要注意';
+  }
+
+  function calculate(params) {
+    const configValue = params.config || AppState.state.config;
+    const info = configInfo(configValue);
+    const freq_kHz = Number(params.freq_kHz);
+    const length_m = Number(params.length_m);
+    const env = params.env || 'normal';
+    const load = params.load || 'standard';
+    if (!Number.isFinite(freq_kHz) || freq_kHz <= 0) throw Error('使用周波数は0より大きい値を入力してください。');
+    if (!Number.isFinite(length_m) || length_m <= 0) throw Error('ケーブル長さは0より大きい値を入力してください。');
+
+    const structure = getCableStructureLabel(chooseStructure(info, freq_kHz, length_m, env));
+    const baseCap = getCableCapacitance(structure);
+    const totalCap = baseCap * length_m;
+    const capFormula = CONFIG.cable.capacitanceImpactFormula;
+    const capImpactPercent = clamp((freq_kHz / capFormula.freqBaseKHz) * (totalCap / capFormula.capBasePf) * capFormula.multiplier, 0, 100);
+    const maxLength = maxCableLength(freq_kHz, env);
+    const recommendedCable = AppState.state.ectImport?.recommendedCable || '';
+    const ground = env === 'noise'
+      ? '基本は計測器側1点接地。高ノイズ時のみ両側接地またはコンデンサ接地を実機確認。'
+      : '計測器側1点接地';
+    const reasons = [
+      info.label + 'は ' + info.note + ' のため、必要芯数は ' + info.cores + ' を目安にします。',
+      info.differential ? '差動A/Bの容量バランスを優先し、ペア構造とシールドを推奨します。' : '差動なしのため、検出線はノイズ影響を受けやすい前提で評価します。',
+      info.excitation ? '励磁線と検出線は別ペアにして、誘導結合と信号漏れを抑えます。' : '励磁線が無い構成なので、検出線のシールド基準を明確にします。',
+      ENV_LABELS[env] + '環境、' + LOAD_LABELS[load] + '負荷として簡易評価しました。',
+    ];
+    if (recommendedCable) reasons.push('ECT DESIGNER推奨: ' + recommendedCable + ' を初期候補に含めて確認してください。');
+    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz) reasons.push('1000kHz以上のため、短尺・低容量タイプを優先します。');
+    if (length_m >= CONFIG.thresholds.cable.longCableM) reasons.push('2m以上のため、静電容量の影響を強めに見ます。');
+
+    const notices = [
+      '差動A/Bは同じケーブル長、同じペア構造で容量バランスを合わせてください。',
+      '励磁線と検出線は可能な限り別ペアに分けてください。',
+      '樹脂筐体ではシールド基準点を計測器側へ寄せてください。',
+      '長尺ケーブルでは容量増加で高周波特性が落ちます。',
+      '最終確認は実機・LCRメータ・ノイズ確認で行ってください。',
+    ];
+    if (!info.differential) notices.push('差動なしの検出線はノイズに弱いため、配線経路とシールド接地を慎重に確認してください。');
+    if (length_m > maxLength) notices.push('入力ケーブル長が最大推奨長を超えています。短縮または低容量ケーブルを検討してください。');
+    if (capImpactPercent > CONFIG.thresholds.cable.cautionImpactPercent) notices.push('静電容量影響が大きいため、周波数低下・短尺化・低容量ケーブルを検討してください。');
+
+    return {
+      configLabel: info.label,
+      awg: chooseAwg(info, freq_kHz, length_m, env),
+      cores: info.cores,
+      structure,
+      candidates: candidates(structure, env, info),
+      capImpactPercent,
+      capJudge: capJudge(capImpactPercent),
+      totalCap,
+      maxLength,
+      ground,
+      reasons,
+      notices,
+    };
+  }
+
+  return ({ calculate, configInfo, ENV_LABELS, LOAD_LABELS });
+})();
+
+/* Render layer */
+const Render = (() => {
+  const { state } = AppState;
+  let previewRenderTimer = null;
+  let renderAllScheduled = false;
+  let roleInputsScheduled = false;
+  let couplingScheduled = false;
+  let cableScheduled = false;
+  const scheduledRoles = new Set();
+  let lastDesignResult = null;
+  const $ = id => document.getElementById(id);
+  const setHtml = (id, html) => {
+    const element = $(id);
+    if (element) element.innerHTML = html;
+  };
+  const scheduleFrame = callback => {
+    if (typeof window !== 'undefined' && window.requestAnimationFrame) window.requestAnimationFrame(callback);
+    else setTimeout(callback, 16);
+  };
+
+  function format(value, digits = 2) {
+    return Number.isFinite(value) ? value.toFixed(digits) : '-';
+  }
+
+  function formatInt(value) {
+    return Number.isFinite(value) ? Math.round(value).toLocaleString() : '-';
+  }
+
+  function showError(message, targetId = 'errorArea') {
+    const element = $(targetId);
+    if (!element) return;
+    element.innerHTML = '⚠️ ' + message;
+    element.className = 'error-box';
+  }
+
+  function clearError(targetId = 'errorArea') {
+    const element = $(targetId);
+    if (!element) return;
+    element.innerHTML = '';
+    element.className = 'hidden';
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    })[char]);
+  }
+
+  function htmlText(value, rawHtml = false) {
+    return rawHtml ? String(value ?? '') : escapeHtml(value);
+  }
+
+  function attr(name, value) {
+    return value === undefined || value === null || value === false ? '' : ' ' + name + '="' + escapeHtml(value) + '"';
+  }
+
+  function eventAttr(name, value) {
+    return value ? ' ' + name + '="' + String(value) + '"' : '';
+  }
+
+  function inputGroupClass(full, extraClass) {
+    return ['input-group', full ? 'full' : '', extraClass || ''].filter(Boolean).join(' ');
+  }
+
+  function createNumericField(options = {}) {
+    const {
+      id,
+      label,
+      value = '',
+      unit = '',
+      step,
+      min,
+      max,
+      full = false,
+      onInput,
+      onChange,
+      extraClass = '',
+      disabled = false,
+      rawHtml = false,
+    } = options;
+    return '<div class="' + inputGroupClass(full, extraClass) + '">' +
+      '<div class="input-label">' + htmlText(label, rawHtml) + '</div>' +
+      '<div class="input-row"><input type="number"' +
+      attr('id', id) +
+      attr('value', value) +
+      attr('step', step) +
+      attr('min', min) +
+      attr('max', max) +
+      (disabled ? ' disabled' : '') +
+      eventAttr('oninput', onInput) +
+      eventAttr('onchange', onChange) +
+      '><span class="input-unit">' + htmlText(unit, rawHtml) + '</span></div></div>';
+  }
+
+  function createSelectField(options = {}) {
+    const {
+      id,
+      label,
+      options: selectOptions = [],
+      value = selectOptions[0]?.value || '',
+      full = false,
+      onChange,
+      extraClass = '',
+      disabled = false,
+      rawHtml = false,
+    } = options;
+    return '<div class="' + inputGroupClass(full, extraClass) + '">' +
+      '<div class="input-label">' + htmlText(label, rawHtml) + '</div>' +
+      '<div class="input-row"><select' +
+      attr('id', id) +
+      (disabled ? ' disabled' : '') +
+      eventAttr('onchange', onChange) +
+      '>' +
+      selectOptions.map(option => {
+        const optionValue = option.value ?? '';
+        const optionLabel = option.label ?? optionValue;
+        return '<option value="' + escapeHtml(optionValue) + '"' + (value === optionValue ? ' selected' : '') + '>' +
+          htmlText(optionLabel, option.rawHtml || rawHtml) +
+          '</option>';
+      }).join('') +
+      '</select></div></div>';
+  }
+
+  function createTextareaField(options = {}) {
+    const {
+      id,
+      label,
+      value = '',
+      placeholder = '',
+      full = false,
+      rows,
+      onInput,
+      onChange,
+      extraClass = '',
+      disabled = false,
+      rawHtml = false,
+    } = options;
+    return '<div class="' + inputGroupClass(full, extraClass) + '">' +
+      (label ? '<div class="input-label">' + htmlText(label, rawHtml) + '</div>' : '') +
+      '<textarea class="textarea-input"' +
+      attr('id', id) +
+      attr('placeholder', placeholder) +
+      attr('rows', rows) +
+      (disabled ? ' disabled' : '') +
+      eventAttr('oninput', onInput) +
+      eventAttr('onchange', onChange) +
+      '>' + escapeHtml(value) + '</textarea></div>';
+  }
+
+  function createChoiceGroup(options = {}) {
+    const {
+      options: choiceOptions = [],
+      selectedValue,
+      onClick,
+      twoColumns = false,
+      full = false,
+      label = '',
+      extraClass = '',
+      rawHtml = false,
+    } = options;
+    const classes = twoColumns ? 'choice-grid two' : 'choice-grid';
+    const buttons = '<div class="' + classes + '">' + choiceOptions.map(option =>
+      '<button type="button" class="choice-btn ' + (selectedValue === option.value ? 'sel' : '') + '"' +
+      eventAttr('onclick', typeof onClick === 'function' ? onClick(option.value) : onClick) +
+      '>' + htmlText(option.label, option.rawHtml || rawHtml) + '</button>'
+    ).join('') + '</div>';
+    if (!full && !label && !extraClass) return buttons;
+    return '<div class="' + inputGroupClass(full, extraClass) + '">' +
+      (label ? '<div class="input-label">' + htmlText(label, rawHtml) + '</div>' : '') +
+      buttons +
+      '</div>';
+  }
+
+  function createInfoNote(options = {}) {
+    const { text = '', full = false, extraClass = '', rawHtml = false } = options;
+    return '<div class="' + inputGroupClass(full, extraClass) + '"><div class="section-note" style="margin:0">' +
+      htmlText(text, rawHtml) +
+      '</div></div>';
+  }
+
+  function optionButtons(options, selectedValue, onClick, twoColumns = false) {
+    return createChoiceGroup({ options, selectedValue, onClick, twoColumns });
+  }
+
+  function card(label, value, unit = '', className = '', detail = '') {
+    const unitHtml = unit + (detail ? '<br>' + detail : '');
+    return '<div class="result-card ' + className + '"><div class="result-label">' + label + '</div><div class="result-value">' + value + '</div><div class="result-unit">' + unitHtml + '</div></div>';
+  }
+
+  function list(items) {
+    return '<div class="result-card full"><ul class="result-list">' + items.map(item => '<li>' + item + '</li>').join('') + '</ul></div>';
+  }
+
+  function getInputValue(id, defaultValue) {
+    return state.inputs && state.inputs[id] !== undefined ? state.inputs[id] : defaultValue;
+  }
+
+  function readRenderNumber(id, fallback = null) {
+    const elementValue = $(id)?.value;
+    const raw = elementValue !== undefined ? elementValue : getInputValue(id, fallback);
+    const value = parseFloat(raw);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function numberInput(id, label, value, unit, step = '0.1', min = '0.001') {
+    const currentValue = getInputValue(id, value);
+    return createNumericField({
+      id,
+      label,
+      value: currentValue,
+      unit,
+      step,
+      min,
+      onInput: "UI.saveInputValue('" + id + "', this.value); UI.updateRolePreviewFromInput('" + id + "')",
+    });
+  }
+
+  function selectInput(id, label, options) {
+    const currentValue = getInputValue(id, options[0]?.value || '');
+    return createSelectField({
+      id,
+      label,
+      options,
+      value: currentValue,
+      onChange: "UI.saveInputValue('" + id + "', this.value)",
+    });
+  }
+
+  function getCoilTypeLabel(type) {
+    if (type === 'air') return '空芯';
+    if (type === 'insert' || type === 'air_ferrite') return '空芯＋中心フェライト';
+    if (type === 'ferrite') return 'フェライト直巻き';
+    if (type === 'cross') return 'クロス差動';
+    if (type === 'crossFerrite') return 'クロス差動＋フェライト';
+    return '';
+  }
+
+  function getRoleSummaryLabel(role) {
+    const typeLabel = getCoilTypeLabel(state.roles[role].type);
+    if (role !== 'detect') return typeLabel;
+    const parts = [AppState.isDifferential() ? '差動' : '検出', typeLabel];
+    return parts.filter(Boolean).join(' / ');
+  }
+
+  function note(text) {
+    return createInfoNote({ text, full: true });
+  }
+
+  function inputSubhead(title, detail = '', action = '') {
+    return '<div class="input-subhead"><div class="input-subhead-title">' +
+      title + (detail ? '<span>' + detail + '</span>' : '') +
+      '</div>' + (action ? '<div class="input-subhead-action">' + action + '</div>' : '') + '</div>';
+  }
+
+  function roleInput(role, name, label, value, unit, step = '0.1', min = '0.001') {
+    return numberInput(role + '_' + name, CONFIG.roles[role].prefix + label, value, unit, step, min);
+  }
+
+  function hasAdjustableFerriteRole() {
+    return AppState.activeRoles().some(role => ['insert', 'ferrite'].includes(state.roles[role].type));
+  }
+
+  function globalFerriteInputs() {
+    if (!hasAdjustableFerriteRole()) return [];
+    const material = getInputValue('globalFerriteMaterial', '2G4');
+    const rows = [
+      createSelectField({
+        id: 'globalFerriteMaterial',
+        label: 'フェライト材質',
+        options: CONFIG.ferrite.materials,
+        value: material,
+        onChange: 'UI.pickGlobalFerriteMaterial(this.value)',
+      }),
+    ];
+    if (material === 'manual') {
+      rows.push(numberInput('globalFerriteFactor', '基本補正係数', CONFIG.ferrite.factors['2G4'], '×', '0.1', '0.01'));
+    }
+    return rows;
+  }
+
+  function ferriteFactorNote(role, kind) {
+    return '<div class="input-group full"><div class="section-note" id="ferriteFactorNote_' + role + '" style="margin:0">' + ferriteFactorText(role, kind) + '</div></div>';
+  }
+
+  function ferriteFactorText(role, kind) {
+    const model = Calculation.ferriteFactorModel(role, kind);
+    return '実効フェライト補正：材質 ' + format(model.materialFactor, 2) +
+      ' × 周波数 ' + format(model.freqFactor, 2) +
+      ' × サイズ ' + format(model.sizeFactor, 2) +
+      ' × 長さ ' + format(model.lengthFactor, 2) +
+      ' × 形状 ' + format(model.shapeFactor, 2) +
+      ' = 約' + format(model.effective, 2) + '倍';
+  }
+
+  function updateFerriteFactorNote(role) {
+    const roleState = state.roles[role];
+    const element = $('ferriteFactorNote_' + role);
+    if (!element) return;
+    if (roleState.type === 'insert') element.textContent = ferriteFactorText(role, 'insert');
+    if (roleState.type === 'ferrite') element.textContent = ferriteFactorText(role, 'ferrite');
+  }
+
+  function roleChoice(role, key, options, label = '') {
+    return createChoiceGroup({
+      options,
+      selectedValue: state.roles[role][key],
+      onClick: value => "UI.pickRole('" + role + "','" + key + "','" + value + "')",
+      twoColumns: true,
+      full: true,
+      label,
+    });
+  }
+
+  function shapeOptionsForRole(role) {
+    if (role === 'detect' && AppState.isCross()) {
+      return CONFIG.shapes.map(option => option.value === 'cyl' ? { ...option, label: '球形コイル' } : option);
+    }
+    return CONFIG.shapes;
+  }
+
+  function shapeSubheadLabel(role) {
+    const roleState = state.roles[role];
+    if (roleState.shape === 'cyl') return role === 'detect' && AppState.isCross() ? '球形コイル' : '円筒コイル';
+    return '角形コイル';
+  }
+
+  function excitationPositionSelect() {
+    const currentValue = getInputValue('excitationPosition', 'outer');
+    return createSelectField({
+      id: 'excitationPosition',
+      label: 'コイル配置',
+      options: CONFIG.excitationPositions,
+      value: currentValue,
+      full: true,
+      onChange: "UI.saveInputValue('excitationPosition', this.value)",
+    });
+  }
+
+  function modeSwitch(role, isTurnMode) {
+    return "<div class=\"turn-mode-switch\" onclick=\"UI.toggleTurnMode('" + role + "', " + (!isTurnMode) + ")\">" +
+      "<button type=\"button\" class=\"mini-check " + (!isTurnMode ? 'selected' : '') + "\" onclick=\"event.stopPropagation(); UI.toggleTurnMode('" + role + "', false)\">" +
+      "<span class=\"mode-mark\">" + (!isTurnMode ? '✓' : '-') + "</span><span>目標Z</span></button>" +
+      "<button type=\"button\" class=\"mini-check " + (isTurnMode ? 'selected' : '') + "\" onclick=\"event.stopPropagation(); UI.toggleTurnMode('" + role + "', true)\">" +
+      "<span class=\"mode-mark\">" + (isTurnMode ? '✓' : '-') + "</span><span>巻数</span></button>" +
+      "</div>";
+  }
+
+  function renderConfigChoices() {
+    setHtml('configChoices', CONFIG.coilConfigs.map(option =>
+      '<button type="button" class="choice-btn ' + (state.config === option.value ? 'sel' : '') + '" onclick="UI.pick(\'config\',\'' + option.value + '\')">' + option.label + '</button>'
+    ).join(''));
+  }
+
+  function renderProbeStyleChoices() {
+    const labels = AppState.PROBE_STYLES;
+    setHtml('probeStyleChoices', Object.entries(labels).map(([value, label]) =>
+      '<button type="button" class="choice-btn ' + (state.probeStyle === value ? 'sel' : '') + '" onclick="UI.pick(\'probeStyle\',\'' + value + '\')">' + label + '</button>'
+    ).join(''));
+  }
+
+  function renderConfigSummary() {
+    const cfg = CONFIG.coilConfigs.find(item => item.value === state.config) || CONFIG.coilConfigs[0];
+    const chips = [
+      '<span class="summary-chip"><strong>プローブ</strong> ' + (AppState.PROBE_STYLES[state.probeStyle] || '-') + '</span>',
+      '<span class="summary-chip"><strong>構成</strong> ' + cfg.label + '</span>',
+      '<span class="summary-chip"><strong>検出</strong> ' + getRoleSummaryLabel('detect') + '</span>',
+    ];
+    if (AppState.hasExcitation()) {
+      if (AppState.hasDualExcitation()) {
+        chips.push('<span class="summary-chip"><strong>励磁</strong> 共通設計 ×2 / ' + getRoleSummaryLabel('excitation1') + '</span>');
+      } else {
+        chips.push('<span class="summary-chip"><strong>励磁</strong> ' + getRoleSummaryLabel('excitation') + '</span>');
+      }
+    } else {
+      chips.push('<span class="summary-chip"><strong>励磁</strong> なし</span>');
+    }
+    setHtml('configSummary', '<div class="section-note">選択中：</div><div class="compact-summary">' + chips.join('') + '</div>');
+  }
+
+  function renderTypeChoices() {
+    const roles = AppState.hasDualExcitation()
+      ? AppState.activeRoles().filter(role => role !== 'excitation2')
+      : AppState.activeRoles();
+    const cards = roles.map(role => {
+      const roleState = state.roles[role];
+      const options = role === 'detect' && AppState.isDifferential()
+        ? CONFIG.differentialDetectCoilTypes
+        : CONFIG.coilTypes;
+      const roleLabel = AppState.hasDualExcitation() && role === 'excitation1' ? '励磁共通' : CONFIG.roles[role].label;
+      return '<div class="result-card full"><div class="section-note" style="margin:0 0 8px">' + roleLabel + 'タイプ</div>' +
+        optionButtons(options, roleState.type, value => "UI.pickRole('" + role + "','type','" + value + "')") +
+        '</div>';
+    });
+    $('typeNote').textContent = AppState.hasDualExcitation()
+      ? '2励磁構成では、励磁A/Bを左右対称の共通励磁コイル設計として扱います。'
+      : AppState.isDifferential()
+        ? '差動構成では、検出コイルタイプとしてクロス差動とクロス差動＋フェライトを選択できます。'
+        : '検出・励磁コイルのタイプを独立して設定できます。';
+    setHtml('typeChoices', cards.join(''));
+  }
+
+  function buildRoleRows(role) {
+    const roleState = state.roles[role];
+    const isTurnMode = (roleState.turnMode || 'targetZ') === 'turns';
+    const rows = [
+      inputSubhead('基本条件', '線径と設計目標', modeSwitch(role, isTurnMode)),
+      roleInput(role, 'wireDia', '線径', '0.05', 'mm', '0.01'),
+      isTurnMode
+        ? roleInput(role, 'turns', '希望巻数', '50', 'T', '1', '1')
+        : roleInput(role, 'targetZ', '目標Z', CONFIG.roles[role].defaultTargetZ, 'Ω', '1', '0.01'),
+      roleChoice(role, 'shape', shapeOptionsForRole(role), CONFIG.roles[role].label + 'の形状'),
+    ];
+
+    if (roleState.type === 'ferrite') {
+      rows.push(
+        inputSubhead('フェライト条件', '直巻きコア'),
+        roleChoice(role, 'ferriteShape', CONFIG.ferriteShapes, 'フェライト形状')
+      );
+      if (roleState.ferriteShape === 'round') rows.push(roleInput(role, 'ferriteDia', 'フェライト径', '1.0', 'mm'));
+      else rows.push(roleInput(role, 'ferriteH', 'フェライト高さ', '3.0', 'mm'), roleInput(role, 'ferriteW', 'フェライト幅', '5.0', 'mm'));
+      rows.push(
+        roleInput(role, 'ferriteLength', 'フェライト長さ（参考）', '8.0', 'mm'),
+        ferriteFactorNote(role, 'ferrite'),
+        note('※Z計算は巻線長を主に使用します。フェライト長さは構造確認用です。'),
+        inputSubhead('巻線スペース', '実際に巻ける範囲'),
+        roleInput(role, 'length', '巻線長', '5.0', 'mm')
+      );
+    } else {
+      rows.push(inputSubhead('コイルボビン寸法', shapeSubheadLabel(role)));
+      if (roleState.shape === 'cyl') rows.push(
+        roleInput(role, 'innerDia', '内径', '1.0', 'mm'),
+        roleInput(role, 'outerDia', '外径', '3.0', 'mm'),
+        roleInput(role, 'length', '巻線長', '2.0', 'mm')
+      );
+      else rows.push(
+        roleInput(role, 'innerH', '内側高さ', '4.0', 'mm'),
+        roleInput(role, 'innerW', '内側幅', '8.0', 'mm'),
+        roleInput(role, 'outerH', '外側高さ', '6.0', 'mm'),
+        roleInput(role, 'outerW', '外側幅', '10.0', 'mm'),
+        roleInput(role, 'length', '巻線長', '6.0', 'mm')
+      );
+
+      if (roleState.type === 'insert') {
+        rows.push(
+          inputSubhead('中心フェライト', '空芯コイル内に入れるコア'),
+          roleChoice(role, 'insertShape', CONFIG.insertShapes, '中心フェライト形状')
+        );
+        if (roleState.insertShape === 'round') rows.push(roleInput(role, 'insertDia', '中心フェライト径（参考）', '1.0', 'mm'));
+        else rows.push(roleInput(role, 'insertH', '中心フェライト高さ（参考）', '2.0', 'mm'), roleInput(role, 'insertW', '中心フェライト幅（参考）', '2.0', 'mm'));
+        rows.push(
+          roleInput(role, 'insertLength', '中心フェライト長さ（参考）', '8.0', 'mm'),
+          ferriteFactorNote(role, 'insert'),
+          note('※中心フェライト寸法は構造メモ用です。補正は自動補正で推定します。')
+        );
+      }
+      if (role === 'detect' && roleState.type === 'crossFerrite') {
+        rows.push(note('クロス差動＋フェライトは、上側交差点から下側交差点を通す交差点ブリッジ型フェライトとして扱い、検出インピーダンスに約1.8倍の補正を適用しています（固定補正）。'));
+      }
+    }
+    return rows;
+  }
+
+  function roleSummaryHtml(role) {
+    const typeLabel = getRoleSummaryLabel(role);
+    return '<summary class="role-summary"><span class="role-summary-title">' + CONFIG.roles[role].label + '設定</span>' +
+      (typeLabel ? '<span class="coil-type-label">' + typeLabel + '</span>' : '') +
+      '</summary>';
+  }
+
+  function renderRoleContent(role) {
+    const rows = buildRoleRows(role);
+    return roleSummaryHtml(role) + '<div class="input-grid" style="margin-top:8px">' + rows.join('') + '</div><div class="live-preview" id="preview_' + role + '">外寸プレビュー：計算中...</div>';
+  }
+
+  function renderRoleDimensions(role) {
+    return '<details class="role-card" data-role="' + role + '"' + (state.detailsOpen[role] ? ' open' : '') + '>' + renderRoleContent(role) + '</details>';
+  }
+
+  function renderRoleInputs() {
+    const sharedRows = [numberInput('freq', '周波数', CONFIG.defaults.frequencyKHz, 'kHz', '10')]
+      .concat(globalFerriteInputs());
+    const detectRows = sharedRows.concat(renderRoleDimensions('detect'));
+    const excitationRoles = AppState.hasDualExcitation()
+      ? ['excitation1']
+      : AppState.activeRoles().filter(role => role !== 'detect');
+    if (AppState.hasDualExcitation()) AppState.syncDualExcitationCommon();
+    setHtml('detectRoleInputs', detectRows.join(''));
+    const excitationHtml = excitationRoles.map(renderRoleDimensions).join('');
+    setHtml('excitationRoleInputs', AppState.hasDualExcitation()
+      ? '<div class="info-box"><strong>励磁コイル：共通設計 ×2</strong><br>巻数・線径・形状・フェライト条件は左右対称の共通設計として扱います。</div>' + excitationHtml.replace(/励磁1/g, '励磁共通')
+      : excitationHtml);
+    setHtml('roleInputs', detectRows.concat(excitationRoles.map(renderRoleDimensions)).join(''));
+    const hasExcitation = excitationRoles.length > 0;
+    $('excitationEmptyMessage')?.classList.toggle('hidden', hasExcitation);
+  }
+
+  function renderCouplingInputs() {
+    const diffRows = [];
+    const excitationRows = [];
+    if (AppState.isDifferential() && !AppState.isCross()) {
+      diffRows.push(
+        numberInput('flawWidth', 'きず幅', '0.5', 'mm'),
+        numberInput('inspectDepth', '検査深さ', '0.05', 'mm', '0.01', '0'),
+        numberInput('diffDistance', '端面ギャップ', '0.5', 'mm')
+      );
+    }
+    if (AppState.isSimpleExcitationDetect()) {
+      excitationRows.push(excitationPositionSelect());
+    }
+    if (AppState.hasExcitation()) {
+      if (AppState.hasDualExcitation()) excitationRows.push(
+        numberInput('ex1Distance', '励磁1-検出コイル距離', '1.0', 'mm'),
+        numberInput('ex2Distance', '励磁2-検出コイル距離', '1.0', 'mm'),
+        numberInput('excitationGap', '励磁1-励磁2コイル距離', '2.0', 'mm'),
+        selectInput('excitationPolarity', '励磁極性', CONFIG.excitationPolarities)
+      );
+      else excitationRows.push(numberInput('exciteDetectDistance', '励磁コイル-検出コイル距離', '1.0', 'mm'));
+    }
+    $('couplingSection').classList.toggle('hidden', false);
+    $('excitationCouplingSection')?.classList.toggle('hidden', excitationRows.length === 0);
+    $('diffEmptyMessage')?.classList.toggle('hidden', AppState.isDifferential());
+    setHtml('couplingInputs', diffRows.join(''));
+    setHtml('excitationCouplingInputs', excitationRows.join(''));
+  }
+  function bindDetailsState() {
+    document.querySelectorAll('details[data-role]').forEach(detail => {
+      if (detail.dataset.boundDetails === 'true') return;
+      detail.dataset.boundDetails = 'true';
+      detail.addEventListener('toggle', () => {
+        const role = detail.dataset.role;
+        if (role && Object.prototype.hasOwnProperty.call(state.detailsOpen, role)) state.detailsOpen[role] = detail.open;
+      });
+    });
+  }
+
+  function renderRoleBlock(role) {
+    const current = document.querySelector('details[data-role="' + role + '"]');
+    if (!current) {
+      renderRoleInputs();
+      bindDetailsState();
+      disableNumberWheel();
+      scheduleRolePreviews(AppState.activeRoles());
+      return;
+    }
+    if (Object.prototype.hasOwnProperty.call(state.detailsOpen, role)) state.detailsOpen[role] = current.open;
+    current.innerHTML = renderRoleContent(role);
+    current.open = !!state.detailsOpen[role];
+    bindDetailsState();
+    disableNumberWheel();
+    updateRolePreview(role);
+  }
+
+  function roleShortLabel(role) {
+    if (role === 'detect') return '検出';
+    if (role === 'excitation') return '励磁';
+    if (role === 'excitation1') return '励磁1';
+    if (role === 'excitation2') return '励磁2';
+    return role;
+  }
+
+  function estimatedKey(role) {
+    return role + 'Estimated';
+  }
+
+  function roleEstimatedZ(estimated, role) {
+    return estimated[estimatedKey(role)];
+  }
+
+  function validTuningFactor(role) {
+    const factor = Number(state.tuningCorrection[role]);
+    return AppState.isValidTuningFactor(factor) ? factor : 1;
+  }
+
+  function tunedEstimatedZ(estimated, role) {
+    const base = roleEstimatedZ(estimated, role);
+    return state.tuningEnabled && role === 'detect' ? base * validTuningFactor(role) : base;
+  }
+
+  function tuningDetail(estimated, role) {
+    if (!state.tuningEnabled || role !== 'detect') return '';
+    return '<span class="text-muted">通常推定：' + format(roleEstimatedZ(estimated, role), 1) + 'Ω / 補正係数：' + format(validTuningFactor(role), 2) + '</span>';
+  }
+
+  function estimatedZCard(estimated, role) {
+    return card(roleShortLabel(role) + '推定Z', format(tunedEstimatedZ(estimated, role), 1), 'Ω', 'highlight', tuningDetail(estimated, role));
+  }
+
+  function renderDetectEstimatedCards(estimated) {
+    return [
+      estimatedZCard(estimated, 'detect'),
+      card('検出補正', estimated.detectCorrectionLabel),
+    ].join('');
+  }
+
+  function renderExcitationEstimatedCards(estimated) {
+    const cards = [];
+    if (AppState.hasExcitation() && !AppState.hasDualExcitation()) cards.push(
+      estimatedZCard(estimated, 'excitation'),
+      card('励磁補正', estimated.excitationCorrectionLabel),
+      card('励磁・検出結合', format(estimated.couplingFactor, 2), 'x')
+    );
+    if (AppState.isSimpleExcitationDetect()) cards.push(card('励磁位置補正', format(estimated.positionFactor, 2), 'x'));
+    if (AppState.hasDualExcitation()) cards.push(
+      estimatedZCard(estimated, 'excitation1'),
+      estimatedZCard(estimated, 'excitation2'),
+      card('励磁1補正', estimated.excitation1CorrectionLabel),
+      card('励磁2補正', estimated.excitation2CorrectionLabel),
+      card('励磁1結合', format(estimated.couplingFactor1, 2), 'x'),
+      card('励磁2結合', format(estimated.couplingFactor2, 2), 'x'),
+      card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm')
+    );
+    return cards.join('');
+  }
+
+  function renderEstimatedCards(estimated) {
+    const cards = [
+      estimatedZCard(estimated, 'detect'),
+      card('検出補正', estimated.detectCorrectionLabel),
+    ];
+    if (AppState.hasExcitation() && !AppState.hasDualExcitation()) cards.push(
+      estimatedZCard(estimated, 'excitation'),
+      card('励磁補正', estimated.excitationCorrectionLabel),
+      card('励磁・検出結合', format(estimated.couplingFactor, 2), 'x')
+    );
+    if (AppState.isSimpleExcitationDetect()) cards.push(card('コイル配置補正', format(estimated.positionFactor, 2), 'x'));
+    if (AppState.hasDualExcitation()) cards.push(
+      estimatedZCard(estimated, 'excitation1'),
+      estimatedZCard(estimated, 'excitation2'),
+      card('励磁1補正', estimated.excitation1CorrectionLabel),
+      card('励磁2補正', estimated.excitation2CorrectionLabel),
+      card('励磁1結合', format(estimated.couplingFactor1, 2), 'x'),
+      card('励磁2結合', format(estimated.couplingFactor2, 2), 'x'),
+      card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm')
+    );
+    return cards.join('');
+  }
+
+  function tuningInput(role) {
+    const id = 'tune_' + role + 'Z';
+    const currentValue = getInputValue(id, '');
+    return createNumericField({
+      id,
+      label: '実測 ' + roleShortLabel(role) + 'Z',
+      value: currentValue,
+      unit: 'Ω',
+      onInput: "UI.saveInputValue('" + id + "', this.value); UI.updateTuning()",
+    });
+  }
+
+  function tuningMeasuredZ(role) {
+    const value = parseFloat(getInputValue('tune_' + role + 'Z', ''));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  function tuningErrorClass(errorPct) {
+    if (errorPct <= 5) return 'text-good';
+    if (errorPct <= 10) return 'text-warn';
+    return 'text-bad';
+  }
+
+  function tuningRoleResult(estimated, role) {
+    const measured = tuningMeasuredZ(role);
+    const base = roleEstimatedZ(estimated, role);
+    if (!Number.isFinite(base) || base <= 0) return null;
+    if (measured === null) {
+      return card(roleShortLabel(role) + '保存補正係数', format(validTuningFactor(role), 2), 'x', '', '<span class="text-muted">実測Zを入力すると係数を計算します</span>');
+    }
+    const factor = measured / base;
+    if (!AppState.isValidTuningFactor(factor)) {
+      return card(roleShortLabel(role) + '補正係数', format(factor, 2), 'x', 'bad', '<span class="text-bad">補正係数が極端です。入力値か測定条件を確認してください。</span>');
+    }
+    const corrected = base * factor;
+    const diff = corrected - measured;
+    const errorPct = Math.abs(diff) / measured * 100;
+    const errorClass = tuningErrorClass(errorPct);
+    return [
+      card(roleShortLabel(role) + '補正係数', format(factor, 2), 'x'),
+      card(roleShortLabel(role) + '補正後推定Z', format(corrected, 1), 'Ω', 'highlight', '<span class="text-muted">通常推定：' + format(base, 1) + 'Ω</span>'),
+      card(roleShortLabel(role) + '実測との差', '<span class="' + errorClass + '">' + format(diff, 1) + '</span>', 'Ω'),
+      card(roleShortLabel(role) + '誤差率', '<span class="' + errorClass + '">' + format(errorPct, 1) + '</span>', '%'),
+    ].join('');
+  }
+
+  function collectTuningFactors(estimated) {
+    const factors = {};
+    const invalid = [];
+    ['detect'].forEach(role => {
+      const measured = tuningMeasuredZ(role);
+      const base = roleEstimatedZ(estimated, role);
+      if (measured === null || !Number.isFinite(base) || base <= 0) return;
+      const factor = measured / base;
+      if (!AppState.isValidTuningFactor(factor)) invalid.push(role);
+      else factors[role] = factor;
+    });
+    return { factors, invalid };
+  }
+
+  function formatSavedAt(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    const pad = number => String(number).padStart(2, '0');
+    return date.getFullYear() + '/' + pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+  }
+
+  function tuningSavedStateHtml(roles, enabled) {
+    if (!state.tuningUpdatedAt) return '';
+    const factors = roles
+      .map(role => roleShortLabel(role) + ' ' + format(validTuningFactor(role), 2) + '倍')
+      .join(' / ');
+    return '<div class="info-box" style="margin-top:12px">' +
+      '<strong>学習済み補正あり</strong><br>' +
+      '補正係数：' + factors + '<br>' +
+      '保存日時：' + formatSavedAt(state.tuningUpdatedAt) + '<br>' +
+      (enabled ? '現在の推定Zに反映中' : '現在は推定Zに反映していません') +
+      '</div>';
+  }
+
+  function tuningIntroHtml() {
+    return '<div class="info-box"><strong>検出コイルの計算値と実測値のズレから補正係数を作ります。</strong><br>' +
+      '保存すると、次回以降の検出コイル推定Zへ反映できます。<br><br>' +
+      '例：<br>' +
+      '計算値 250Ω / 実測値 280Ω<br>' +
+      '→ 補正係数 1.12倍として保存<br>' +
+      '→ 次回から同じような条件の検出コイル推定Zを実測寄りに補正<br><br>' +
+      'フェライト・巻き方・線径・周波数によるクセを少しずつ学習して、<br>' +
+      '検出コイルの設計精度を上げるための機能です。</div>';
+  }
+
+  function renderTuningPlaceholder() {
+    setHtml('tuningArea', tuningIntroHtml() + '<div class="info-box">構成込み結果を更新すると、検出コイル単体Zの実測入力と学習保存を使えます。</div>');
+  }
+
+  function renderTuningSection(estimated) {
+    const roles = ['detect'].filter(role => Number.isFinite(roleEstimatedZ(estimated, role)));
+    const inputRows = roles.map(tuningInput).join('');
+    const resultCards = roles.map(role => tuningRoleResult(estimated, role)).filter(Boolean).join('');
+    const enabled = state.tuningEnabled;
+    const intro = tuningIntroHtml();
+    const savedState = tuningSavedStateHtml(roles, enabled);
+    const caution = '<div class="section-note" style="margin-top:12px">この補正は検出コイル単体Z用です。<br>' +
+      '励磁込み・差動込み・組み込み全体Zの補正ではありません。<br>' +
+      'フェライト材質・線径・巻き方・周波数が大きく変わる場合は、再度実測して補正してください。</div>';
+    setHtml('tuningArea',
+      intro +
+      '<div class="input-grid" style="margin-top:12px">' + inputRows +
+      '<div class="result-grid tuning-inline-results" id="tuningResultCards">' + (resultCards || list(['<span class="text-muted">実測Zを入力すると補正係数を計算します。</span>'])) + '</div>' +
+      '<div class="input-group full"><span class="input-label">推定Zへの反映</span><div class="turn-mode-switch">' +
+      '<button type="button" class="mini-check ' + (enabled ? 'selected' : '') + '" onclick="UI.toggleTuning(true)"><span class="mode-mark">' + (enabled ? '✓' : '-') + '</span><span>学習した補正を推定Zへ反映する</span></button>' +
+      '<button type="button" class="mini-check ' + (!enabled ? 'selected' : '') + '" onclick="UI.toggleTuning(false)"><span class="mode-mark">' + (!enabled ? '✓' : '-') + '</span><span>学習補正を使わない</span></button>' +
+      '</div></div></div>' +
+      savedState +
+      '<div class="tuning-actions">' +
+      '<button class="calc-btn" type="button" onclick="UI.saveTuningCorrection()">このズレを学習して保存</button>' +
+      '<button class="calc-btn" type="button" onclick="UI.resetTuningCorrection()">学習補正をリセット</button>' +
+      '</div>' + caution
+    );
+    disableNumberWheel();
+  }
+
+  function renderDifferentialResults(differential) {
+    $('diffResultsSection').classList.toggle('hidden', !differential);
+    if (!differential) return;
+    if (differential.version === 2) {
+      const cards = [
+        card('推奨差動ギャップ 感度重視', format(differential.sensitivityLo, 2) + '-' + format(differential.sensitivityHi, 2), 'mm'),
+        card('推奨差動ギャップ バランス', format(differential.standardLo, 2) + '-' + format(differential.standardHi, 2), 'mm', 'highlight'),
+        card('推奨差動ギャップ 深部探傷', format(differential.deepLo, 2) + '-' + format(differential.deepHi, 2), 'mm'),
+        card('端面ギャップ（実ギャップ）', format(differential.edgeGap, 2), 'mm'),
+        card('中心間距離', format(differential.centerDistance, 2), 'mm'),
+        card('現在位置', differential.position, '', 'highlight'),
+        card('判定', differential.judgment, ''),
+        list(differential.reasons)
+      ];
+      const html = cards.join('');
+      setHtml('diffResults', html);
+      return;
+    }
+    if (differential.probeStyle) {
+      const cards = [
+        card('感度重視ギャップ', format(differential.sensitivityLo, 2) + '-' + format(differential.sensitivityHi, 2), 'mm'),
+        card('バランスギャップ', format(differential.balanceLo, 2) + '-' + format(differential.balanceHi, 2), 'mm', 'highlight'),
+        card('深部探傷ギャップ', format(differential.deepLo, 2) + '-' + format(differential.deepHi, 2), 'mm'),
+      ];
+      if (differential.mode === 'check') {
+        cards.push(
+          card('中心間距離', format(differential.centerDistance, 2), 'mm'),
+          card('実ギャップ', format(differential.edgeGap, 2), 'mm'),
+          card('現在位置', differential.status, '', 'highlight'),
+          list(differential.reasons)
+        );
+      } else {
+        cards.push(
+          list(['<strong>プローブ形式</strong> ' + differential.probeLabel].concat(differential.reasons)),
+          list(['端面ギャップと中心間距離を分けて確認してください。'])
+        );
+      }
+      const html = cards.join('');
+      setHtml('diffResults', html);
+      return;
+    }
+    const cards = [
+      card('推奨差動距離', format(differential.recLo, 2) + '-' + format(differential.recHi, 2), 'mm', 'highlight'),
+      card('許容範囲', format(differential.allowLo, 2) + '-' + format(differential.allowHi, 2), 'mm'),
+    ];
+
+    if (differential.mode === 'recommend') {
+      cards.push(
+        list(['<strong>分類</strong> ' + differential.className].concat(differential.reasons)),
+        list(['ECT DESIGNERから値を持ってきた場合は、端面ギャップとして確認してください。'])
+      );
+    } else {
+      const statusClass = differential.status === 'OK' ? '' : 'warn';
+      cards.push(
+        card('入力差動距離', format(differential.used, 2), 'mm'),
+        card('判定', differential.status, '', statusClass),
+        list(differential.warnings.length ? differential.warnings.map(warning => '<span class="text-bad">' + warning + '</span>') : ['<span class="text-good">OK</span>'])
+      );
+    }
+
+    const html = cards.join('');
+    setHtml('diffResults', html);
+  }
+
+  function renderExcitationSummary(estimated) {
+    const hasExcitation = AppState.hasExcitation();
+    $('excitationEstimateSection')?.classList.toggle('hidden', !hasExcitation);
+    if (!hasExcitation) {
+      setHtml('excitationEstimatedResults', '');
+      return;
+    }
+    const cards = [];
+    if (AppState.hasDualExcitation()) {
+      const d1 = readRenderNumber('ex1Distance', 1);
+      const d2 = readRenderNumber('ex2Distance', 1);
+      const gap = readRenderNumber('excitationGap', 2);
+      cards.push(
+        card('励磁1-検出距離', format(d1, 2), 'mm'),
+        card('励磁2-検出距離', format(d2, 2), 'mm'),
+        card('励磁1-励磁2距離', format(gap, 2), 'mm'),
+        card('励磁1結合', format(estimated.couplingFactor1, 2), 'x'),
+        card('励磁2結合', format(estimated.couplingFactor2, 2), 'x'),
+        card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm')
+      );
+    } else {
+      const distance = readRenderNumber('exciteDetectDistance', 1);
+      cards.push(
+        card('励磁-検出距離', format(distance, 2), 'mm'),
+        card('結合係数', format(estimated.couplingFactor, 2), 'x')
+      );
+      if (AppState.isSimpleExcitationDetect()) cards.push(card('励磁位置補正', format(estimated.positionFactor, 2), 'x'));
+    }
+    setHtml('excitationEstimatedResults', renderExcitationEstimatedCards(estimated));
+  }
+
+  function polarityLabel(value) {
+    return (CONFIG.excitationPolarities.find(item => item.value === value) || CONFIG.excitationPolarities[0]).label;
+  }
+
+  function specBlock(title, items) {
+    return '<div class="spec-block"><h3>【' + title + '】</h3><ul>' +
+      items.filter(Boolean).map(item => '<li>' + item + '</li>').join('') +
+      '</ul></div>';
+  }
+
+  function roleSpecItems(role, single, estimatedZ) {
+    const roleState = state.roles[role];
+    const targetZ = readRenderNumber(role + '_targetZ', CONFIG.roles[role].defaultTargetZ);
+    const wireDia = readRenderNumber(role + '_wireDia', 0.05);
+    const items = [
+      'タイプ：<strong>' + getCoilTypeLabel(roleState.type) + '</strong>',
+      '巻数：<strong>' + formatInt(single?.inv?.Nt) + 'T</strong>',
+      '線径：<strong>' + format(wireDia, 2) + 'mm</strong>',
+    ];
+    if (['insert', 'ferrite'].includes(roleState.type)) {
+      items.push('フェライト：<strong>' + getInputValue('globalFerriteMaterial', '2G4') + '</strong>');
+    }
+    items.push('推定Z：<strong>' + format(estimatedZ, 1) + 'Ω</strong>');
+    items.push('目標Z：<strong>' + format(targetZ, 1) + 'Ω</strong>');
+    return items;
+  }
+
+  function learningSpecItems() {
+    if (!state.tuningUpdatedAt) return [
+      '対象：<strong>検出コイル単体Z</strong>',
+      '状態：<strong>未学習</strong>',
+    ];
+    return [
+      '対象：<strong>検出コイル単体Z</strong>',
+      '補正係数：<strong>' + format(validTuningFactor('detect'), 2) + '倍</strong>',
+      '状態：<strong>' + (state.tuningEnabled ? '推定Zへ反映中' : '現在は推定Zに反映していません') + '</strong>',
+      '保存日時：<strong>' + formatSavedAt(state.tuningUpdatedAt) + '</strong>',
+    ];
+  }
+
+  function cableSpecItems() {
+    try {
+      const cable = CableSelection.calculate({
+        config: state.config,
+        freq_kHz: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
+        length_m: Number(getInputValue('cable-length', CONFIG.cable.defaultLengthM)),
+        env: getInputValue('cable-env', 'normal'),
+        load: getInputValue('cable-load', 'standard'),
+      });
+      return [
+        '推奨構造：<strong>' + cable.structure + '</strong>',
+        '推奨AWG：<strong>' + cable.awg + '</strong>',
+        '必要芯数：<strong>' + cable.cores + '</strong>',
+        '最大推奨長：<strong>' + format(cable.maxLength, 1) + 'm</strong>',
+        '接地：<strong>' + cable.ground + '</strong>',
+      ];
+    } catch (error) {
+      return ['ケーブル候補：<strong>ケーブル選定タブで条件を確認してください</strong>'];
+    }
+  }
+
+  function renderDesignSpec(result) {
+    const cfg = CONFIG.coilConfigs.find(item => item.value === state.config) || CONFIG.coilConfigs[0];
+    const detectEstimated = tunedEstimatedZ(result.estimated, 'detect');
+    const blocks = [];
+    blocks.push(specBlock('設計条件', [
+      'プローブ形式：<strong>' + (AppState.PROBE_STYLES[state.probeStyle] || '-') + '</strong>',
+      'コイル構成：<strong>' + cfg.label + '</strong>',
+      '測定周波数：<strong>' + format(readRenderNumber('freq', CONFIG.defaults.frequencyKHz), 1) + 'kHz</strong>',
+    ]));
+    blocks.push(specBlock('検出コイル', roleSpecItems('detect', result.singles.detect, detectEstimated)));
+    if (result.differential) {
+      blocks.push(specBlock('差動条件', [
+        '端面ギャップ：<strong>' + format(result.differential.edgeGap, 2) + 'mm</strong>',
+        '中心間距離：<strong>' + format(result.differential.centerDistance, 2) + 'mm</strong>',
+        '現在位置：<strong>' + result.differential.position + '</strong>',
+        '判定：<strong>' + result.differential.judgment + '</strong>',
+      ]));
+    }
+    if (AppState.hasExcitation()) {
+      const role = AppState.hasDualExcitation() ? 'excitation1' : 'excitation';
+      const estimatedZ = AppState.hasDualExcitation() ? tunedEstimatedZ(result.estimated, 'excitation1') : tunedEstimatedZ(result.estimated, 'excitation');
+      const items = ['励磁：<strong>あり</strong>'];
+      items.push(...roleSpecItems(role, result.singles[role], estimatedZ));
+      if (AppState.hasDualExcitation()) {
+        items.splice(1, 0, '励磁コイル：<strong>共通設計 ×2</strong>', '配置：<strong>左右対称</strong>');
+        items.push(
+          '励磁1-検出距離：<strong>' + format(readRenderNumber('ex1Distance', 1), 2) + 'mm</strong>',
+          '励磁2-検出距離：<strong>' + format(readRenderNumber('ex2Distance', 1), 2) + 'mm</strong>',
+          '励磁1-励磁2距離：<strong>' + format(readRenderNumber('excitationGap', 2), 2) + 'mm</strong>',
+          '極性：<strong>' + polarityLabel(getInputValue('excitationPolarity', 'same')) + '</strong>',
+          '励磁1結合：<strong>' + format(result.estimated.couplingFactor1, 2) + 'x</strong>',
+          '励磁2結合：<strong>' + format(result.estimated.couplingFactor2, 2) + 'x</strong>',
+          '2励磁バランス：<strong>' + format(result.estimated.balanceDelta, 2) + 'mm</strong>'
+        );
+      } else {
+        items.push(
+          '励磁-検出距離：<strong>' + format(readRenderNumber('exciteDetectDistance', 1), 2) + 'mm</strong>',
+          AppState.isSimpleExcitationDetect() ? '励磁位置：<strong>' + getExcitationPositionLabel(getInputValue('excitationPosition', 'outer')) + '</strong>' : '',
+          '結合：<strong>' + format(result.estimated.couplingFactor, 2) + 'x</strong>'
+        );
+      }
+      blocks.push(specBlock('励磁条件', items));
+    } else {
+      blocks.push(specBlock('励磁条件', ['励磁：<strong>なし</strong>']));
+    }
+    blocks.push(specBlock('学習補正', learningSpecItems()));
+    blocks.push(specBlock('ケーブル候補', cableSpecItems()));
+    const notices = [
+      '構造込み推定Zは初期設計値です。最終値はLCRメータで確認してください。',
+      'フェライト材質や巻き方が変わる場合は、再度実測補正してください。',
+      '高周波ではケーブル容量の影響に注意してください。',
+    ];
+    blocks.push(specBlock('注意', notices));
+    setHtml('designSpecResults', '<div class="spec-view">' + blocks.join('') + '</div>');
+  }
+
+  function colorNoticeText(text) {
+    if (text === 'OK' || text.startsWith('OK') || text.includes('収まり OK')) return '<span class="text-good">' + text + '</span>';
+    if (text.includes('70%以上')) return '<span class="text-muted">' + text + '</span>';
+    if (
+      text.includes('超えています') ||
+      text.includes('NG') ||
+      text.includes('強すぎる') ||
+      text.includes('太すぎる') ||
+      text.includes('最大層数') ||
+      text.includes('100%以上') ||
+      text.includes('95%以上') ||
+      text.includes('限界') ||
+      text.includes('マイナス') ||
+      text.includes('収まり NG')
+    ) {
+      return '<span class="text-bad">' + text + '</span>';
+    }
+    if (
+      text.includes('注意') ||
+      text.includes('可能性') ||
+      text.includes('推奨') ||
+      text.includes('確認') ||
+      text.includes('80%以上') ||
+      text.includes('90%以上')
+    ) {
+      return '<span class="text-warn">' + text + '</span>';
+    }
+    return '<span class="text-muted">' + text + '</span>';
+  }
+
+  function renderNotices(singles, estimated, differential) {
+    const items = ['フェライト補正は初期設計用の実用補正値です。最終値はLCRメータで実測確認してください。'];
+    Object.values(singles).forEach(single => {
+      const label = CONFIG.roles[single.role].label;
+      if (single.wireDia_mm > single.fwd.skinD_mm * 2) items.push(label + 'の線径が太すぎる可能性があります。');
+      if (!single.fits || single.inv.Nt > single.fwd.maxTurns) items.push(label + 'の必要巻数が最大巻数を超えています。');
+      if (single.fwd.usedLayers > single.fwd.maxLayers) items.push(label + 'の層数が最大層数を超えています。');
+      if (single.fwd.fill_pct >= 100) items.push(label + 'の占有率が100%以上です。収まりNGです。');
+      else if (single.fwd.fill_pct >= 95) items.push(label + 'の占有率が95%以上です。ほぼ限界です。');
+      else if (single.fwd.fill_pct >= 90) items.push(label + 'の占有率が90%以上です。巻線誤差に注意してください。');
+      else if (single.fwd.fill_pct >= 80) items.push(label + 'の占有率が80%以上です。余裕が少なめです。');
+      else if (single.fwd.fill_pct >= 70) items.push(label + 'の占有率が70%以上です。実装時に巻線ばらつきを確認してください。');
+    });
+    if (Object.values(state.roles).some(role => ['insert', 'ferrite'].includes(role.type))) items.push('フェライト補正は材質・周波数・サイズから推定した簡易モデルです。初期設計用の目安であり、最終値は実測Zに合わせて確認してください。');
+    if (AppState.isCross()) items.push('クロス差動はコイルA/Bを1層ずつ重ねるため、占有率・最大層数は通常コイルの約2倍高さとして計算しています。');
+    if (AppState.hasCrossFerrite()) items.push('クロス差動＋フェライトは、上側交差点から下側交差点を通す交差点ブリッジ型フェライトとして扱い、検出インピーダンスに約1.8倍の補正を適用しています（固定補正）。');
+    if (state.tuningEnabled) {
+      items.push('実測補正を反映中です。測定周波数・治具条件が変わると補正係数も変わります。');
+      AppState.activeRoles().forEach(role => {
+        const factor = validTuningFactor(role);
+        if (factor >= 1.5 || factor <= 0.7) items.push(roleShortLabel(role) + '補正係数が大きくズレています。フェライト補正・結合距離・実測条件を確認してください。');
+      });
+    }
+    items.push(...estimated.warnings);
+    if (differential) items.push(...differential.warnings);
+    const isWarning = items.some(item => item.includes('注意') || item.includes('NG') || item.includes('超え') || item.includes('以上'));
+    setHtml('noticeResults', '<div class="' + (isWarning ? 'warn-box' : 'info-box') + '">' + items.map(item => '- ' + colorNoticeText(item)).join('<br>') + '</div>');
+  }
+
+  function renderResults(result) {
+    lastDesignResult = result;
+    clearError('errorArea');
+    $('resultArea').classList.remove('hidden');
+    setHtml('detectEstimatedResults', renderDetectEstimatedCards(result.estimated));
+    $('detectEstimateSection')?.classList.remove('hidden');
+    renderTuningSection(result.estimated);
+    renderDifferentialResults(result.differential);
+    renderExcitationSummary(result.estimated);
+    renderDesignSpec(result);
+    renderNotices(result.singles, result.estimated, result.differential);
+  }
+
+  function renderMeasuredResult(inverse, mode = 'z') {
+    const isL = mode === 'l';
+    clearError('measuredErrorArea');
+    $('measuredResults')?.classList.remove('hidden');
+    setHtml('measuredResults',
+      '<ul class="compact-result-list">' +
+      '<li>目標巻数: <strong>' + formatInt(inverse.Nt) + ' T</strong></li>' +
+      (isL
+        ? '<li>確認L: <strong>' + format(inverse.Lv_uH, 3) + ' uH</strong></li>'
+        : '<li>確認Z: <strong>' + format(inverse.Zv, 1) + ' Ω</strong></li>') +
+      (isL ? '<li>確認Z換算: <strong>' + format(inverse.Zv, 1) + ' Ω</strong></li>' : '') +
+      '<li>実測L1: <strong>' + format(inverse.L1_uH, 3) + ' uH</strong></li>' +
+      '<li>目標L: <strong>' + format(inverse.Lt_uH, 3) + ' uH</strong></li>' +
+      '</ul>'
+    );
+  }
+
+  function renderCableControls() {
+    const configEl = $('cable-config');
+    if (configEl) {
+      const current = getInputValue('cable-config', state.config);
+      configEl.innerHTML = CONFIG.coilConfigs.map(option =>
+        '<option value="' + option.value + '"' + (current === option.value ? ' selected' : '') + '>' + option.label + '</option>'
+      ).join('');
+      configEl.onchange = () => AppState.setInputValue('cable-config', configEl.value);
+    }
+    const freqEl = $('cable-freq');
+    if (freqEl) {
+      if (!state.inputs['cable-freq']) freqEl.value = getInputValue('freq', CONFIG.defaults.frequencyKHz);
+      freqEl.oninput = () => AppState.setInputValue('cable-freq', freqEl.value);
+    }
+    const lengthEl = $('cable-length');
+    if (lengthEl) lengthEl.oninput = () => AppState.setInputValue('cable-length', lengthEl.value);
+    const envEl = $('cable-env');
+    if (envEl) envEl.onchange = () => AppState.setInputValue('cable-env', envEl.value);
+    const loadEl = $('cable-load');
+    if (loadEl) loadEl.onchange = () => AppState.setInputValue('cable-load', loadEl.value);
+  }
+
+  function renderEctImportStatus(result) {
+    const target = $('ectJsonStatus');
+    if (!target) return;
+    if (!result) {
+      target.className = 'hidden';
+      target.innerHTML = '';
+      return;
+    }
+    const applied = result.applied?.length ? result.applied.map(item => '- ' + item).join('<br>') : '- なし';
+    const skipped = result.skipped?.length ? result.skipped.map(item => '- ' + item).join('<br>') : '- なし';
+    target.className = result.ok ? 'info-box' : 'warn-box';
+    target.innerHTML = result.ok
+      ? '<strong>読み込み成功</strong><br>反映した項目<br>' + applied + '<br><br>反映できなかった項目<br>' + skipped
+      : '<strong>読み込み失敗</strong><br>' + result.message;
+  }
+
+  function renderCableResult(result) {
+    clearError('cableErrorArea');
+    $('cableResultArea')?.classList.remove('hidden');
+    $('cableReasonSection')?.classList.remove('hidden');
+    $('cableNoticeSection')?.classList.remove('hidden');
+    const impactClass = result.capImpactPercent >= CONFIG.thresholds.cable.cautionImpactPercent
+      ? 'text-bad'
+      : result.capImpactPercent > CONFIG.thresholds.cable.lowImpactPercent ? 'text-warn' : 'text-good';
+    const lengthClass = result.maxLength < 1.5 ? 'text-warn' : 'text-good';
+    const lines = [
+      previewLine('推奨AWG', result.awg),
+      previewLine('必要芯数', result.cores),
+      previewLine('推奨構造', result.structure),
+      previewLine('型番候補', result.candidates, 'text-muted'),
+      previewSeparator(),
+      previewLine('静電容量影響', format(result.capImpactPercent, 1) + ' %', impactClass),
+      previewLine('容量判定', result.capJudge, impactClass),
+      previewLine('総容量目安', format(result.totalCap, 0) + ' pF', 'text-muted'),
+      previewLine('最大推奨長', format(result.maxLength, 1) + ' m', lengthClass),
+      previewSeparator(),
+      previewLine('シールド接地', result.ground, 'text-muted'),
+    ];
+    setHtml('cableResults', '<div class="live-preview">' + previewHtml('ケーブル選定プレビュー', lines) + '</div>');
+    setHtml('cableReasons', list(result.reasons));
+    setHtml('cableNotices', '<div class="warn-box">' + result.notices.map(item => '- ' + item).join('<br>') + '</div>');
+  }
+
+  function previewNumber(id, fallback) {
+    const element = $(id);
+    const raw = element ? element.value : state.inputs[id];
+    const value = parseFloat(raw);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function hasPositivePreviewNumber(id) {
+    const element = $(id);
+    const raw = element ? element.value : state.inputs[id];
+    if (raw === undefined || raw === null || String(raw).trim() === '') return false;
+    const value = parseFloat(raw);
+    return Number.isFinite(value) && value > 0;
+  }
+
+  function rolePreviewInputsValid(role) {
+    const roleState = state.roles[role];
+    const prefix = role + '_';
+    const isTurnMode = (roleState.turnMode || 'targetZ') === 'turns';
+    const required = ['freq', prefix + 'wireDia', prefix + 'length', isTurnMode ? prefix + 'turns' : prefix + 'targetZ'];
+    if (hasAdjustableFerriteRole() && getInputValue('globalFerriteMaterial', '2G4') === 'manual') required.push('globalFerriteFactor');
+
+    if (roleState.type === 'ferrite') {
+      if (roleState.ferriteShape === 'round') required.push(prefix + 'ferriteDia');
+      else required.push(prefix + 'ferriteH', prefix + 'ferriteW');
+    } else if (roleState.shape === 'cyl') {
+      required.push(prefix + 'innerDia', prefix + 'outerDia');
+    } else {
+      required.push(prefix + 'innerH', prefix + 'innerW', prefix + 'outerH', prefix + 'outerW');
+    }
+
+    return required.every(hasPositivePreviewNumber);
+  }
+
+  function previewClass(gap, fillPct, turns, maxTurns, usedLayers, maxLayers) {
+    if (gap < 0 || fillPct >= 95 || turns > maxTurns || usedLayers > maxLayers) return 'bad';
+    if (fillPct >= 80) return 'warn';
+    return '';
+  }
+
+  function textSpan(className, text) {
+    return '<span class="' + className + '">' + text + '</span>';
+  }
+
+  function previewLine(label, value, className = 'text-info') {
+    return label + ' ' + textSpan(className, value);
+  }
+
+  function previewSeparator() {
+    return '<span class="preview-separator"></span>';
+  }
+
+  function previewFillClass(fillPct) {
+    if (fillPct >= 95) return 'text-bad';
+    if (fillPct >= 80) return 'text-warn';
+    return 'text-good';
+  }
+
+  function previewLayerClass(usedLayers, maxLayers) {
+    if (usedLayers > maxLayers) return 'text-bad';
+    if (maxLayers > 0 && usedLayers / maxLayers >= 0.8) return 'text-warn';
+    return 'text-good';
+  }
+
+  function previewGapClass(gap) {
+    return gap < 0 ? 'text-bad' : 'text-good';
+  }
+
+  function previewStatusClass(status) {
+    return status === 'OK' ? 'text-good' : 'text-bad';
+  }
+
+  function previewHtml(title, lines) {
+    return '<strong>' + title + '</strong>' + previewSeparator() + lines.join('<br>');
+  }
+
+  function getExcitationPositionLabel(value) {
+    if (value === 'inner') return '励磁内側・検出外側';
+    if (value === 'separate') return '励磁・検出 分離';
+    return '励磁外側・検出内側';
+  }
+
+  function getCouplingStrengthLabel(value) {
+    if (value === 'inner') return '中';
+    if (value === 'separate') return '弱';
+    return '強';
+  }
+
+  function getExcitationUsageLabel(value) {
+    if (value === 'inner') return '表面感度・高分解能向き';
+    if (value === 'separate') return 'ノイズ低減・干渉抑制向き';
+    return '深部検出・高感度向き';
+  }
+
+  function previewResult(role, result) {
+    const roleState = state.roles[role];
+    const isTargetMode = (roleState.turnMode || 'targetZ') === 'targetZ';
+    const fwd = result.fwd;
+    const turns = result.inv.Nt;
+    const status = result.fits && turns <= fwd.maxTurns && fwd.usedLayers <= fwd.maxLayers && fwd.fill_pct < 100 ? 'OK' : 'NG';
+    const title = isTargetMode ? '外寸プレビュー（目標Zモード）' : '外寸プレビュー（巻数モード）';
+    const lines = [];
+
+    if (isTargetMode) {
+      lines.push(previewLine('確定巻数', formatInt(turns) + ' T'));
+    } else {
+      lines.push(previewLine('指定巻数', formatInt(turns) + ' T'));
+    }
+    lines.push(previewLine('一層巻数', formatInt(fwd.turnsPerLayer) + ' T/層', 'text-muted'));
+    lines.push(previewLine('層数', formatInt(fwd.usedLayers) + ' / ' + formatInt(fwd.maxLayers) + ' 層', previewLayerClass(fwd.usedLayers, fwd.maxLayers)));
+    lines.push(previewLine('最大巻数', formatInt(fwd.maxTurns) + ' T', 'text-muted'));
+    lines.push(previewSeparator());
+
+    if (Number.isFinite(fwd.coilOD_mm)) {
+      lines.push(previewLine('外径', format(fwd.coilOD_mm, 2) + ' mm') + ' / ' + previewLine('最大外径', format(maxPreviewOuterDia(role), 2) + ' mm'));
+    } else {
+      const maxRect = maxPreviewRectOuter(role);
+      lines.push(previewLine('外側高さ', format(fwd.coilH, 2) + ' mm') + ' / ' + previewLine('最大', format(maxRect.h, 2) + ' mm'));
+      lines.push(previewLine('外側幅', format(fwd.coilW, 2) + ' mm') + ' / ' + previewLine('最大', format(maxRect.w, 2) + ' mm'));
+    }
+
+    lines.push(previewLine('占有率', format(fwd.fill_pct, 1) + ' %', previewFillClass(fwd.fill_pct)));
+    lines.push(previewLine('残りすき間', format(fwd.gap_mm, 2) + ' mm', previewGapClass(fwd.gap_mm)));
+    lines.push(previewLine('収まり', status, previewStatusClass(status)));
+    lines.push(previewSeparator());
+
+    if (isTargetMode) lines.push(previewLine('目標Z', format(result.targetZ_ohm, 1) + ' Ω'));
+    lines.push(previewLine('補正なし単体Z', format(fwd.Z, 1) + ' Ω', 'text-muted'));
+    if (['insert', 'ferrite', 'crossFerrite'].includes(roleState.type)) {
+      const factor = Calculation.getTypeFactor(role);
+      const correctedZ = fwd.Z * factor;
+      lines.push(previewLine('補正後Z目安', format(correctedZ, 1) + ' Ω', 'text-info'));
+      lines.push(previewLine('補正係数', format(factor, 2) + 'x', 'text-muted'));
+      lines.push(textSpan('text-muted', '※補正後Z目安はフェライト・構成補正を含む初期推定です。'));
+    }
+    lines.push(previewLine('L', format(fwd.L_uH, 2) + ' uH'));
+    lines.push(previewLine('表皮深さ', format(fwd.skinD_mm, 3) + ' mm', 'text-muted'));
+    if (role === 'detect' && AppState.hasExcitation()) {
+      const position = Calculation.readValue('excitationPosition', 'outer');
+      lines.push(previewSeparator());
+      lines.push(previewLine('配置', getExcitationPositionLabel(position)) + '（結合 ' + textSpan('text-info', getCouplingStrengthLabel(position)) + '・' + textSpan('text-muted', getExcitationUsageLabel(position)) + '）');
+    }
+
+    return {
+      className: previewClass(fwd.gap_mm, fwd.fill_pct, turns, fwd.maxTurns, fwd.usedLayers, fwd.maxLayers),
+      html: previewHtml(title, lines),
+    };
+  }
+
+  function maxPreviewOuterDia(role) {
+    const roleState = state.roles[role];
+    const prefix = role + '_';
+    if (roleState.type === 'ferrite') {
+      const wireDia = previewNumber(prefix + 'wireDia', 0.05);
+      const clearance = Math.max(wireDia * 8, 0.4);
+      return previewNumber(prefix + 'ferriteDia', 1.0) + clearance * 2;
+    }
+    return previewNumber(prefix + 'outerDia', 3.0);
+  }
+
+  function maxPreviewRectOuter(role) {
+    const roleState = state.roles[role];
+    const prefix = role + '_';
+    if (roleState.type === 'ferrite') {
+      const wireDia = previewNumber(prefix + 'wireDia', 0.05);
+      const clearance = Math.max(wireDia * 8, 0.4);
+      return {
+        h: previewNumber(prefix + 'ferriteH', 3.0) + clearance * 2,
+        w: previewNumber(prefix + 'ferriteW', 5.0) + clearance * 2,
+      };
+    }
+    return {
+      h: previewNumber(prefix + 'outerH', 6.0),
+      w: previewNumber(prefix + 'outerW', 10.0),
+    };
+  }
+
+  function updateRolePreview(role) {
+    const target = $('preview_' + role);
+    if (!target || !state.roles[role]) return;
+    let preview = null;
+
+    if (!rolePreviewInputsValid(role)) {
+      target.classList.remove('warn', 'bad');
+      target.innerHTML = '<strong>外寸プレビュー：</strong>入力値を確認してください';
+      return;
+    }
+
+    try {
+      preview = previewResult(role, Calculation.calculateRole(role));
+    } catch (error) {
+      target.classList.remove('warn', 'bad');
+      target.innerHTML = '<strong>外寸プレビュー：</strong>入力値を確認してください';
+      return;
+    }
+
+    target.classList.remove('warn', 'bad');
+    if (!preview) {
+      target.innerHTML = '<strong>外寸プレビュー：</strong>入力値を確認してください';
+      return;
+    }
+    if (preview.className) target.classList.add(preview.className);
+    target.innerHTML = preview.html;
+    updateFerriteFactorNote(role);
+  }
+
+  function affectedPreviewRoles(id) {
+    const directRole = AppState.activeRoles().find(role => id === role || id.startsWith(role + '_'));
+    if (directRole) return [directRole];
+    if (id === 'excitationPosition') return ['detect'];
+    if (id === 'globalFerriteMaterial' || id === 'globalFerriteFactor') {
+      return AppState.activeRoles().filter(role => ['insert', 'ferrite'].includes(state.roles[role].type));
+    }
+    if (id === 'freq') return AppState.activeRoles();
+    return [];
+  }
+
+  function scheduleRolePreviews(roles) {
+    clearTimeout(previewRenderTimer);
+    const uniqueRoles = [...new Set(roles)].filter(role => AppState.activeRoles().includes(role));
+    if (!uniqueRoles.length) return;
+    previewRenderTimer = setTimeout(() => scheduleFrame(() => uniqueRoles.forEach(role => updateRolePreview(role))), 180);
+  }
+
+  function refreshRoleInputs() {
+    renderTypeChoices();
+    renderConfigSummary();
+    renderRoleInputs();
+    bindDetailsState();
+    disableNumberWheel();
+    scheduleRolePreviews(AppState.activeRoles());
+  }
+
+  function scheduleRenderAll(reason = '') {
+    if (renderAllScheduled) return;
+    renderAllScheduled = true;
+    scheduleFrame(() => {
+      renderAllScheduled = false;
+      renderAll();
+    });
+  }
+
+  function scheduleRenderRole(role, reason = '') {
+    if (!AppState.activeRoles().includes(role)) {
+      scheduleRenderAll(reason || 'inactive-role');
+      return;
+    }
+    if (reason === 'type') {
+      if (roleInputsScheduled) return;
+      roleInputsScheduled = true;
+      scheduleFrame(() => {
+        roleInputsScheduled = false;
+        refreshRoleInputs();
+      });
+      return;
+    }
+    scheduledRoles.add(role);
+    if (scheduledRoles.size > 1 || scheduledRoles.has('__scheduled__')) return;
+    scheduledRoles.add('__scheduled__');
+    scheduleFrame(() => {
+      const roles = [...scheduledRoles].filter(item => item !== '__scheduled__');
+      scheduledRoles.clear();
+      roles.forEach(renderRoleBlock);
+    });
+  }
+
+  function scheduleRenderCoupling(reason = '') {
+    if (couplingScheduled) return;
+    couplingScheduled = true;
+    scheduleFrame(() => {
+      couplingScheduled = false;
+      renderCouplingInputs();
+      disableNumberWheel();
+    });
+  }
+
+  function scheduleRenderCable(reason = '') {
+    if (cableScheduled) return;
+    cableScheduled = true;
+    scheduleFrame(() => {
+      cableScheduled = false;
+      renderCableControls();
+    });
+  }
+
+  function disableNumberWheel() {
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+      if (input.dataset.wheelGuard === 'true') return;
+      input.dataset.wheelGuard = 'true';
+      input.addEventListener('wheel', event => {
+        if (document.activeElement === input) {
+          event.preventDefault();
+          input.blur();
+        }
+      }, { passive: false });
+    });
+  }
+
+  function updateDesignSubTabVisibility() {
+    $('diffEmptyMessage')?.classList.toggle('hidden', AppState.isDifferential());
+    $('excitationEmptyMessage')?.classList.toggle('hidden', AppState.hasExcitation());
+  }
+
+  function renderAll() {
+    renderProbeStyleChoices();
+    renderConfigChoices();
+    renderConfigSummary();
+    refreshRoleInputs();
+    renderCouplingInputs();
+    renderCableControls();
+    $('resultArea').classList.add('hidden');
+    $('detectEstimateSection')?.classList.add('hidden');
+    $('excitationEstimateSection')?.classList.add('hidden');
+    $('diffResultsSection')?.classList.add('hidden');
+    setHtml('designSpecResults', '<div class="info-box">構成込み結果を更新すると、設計仕様まとめを表示します。</div>');
+    renderTuningPlaceholder();
+    updateDesignSubTabVisibility();
+    clearError();
+  }
+
+  function rerenderLastDesign() {
+    if (!lastDesignResult) return;
+    setHtml('detectEstimatedResults', renderDetectEstimatedCards(lastDesignResult.estimated));
+    setHtml('excitationEstimatedResults', renderExcitationEstimatedCards(lastDesignResult.estimated));
+    renderTuningSection(lastDesignResult.estimated);
+    renderExcitationSummary(lastDesignResult.estimated);
+    renderDesignSpec(lastDesignResult);
+    renderNotices(lastDesignResult.singles, lastDesignResult.estimated, lastDesignResult.differential);
+  }
+
+  function updateTuning() {
+    if (!lastDesignResult) return;
+    const roles = ['detect'].filter(role => Number.isFinite(roleEstimatedZ(lastDesignResult.estimated, role)));
+    const resultCards = roles.map(role => tuningRoleResult(lastDesignResult.estimated, role)).filter(Boolean).join('');
+    const target = $('tuningResultCards');
+    if (target) {
+      target.innerHTML = resultCards || list(['<span class="text-muted">実測Zを入力すると補正係数を計算します。</span>']);
+    }
+  }
+
+  function toggleTuning(enabled) {
+    AppState.setTuningEnabled(enabled);
+    rerenderLastDesign();
+  }
+
+  function saveTuningCorrection() {
+    if (!lastDesignResult) return { ok: false, message: '先に構成込み結果を更新してください。' };
+    const collected = collectTuningFactors(lastDesignResult.estimated);
+    if (collected.invalid.length) {
+      return { ok: false, message: '補正係数が極端です。入力値か測定条件を確認してください。' };
+    }
+    const roles = Object.keys(collected.factors);
+    if (!roles.length) return { ok: false, message: '保存する実測Zを入力してください。' };
+    roles.forEach(role => AppState.setTuningCorrection(role, collected.factors[role]));
+    if (!AppState.saveTuningCorrection()) return { ok: false, message: '学習補正を保存できませんでした。' };
+    rerenderLastDesign();
+    return { ok: true, message: 'このズレを学習して保存しました。' };
+  }
+
+  function resetTuningCorrection() {
+    AppState.resetTuningCorrection();
+    rerenderLastDesign();
+  }
+
+  return ({
+    $, format, formatInt, card,
+    showError,
+    clearError,
+    renderAll,
+    renderResults,
+    renderMeasuredResult,
+    renderEctImportStatus,
+    renderCableControls,
+    renderCableResult,
+    updateTuning,
+    toggleTuning,
+    saveTuningCorrection,
+    resetTuningCorrection,
+    updateRolePreview,
+    affectedPreviewRoles,
+    scheduleRolePreviews,
+    scheduleRenderAll,
+    scheduleRenderRole,
+    scheduleRenderCoupling,
+    scheduleRenderCable,
+    renderRoleBlock,
+  });
+})();
+
+/* Controller layer */
+const UI = (() => {
+  const TARGET_Z_TUNER_KEY = 'coilDesigner.targetZTuner.v1';
+  let targetZTuner = {
+    mode: 'z',
+    frequency: '',
+    targetZ: '',
+    entry: { n:'', z:'' },
+    points: [],
+  };
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;',
+    })[char]);
+  }
+
+  function measuredMode() {
+    return targetZTuner.mode === 'l' ? 'l' : 'z';
+  }
+
+  function measuredModeMeta() {
+    const isL = measuredMode() === 'l';
+    return {
+      mode: isL ? 'l' : 'z',
+      badge: isL ? 'L' : 'Z',
+      valueLabel: isL ? 'L' : 'Z',
+      unit: isL ? 'uH' : 'Ω',
+      measuredLabel: isL ? '実測 L1' : '実測 Z1',
+      targetLabel: isL ? '目標 L' : '目標 Z',
+      tunerTitle: isL ? 'TARGET L TUNER' : 'TARGET Z TUNER',
+      tunerSubtitle: isL ? '目標Lチューナー' : '目標Zチューナー',
+      help: isL
+        ? '実測点を追加すると、グラフから目標Lに必要な巻数を推定します。'
+        : '実測点を追加すると、グラフから目標巻数を推定します。',
+      flow: isL
+        ? '①試し巻き → ②L実測 → ③入力 → ④目標巻数推定'
+        : '①試し巻き → ②Z実測 → ③入力 → ④目標巻数推定',
+    };
+  }
+
+  function convertZLValue(value, frequency_kHz, toMode) {
+    const n = numberOrNull(value);
+    if (!(n > 0) || !(frequency_kHz > 0)) return value;
+    const freq_Hz = frequency_kHz * 1000;
+    const converted = toMode === 'l'
+      ? n / (2 * Math.PI * freq_Hz) * 1e6
+      : 2 * Math.PI * freq_Hz * n / 1e6;
+    return Render.format(converted, toMode === 'l' ? 3 : 2);
+  }
+
+  function defaultTargetZTuner() {
+    return {
+      mode: 'z',
+      frequency: '',
+      targetZ: '',
+      entry: { n:'', z:'' },
+      points: [],
+    };
+  }
+
+  function loadTargetZTuner() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(TARGET_Z_TUNER_KEY) || 'null');
+      if (parsed && Array.isArray(parsed.points)) {
+        targetZTuner = {
+          mode: parsed.mode === 'l' ? 'l' : 'z',
+          frequency: parsed.frequency ?? '',
+          targetZ: parsed.targetZ ?? '',
+          entry: {
+            n: parsed.entry?.n ?? '',
+            z: parsed.entry?.z ?? '',
+          },
+          points: parsed.points.map(point => ({
+            n: point.n ?? '',
+            z: point.z ?? '',
+          })).filter(point => point.n !== '' || point.z !== ''),
+        };
+      }
+    } catch {
+      targetZTuner = defaultTargetZTuner();
+    }
+  }
+
+  function saveTargetZTuner() {
+    try {
+      localStorage.setItem(TARGET_Z_TUNER_KEY, JSON.stringify(targetZTuner));
+    } catch {}
+  }
+
+  function numberOrNull(value) {
+    const n = Number(String(value ?? '').trim());
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function readTargetZTunerFromDom() {
+    targetZTuner.entry = {
+      n: Render.$('tz-entry-n')?.value ?? '',
+      z: Render.$('tz-entry-z')?.value ?? '',
+    };
+  }
+
+  function validTargetZPoints() {
+    return targetZTuner.points
+      .map((point, index) => ({
+        index,
+        n:numberOrNull(point.n),
+        z:numberOrNull(point.z),
+      }))
+      .filter(point => point.n > 0 && point.z > 0);
+  }
+
+  function targetZTunerStats(points, targetZ) {
+    if (!points.length || !(targetZ > 0)) return null;
+    const ks = points.map(point => point.z / (point.n ** 2));
+    const kAvg = ks.reduce((sum, value) => sum + value, 0) / ks.length;
+    const nTarget = Math.sqrt(targetZ / kAvg);
+    const nextTurns = Math.max(1, Math.round(nTarget));
+    const estimatedZ = kAvg * nextTurns ** 2;
+    const deviations = ks.map(k => Math.abs(k - kAvg) / kAvg * 100);
+    const maxDevPct = deviations.length ? Math.max(...deviations) : 0;
+    return { kAvg, nTarget, nextTurns, estimatedZ, maxDevPct };
+  }
+
+  function targetZTunerWarnings(points, stats, frequency, targetZ) {
+    const meta = measuredModeMeta();
+    const warnings = [];
+    if (!points.length) warnings.push('有効実測点がありません。Nと' + meta.valueLabel + 'を入力してください。');
+    targetZTuner.points.forEach((point, index) => {
+      const n = numberOrNull(point.n);
+      const z = numberOrNull(point.z);
+      if ((point.n !== '' && !(n > 0)) || (point.z !== '' && !(z > 0))) {
+        warnings.push((index + 1) + '行目：巻数または' + meta.valueLabel + 'は0より大きい値にしてください。');
+      }
+    });
+    if (!(frequency > 0)) warnings.push('測定周波数は0より大きい値にしてください。');
+    if (!(targetZ > 0)) warnings.push('目標' + meta.valueLabel + 'は0より大きい値にしてください。');
+    if (stats && stats.maxDevPct >= 20) warnings.push('ばらつきが大きいため、推定巻数の信頼度は低めです。');
+    const seen = new Set();
+    points.forEach(point => {
+      if (seen.has(point.n)) warnings.push('巻数Nが重複している実測点があります。');
+      seen.add(point.n);
+    });
+    const sorted = points.slice().sort((a, b) => a.n - b.n);
+    for (let i = 1; i < sorted.length; i += 1) {
+      if (sorted[i].z < sorted[i - 1].z * 0.95) {
+        warnings.push('巻数が増えているのに' + meta.valueLabel + 'が下がっている点があります。測定条件を確認してください。');
+        break;
+      }
+    }
+    return [...new Set(warnings)];
+  }
+
+  function renderTargetZTunerRows() {
+    const target = Render.$('targetZTunerRows');
+    if (!target) return;
+    const meta = measuredModeMeta();
+    if (!targetZTuner.points.length) {
+      target.innerHTML = '<div class="info-box">追加済み点はまだありません。</div>';
+      return;
+    }
+    target.innerHTML = targetZTuner.points.map((point, index) => {
+      return '<div class="tuner-point-item">' +
+        '<div class="tuner-point-main">' + (index + 1) + '. N=' + escapeHtml(point.n) + 'T / ' + meta.valueLabel + '=' + escapeHtml(point.z) + meta.unit + '</div>' +
+        '<button type="button" class="tuner-delete-btn" onclick="UI.deleteTargetZTunerPoint(' + index + ')">削除</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function drawTargetZTunerChart(points, stats, targetZ, frequency) {
+    const canvas = Render.$('targetZTunerCanvas');
+    if (!canvas) return;
+    const meta = measuredModeMeta();
+    canvas._targetZTunerPoints = [];
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.max(280, rect.width || canvas.parentElement.clientWidth || 600);
+    const height = Math.max(240, rect.height || 320);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#05080d';
+    ctx.fillRect(0, 0, width, height);
+    if (!points.length || !stats) {
+      hideTargetZTunerPopover();
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('表示可能データなし', width / 2, height / 2);
+      return;
+    }
+    const nTarget = stats.nTarget;
+    const maxN = Math.max(...points.map(p => p.n), nTarget, 1) * 1.18;
+    const maxZ = Math.max(...points.map(p => p.z), targetZ, stats.estimatedZ, 1) * 1.18;
+    const plot = { left:46, right:14, top:18, bottom:38 };
+    const plotW = width - plot.left - plot.right;
+    const plotH = height - plot.top - plot.bottom;
+    const x = n => plot.left + (n / maxN) * plotW;
+    const y = z => plot.top + plotH - (z / maxZ) * plotH;
+
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(plot.left, plot.top);
+    ctx.lineTo(plot.left, plot.top + plotH);
+    ctx.lineTo(plot.left + plotW, plot.top + plotH);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#58a6ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= 80; i += 1) {
+      const n = maxN * i / 80;
+      const z = stats.kAvg * n ** 2;
+      if (i === 0) ctx.moveTo(x(n), y(z));
+      else ctx.lineTo(x(n), y(z));
+    }
+    ctx.stroke();
+
+    ctx.strokeStyle = '#e3b341';
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(plot.left, y(targetZ));
+    ctx.lineTo(plot.left + plotW, y(targetZ));
+    ctx.moveTo(x(nTarget), plot.top);
+    ctx.lineTo(x(nTarget), plot.top + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const labelPad = 5;
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    function targetLabel(text, px, py, align = 'left') {
+      const metrics = ctx.measureText(text);
+      const boxW = metrics.width + labelPad * 2;
+      const boxH = 18;
+      const boxX = Math.min(Math.max(px, plot.left + 2), plot.left + plotW - boxW - 2);
+      const boxY = Math.min(Math.max(py - boxH / 2, plot.top + 2), plot.top + plotH - boxH - 2);
+      ctx.fillStyle = 'rgba(5, 8, 13, .82)';
+      ctx.fillRect(boxX, boxY, boxW, boxH);
+      ctx.strokeStyle = 'rgba(227, 179, 65, .45)';
+      ctx.strokeRect(boxX, boxY, boxW, boxH);
+      ctx.fillStyle = '#e3b341';
+      ctx.textAlign = align;
+      ctx.fillText(text, align === 'right' ? boxX + boxW - labelPad : boxX + labelPad, boxY + boxH / 2);
+    }
+    targetLabel('目標' + meta.valueLabel + ' ' + Render.format(targetZ, meta.mode === 'l' ? 3 : 1) + meta.unit, plot.left + 8, y(targetZ) - 13);
+    targetLabel('目標巻き数 ' + Render.format(nTarget, 1) + 'T', x(nTarget) + 8, plot.top + 16);
+
+    ctx.fillStyle = '#e3b341';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'right';
+    ctx.fillText(Render.format(targetZ, meta.mode === 'l' ? 2 : 1), plot.left - 5, y(targetZ));
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'center';
+    ctx.fillText(Render.format(nTarget, 1), x(nTarget), plot.top + plotH + 5);
+
+    points.forEach((point, index) => {
+      const px = x(point.n);
+      const py = y(point.z);
+      canvas._targetZTunerPoints.push({
+        x:px,
+        y:py,
+        index:index + 1,
+        n:point.n,
+        z:point.z,
+      });
+      ctx.fillStyle = '#3fb950';
+      ctx.beginPath();
+      ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(meta.valueLabel + ' ' + meta.unit, 8, plot.top + 4);
+    ctx.fillText('0', 8, plot.top + plotH);
+    if (frequency > 0) {
+      ctx.textAlign = 'left';
+      ctx.fillText('測定周波数 ' + Render.format(frequency, 3) + ' kHz', plot.left + 8, height - 12);
+    }
+    ctx.textAlign = 'right';
+    ctx.fillText('N', plot.left + plotW, height - 18);
+  }
+
+  function hideTargetZTunerPopover() {
+    const popover = Render.$('targetZTunerPopover');
+    if (popover) popover.classList.add('hidden');
+  }
+
+  function showTargetZTunerPointInfo(event) {
+    const canvas = Render.$('targetZTunerCanvas');
+    const popover = Render.$('targetZTunerPopover');
+    if (!canvas || !popover) return;
+    const meta = measuredModeMeta();
+    const rect = canvas.getBoundingClientRect();
+    const px = event.clientX - rect.left;
+    const py = event.clientY - rect.top;
+    const points = canvas._targetZTunerPoints || [];
+    let nearest = null;
+    let nearestDistance = Infinity;
+    points.forEach(point => {
+      const distance = Math.hypot(point.x - px, point.y - py);
+      if (distance < nearestDistance) {
+        nearest = point;
+        nearestDistance = distance;
+      }
+    });
+    if (!nearest || nearestDistance > 18) {
+      hideTargetZTunerPopover();
+      return;
+    }
+    popover.innerHTML =
+      '<strong>' + nearest.index + '点目</strong><br>' +
+      'N=' + Render.format(nearest.n, 1) + 'T / ' + meta.valueLabel + '=' + Render.format(nearest.z, meta.mode === 'l' ? 3 : 2) + meta.unit;
+    const boxW = popover.offsetWidth || 128;
+    const left = Math.min(Math.max(nearest.x, boxW / 2 + 6), rect.width - boxW / 2 - 6);
+    const top = Math.max(nearest.y, 28);
+    popover.style.left = left + 'px';
+    popover.style.top = top + 'px';
+    popover.classList.remove('hidden');
+  }
+
+  function updateTargetZTuner() {
+    readTargetZTunerFromDom();
+    targetZTuner.frequency = Render.$('m-f')?.value || targetZTuner.frequency;
+    targetZTuner.targetZ = Render.$('m-zt')?.value || targetZTuner.targetZ;
+    saveTargetZTuner();
+    const meta = measuredModeMeta();
+    const frequency_kHz = Calculation.readNumber('m-f', null) || numberOrNull(targetZTuner.frequency);
+    const freq_Hz = frequency_kHz > 0 ? frequency_kHz * 1000 : null;
+    const targetZ = Calculation.readNumber('m-zt', null) || numberOrNull(targetZTuner.targetZ);
+    const points = validTargetZPoints();
+    const stats = targetZTunerStats(points, targetZ);
+    const warnings = targetZTunerWarnings(points, stats, frequency_kHz, targetZ);
+    const quick = Render.$('targetZTunerQuick');
+    const output = Render.$('targetZTunerOutput');
+    const warningEl = Render.$('targetZTunerWarnings');
+    if (quick) {
+      quick.innerHTML = stats
+        ? '<span>推定巻数</span><strong>' + stats.nextTurns + ' T</strong><span>推定' + meta.valueLabel + ' ' + Render.format(stats.estimatedZ, meta.mode === 'l' ? 3 : 1) + ' ' + meta.unit + '</span>'
+        : '点を追加すると推定巻数を表示します。';
+    }
+    if (output) {
+      if (stats) {
+        const estimatedL_uH = meta.mode === 'l'
+          ? stats.estimatedZ
+          : (freq_Hz > 0 ? stats.estimatedZ / (2 * Math.PI * freq_Hz) * 1e6 : null);
+        const estimatedZ_ohm = meta.mode === 'l'
+          ? (freq_Hz > 0 ? 2 * Math.PI * freq_Hz * stats.estimatedZ / 1e6 : null)
+          : stats.estimatedZ;
+        output.innerHTML =
+          '<ul class="compact-result-list">' +
+          '<li>有効点数: <strong>' + points.length + ' 点</strong></li>' +
+          '<li>目標' + meta.valueLabel + 'に必要な巻数: <strong>' + Render.format(stats.nTarget, 1) + ' T</strong></li>' +
+          '<li>推奨次巻数: <strong>' + stats.nextTurns + ' T</strong></li>' +
+          '<li>推定Z: <strong>' + (estimatedZ_ohm === null ? '-' : Render.format(estimatedZ_ohm, 2)) + ' Ω</strong></li>' +
+          '<li>推定L: <strong>' + (estimatedL_uH === null ? '-' : Render.format(estimatedL_uH, 3)) + ' uH</strong></li>' +
+          '</ul>';
+      } else {
+        output.innerHTML = '<div class="info-box">有効な実測点と目標' + meta.valueLabel + 'を入力すると推定巻数を表示します。</div>';
+      }
+    }
+    if (warningEl) {
+      warningEl.innerHTML = warnings.length
+        ? '<div class="warn-box">' + warnings.map(item => '- ' + escapeHtml(item)).join('<br>') + '</div>'
+        : '';
+    }
+    drawTargetZTunerChart(points, stats, targetZ, frequency_kHz);
+    renderTargetZTunerRows();
+  }
+
+  function renderMeasuredMode() {
+    const meta = measuredModeMeta();
+    const setText = (id, text) => {
+      const el = Render.$(id);
+      if (el) el.textContent = text;
+    };
+    setText('measuredModeHelp', meta.flow);
+    setText('m-z1-label', meta.measuredLabel);
+    setText('m-z1-unit', meta.unit);
+    setText('m-zt-label', meta.targetLabel);
+    setText('m-zt-unit', meta.unit);
+    setText('targetTunerBadge', meta.badge);
+    setText('targetTunerTitle', meta.tunerTitle);
+    setText('targetTunerSubtitle', meta.tunerSubtitle);
+    setText('targetTunerHelp', meta.help);
+    setText('tz-entry-z-label', '実測' + meta.valueLabel);
+    setText('tz-entry-z-unit', meta.unit);
+    const toggle = Render.$('measuredModeToggle');
+    if (toggle) {
+      toggle.textContent = meta.mode === 'l' ? 'Zへ' : 'Lへ';
+      toggle.classList.toggle('l-mode', meta.mode === 'l');
+      toggle.title = meta.mode === 'l' ? 'Z入力へ切り替え' : 'L入力へ切り替え';
+    }
+  }
+
+  function renderTargetZTuner() {
+    if (!Render.$('tz-entry-n') || !Render.$('tz-entry-z')) return;
+    renderMeasuredMode();
+    Render.$('tz-entry-n').value = targetZTuner.entry?.n || '';
+    Render.$('tz-entry-z').value = targetZTuner.entry?.z || '';
+    ['tz-entry-n', 'tz-entry-z'].forEach(id => {
+      const el = Render.$(id);
+      if (!el) return;
+      el.oninput = updateTargetZTuner;
+      el.onkeydown = event => {
+        if (event.key === 'Enter') addTargetZTunerPoint();
+      };
+    });
+    const canvas = Render.$('targetZTunerCanvas');
+    if (canvas && !canvas._targetZTunerBound) {
+      canvas.addEventListener('click', showTargetZTunerPointInfo);
+      canvas.addEventListener('touchstart', event => {
+        const touch = event.touches && event.touches[0];
+        if (touch) showTargetZTunerPointInfo(touch);
+      }, { passive:true });
+      canvas._targetZTunerBound = true;
+    }
+    renderTargetZTunerRows();
+    updateTargetZTuner();
+  }
+
+  function addTargetZTunerPoint() {
+    readTargetZTunerFromDom();
+    const n = numberOrNull(targetZTuner.entry.n);
+    const z = numberOrNull(targetZTuner.entry.z);
+    if (!(n > 0) || !(z > 0)) {
+      const warningEl = Render.$('targetZTunerWarnings');
+      if (warningEl) warningEl.innerHTML = '<div class="warn-box">巻数Nと実測Zは0より大きい値で入力してください。</div>';
+      return;
+    }
+    targetZTuner.points.push({
+      n:String(targetZTuner.entry.n).trim(),
+      z:String(targetZTuner.entry.z).trim(),
+    });
+    targetZTuner.entry = { n:'', z:'' };
+    saveTargetZTuner();
+    renderTargetZTuner();
+  }
+
+  function deleteTargetZTunerPoint(index) {
+    readTargetZTunerFromDom();
+    targetZTuner.points.splice(index, 1);
+    saveTargetZTuner();
+    renderTargetZTuner();
+  }
+
+  function clearTargetZTuner() {
+    const mode = measuredMode();
+    targetZTuner = defaultTargetZTuner();
+    targetZTuner.mode = mode;
+    hideTargetZTunerPopover();
+    renderTargetZTuner();
+    try {
+      localStorage.removeItem(TARGET_Z_TUNER_KEY);
+    } catch {}
+  }
+
+  function toggleMeasuredMode() {
+    readTargetZTunerFromDom();
+    const fromMode = measuredMode();
+    const toMode = fromMode === 'l' ? 'z' : 'l';
+    const frequency_kHz = Calculation.readNumber('m-f', null);
+    ['m-z1', 'm-zt'].forEach(id => {
+      const el = Render.$(id);
+      if (el) el.value = convertZLValue(el.value, frequency_kHz, toMode);
+    });
+    targetZTuner.mode = toMode;
+    targetZTuner.targetZ = convertZLValue(targetZTuner.targetZ || Render.$('m-zt')?.value || '', frequency_kHz, toMode);
+    targetZTuner.entry.z = convertZLValue(targetZTuner.entry.z, frequency_kHz, toMode);
+    targetZTuner.points = targetZTuner.points.map(point => ({
+      n: point.n,
+      z: convertZLValue(point.z, frequency_kHz, toMode),
+    }));
+    hideTargetZTunerPopover();
+    saveTargetZTuner();
+    Render.$('measuredResults')?.classList.add('hidden');
+    renderTargetZTuner();
+  }
+
+  function copyMeasuredToTuner() {
+    readTargetZTunerFromDom();
+    targetZTuner.frequency = Render.$('m-f')?.value || targetZTuner.frequency;
+    targetZTuner.targetZ = Render.$('m-zt')?.value || targetZTuner.targetZ;
+    const n = Render.$('m-n1')?.value || '';
+    const z = Render.$('m-z1')?.value || '';
+    if (numberOrNull(n) > 0 && numberOrNull(z) > 0) {
+      const exists = targetZTuner.points.some(point => String(point.n) === String(n) && String(point.z) === String(z));
+      if (!exists) targetZTuner.points.push({ n:String(n), z:String(z) });
+    }
+    targetZTuner.entry = { n:'', z:'' };
+    saveTargetZTuner();
+    renderTargetZTuner();
+  }
+
+  function openStep1Modal() {
+    document.getElementById('step1Modal')?.classList.remove('hidden');
+  }
+
+  function openStep2Modal() {
+    document.getElementById('step2Modal')?.classList.remove('hidden');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id)?.classList.add('hidden');
+  }
+
+  function backToStep1() {
+    closeModal('step2Modal');
+    openStep1Modal();
+  }
+
+  function finishStep2() {
+    closeModal('step2Modal');
+  }
+
+  function bindModalOutsideClick() {
+    ['step1Modal', 'step2Modal'].forEach(id => {
+      const modal = document.getElementById(id);
+      if (!modal || modal.dataset.boundOutsideClick === 'true') return;
+      modal.dataset.boundOutsideClick = 'true';
+      modal.onclick = event => {
+        if (event.target === modal) closeModal(id);
+      };
+    });
+  }
+
+  function pick(key, value) {
+    AppState.setValue(key, value);
+    if (key === 'config') {
+      Render.scheduleRenderAll('config-change');
+      closeModal('step1Modal');
+      openStep2Modal();
+      return;
+    }
+    if (key === 'diffDistanceMode') {
+      Render.scheduleRenderCoupling('diff-distance-mode');
+      return;
+    }
+    Render.scheduleRenderAll('state-pick');
+  }
+
+  function pickRole(role, key, value) {
+    AppState.setRoleValue(role, key, value);
+    if (role === 'excitation1' && AppState.hasDualExcitation()) AppState.syncDualExcitationCommon();
+    if (key === 'type') {
+      Render.scheduleRenderRole(role, 'type');
+      Render.scheduleRenderCoupling('role-type');
+      return;
+    }
+    Render.scheduleRenderRole(role, key);
+  }
+
+  function toggleTurnMode(role, checked) {
+    AppState.setRoleValue(role, 'turnMode', checked ? 'turns' : 'targetZ');
+    if (role === 'excitation1' && AppState.hasDualExcitation()) AppState.syncDualExcitationCommon();
+    Render.scheduleRenderRole(role, 'turnMode');
+  }
+
+  function saveInputValue(id, value) {
+    AppState.setInputValue(id, value);
+    if (id.startsWith('excitation1_') && AppState.hasDualExcitation()) {
+      AppState.setInputValue('excitation2_' + id.slice('excitation1_'.length), value);
+    }
+    if (id === 'excitationPosition') Render.scheduleRolePreviews(['detect']);
+  }
+
+  function pickGlobalFerriteMaterial(value) {
+    const previous = AppState.state.inputs.globalFerriteMaterial ?? '2G4';
+    AppState.setInputValue('globalFerriteMaterial', value);
+    if (previous === 'manual' || value === 'manual') {
+      Render.scheduleRenderAll('ferrite-material-manual-toggle');
+      return;
+    }
+    AppState.activeRoles()
+      .filter(role => ['insert', 'ferrite'].includes(AppState.state.roles[role].type))
+      .forEach(role => Render.scheduleRenderRole(role, 'ferrite-material'));
+  }
+
+  function updateTuning() {
+    Render.updateTuning();
+  }
+
+  function toggleTuning(enabled) {
+    Render.toggleTuning(enabled);
+  }
+
+  function saveTuningCorrection() {
+    const result = Render.saveTuningCorrection();
+    if (result.ok) Render.clearError();
+    else Render.showError(result.message);
+  }
+
+  function resetTuningCorrection() {
+    Render.resetTuningCorrection();
+  }
+
+  function updateRolePreviewFromInput(id) {
+    Render.scheduleRolePreviews(Render.affectedPreviewRoles(id));
+  }
+
+  function loadEctJson() {
+    const input = Render.$('ectJsonInput');
+    const text = input?.value || '';
+    const result = ECTBridge.apply(text.trim());
+    if (!result.ok) {
+      Render.renderEctImportStatus(result);
+      return;
+    }
+    if (input) input.disabled = true;
+    Render.scheduleRenderAll('ect-json-import');
+    Render.renderEctImportStatus(result);
+    reflectCableFromDesign(false);
+  }
+
+  function clearEctJson() {
+    const input = Render.$('ectJsonInput');
+    if (input) {
+      input.disabled = false;
+      input.value = '';
+      input.focus();
+    }
+    Render.renderEctImportStatus(null);
+  }
+
+  function reflectCableFromDesign(calculateAfter = false) {
+    const configEl = Render.$('cable-config');
+    const freqEl = Render.$('cable-freq');
+    const designFreq = Number(AppState.state.inputs.freq) || CONFIG.defaults.frequencyKHz;
+    if (configEl) {
+      configEl.value = AppState.state.config;
+      AppState.setInputValue('cable-config', configEl.value);
+    }
+    if (freqEl) {
+      freqEl.value = designFreq;
+      AppState.setInputValue('cable-freq', freqEl.value);
+    }
+    if (calculateAfter) calculateCable();
+    else Render.scheduleRenderCable('reflect-cable-from-design');
+  }
+
+  function calculateCable() {
+    try {
+      Render.clearError('cableErrorArea');
+      const result = CableSelection.calculate({
+        config: Render.$('cable-config')?.value || AppState.state.config,
+        freq_kHz: parseFloat(Render.$('cable-freq')?.value || CONFIG.defaults.frequencyKHz),
+        length_m: parseFloat(Render.$('cable-length')?.value || CONFIG.defaults.cableLengthM),
+        env: Render.$('cable-env')?.value || 'normal',
+        load: Render.$('cable-load')?.value || 'standard',
+      });
+      Render.renderCableResult(result);
+    } catch (error) {
+      Render.$('cableResultArea')?.classList.add('hidden');
+      Render.$('cableReasonSection')?.classList.add('hidden');
+      Render.$('cableNoticeSection')?.classList.add('hidden');
+      Render.showError(error.message || 'ケーブル選定を計算できませんでした。入力値を確認してください。', 'cableErrorArea');
+    }
+  }
+
+  function calculate() {
+    const btn = document.getElementById('designCalcBtn');
+    if (!btn) return;
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.textContent = '計算中...';
+
+    setTimeout(() => {
+      try {
+        Render.clearError('errorArea');
+        const result = Calculation.calculateDesign();
+        Render.renderResults(result);
+      } catch (error) {
+        Render.$('resultArea').classList.add('hidden');
+        Render.showError(error.message || '計算できませんでした。入力値を確認してください。', 'errorArea');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        btn.textContent = '構成込み結果を更新';
+      }
+    }, 100);
+  }
+
+  function calcMeasured() {
+    try {
+      Render.clearError('measuredErrorArea');
+      const mode = measuredMode();
+      const meta = measuredModeMeta();
+      const n1 = Calculation.readNumber('m-n1', null);
+      const value1 = Calculation.readNumber('m-z1', null);
+      const freq_kHz = Calculation.readNumber('m-f', null);
+      const targetValue = Calculation.readNumber('m-zt', null);
+
+      if (!n1 || n1 <= 0) throw Error('試し巻き数 N1 は1以上で入力してください。');
+      if (!value1 || value1 <= 0) throw Error(meta.measuredLabel + 'は0より大きい値を入力してください。');
+      if (!freq_kHz || freq_kHz <= 0) throw Error('測定周波数は0より大きい値を入力してください。');
+      if (!targetValue || targetValue <= 0) throw Error(meta.targetLabel + 'は0より大きい値を入力してください。');
+
+      const inverse = Coil.calcMeasuredInverse(n1, value1, targetValue, freq_kHz * 1000, mode);
+      if (!inverse) throw Error('実測逆算できませんでした。入力値を確認してください。');
+      Render.renderMeasuredResult(inverse, mode);
+      copyMeasuredToTuner();
+    } catch (error) {
+      Render.$('measuredResults').classList.add('hidden');
+      Render.showError(error.message || '計算できませんでした。入力値を確認してください。', 'measuredErrorArea');
+    }
+  }
+
+  function switchMainTab(tab) {
+    ['coil', 'cable', 'measured'].forEach(id => {
+      Render.$('tab-' + id)?.classList.toggle('active', id === tab);
+      Render.$('tabBtn-' + id)?.classList.toggle('active', id === tab);
+    });
+    if (tab === 'cable') Render.scheduleRenderCable('switch-cable-tab');
+    if (tab === 'measured') renderTargetZTuner();
+  }
+
+  function switchDesignSubTab(tab) {
+    ['config', 'detect', 'excitation', 'result'].forEach(id => {
+      Render.$('designSubtab-' + id)?.classList.toggle('active', id === tab);
+      Render.$('designSubtabBtn-' + id)?.classList.toggle('active', id === tab);
+    });
+  }
+
+  function init() {
+    Render.renderAll();
+    loadTargetZTuner();
+    renderTargetZTuner();
+    bindModalOutsideClick();
+  }
+
+  return ({ init, pick, pickRole, toggleTurnMode, saveInputValue, pickGlobalFerriteMaterial, updateTuning, toggleTuning, saveTuningCorrection, resetTuningCorrection, updateRolePreviewFromInput, loadEctJson, clearEctJson, reflectCableFromDesign, calculateCable, calculate, calcMeasured, switchMainTab, switchDesignSubTab, toggleMeasuredMode, addTargetZTunerPoint, deleteTargetZTunerPoint, clearTargetZTuner, copyMeasuredToTuner, openStep1Modal, openStep2Modal, closeModal, backToStep1, finishStep2 });
+})();
+
+UI.init();
+</script>
+</body>
+</html>

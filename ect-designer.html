@@ -1,0 +1,1572 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECT DESIGNER</title>
+<style>
+
+:root {
+  --bg:       #0d1117;
+  --surface:  #161b22;
+  --surface2: #1c2333;
+  --border:   #30363d;
+  --accent:   #58a6ff;
+  --accent2:  #3fb950;
+  --accent3:  #f78166;
+  --accent4:  #d2a8ff;
+  --gold:     #e3b341;
+  --text:     #e6edf3;
+  --muted:    #8b949e;
+  --input-bg: #0d1117;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scrollbar-gutter: stable; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  overflow-y: scroll;
+}
+
+/* ===== ヘッダー ===== */
+.header {
+  background: linear-gradient(135deg, #1a2744 0%, #0d1117 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 10px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-icon { font-size: 20px; }
+.header h1 {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 17px; font-weight: 700;
+  color: var(--accent); letter-spacing: 1px;
+}
+.header-sub { font-size: 9px; color: var(--muted); margin-left: auto; text-align: right; line-height: 1.4; }
+
+/* ===== タブ ===== */
+.tabs { display: flex; background: var(--surface); border-bottom: 2px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 1; min-width: 62px; padding: 9px 4px; text-align: center; cursor: pointer;
+  font-size: 10px; font-weight: 600; color: var(--muted);
+  border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap;
+}
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-icon { font-size: 15px; display: block; margin-bottom: 2px; }
+
+/* ===== コンテンツ ===== */
+.content { display: none; padding: 14px; max-width: 600px; margin: 0 auto; }
+.content.active { display: block; }
+
+/* ===== セクション ===== */
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 13px; margin-bottom: 12px; }
+.section-title {
+  font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700;
+  color: var(--accent); letter-spacing: 1px; margin-bottom: 11px;
+  text-transform: uppercase; display: flex; align-items: center; gap: 6px;
+}
+
+/* ===== 入力 ===== */
+.input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.input-group { display: flex; flex-direction: column; gap: 3px; }
+.input-group.full { grid-column: 1 / -1; }
+.input-label { font-size: 10px; color: var(--muted); font-weight: 500; }
+.input-row {
+  display: flex; align-items: center;
+  background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden; transition: border-color .2s;
+}
+.input-row:focus-within { border-color: var(--accent); }
+.input-row input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text); font-size: 15px; font-weight: 600;
+  padding: 8px 9px; font-family: 'Rajdhani', sans-serif;
+}
+.input-row input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.input-row input[type="number"]::-webkit-outer-spin-button,
+.input-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.input-unit {
+  padding: 0 9px; font-size: 10px; color: var(--accent); font-weight: 600;
+  background: var(--surface2); height: 100%; display: flex; align-items: center;
+  border-left: 1px solid var(--border);
+}
+
+/* ===== ボタン ===== */
+.calc-btn {
+  width: 100%; padding: 12px;
+  background: linear-gradient(135deg, #1f6feb, #388bfd);
+  color: white; border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 700; font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 1px; cursor: pointer; transition: all .2s;
+  margin-bottom: 12px; box-shadow: 0 2px 10px rgba(56,139,253,.3);
+}
+.calc-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(56,139,253,.4); }
+.calc-btn:active { transform: translateY(0); }
+
+/* ===== 結果カード ===== */
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.result-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 11px; text-align: center;
+}
+.result-card.highlight { border-color: var(--gold); background: linear-gradient(135deg, #1a1500, #1c2333); }
+.result-card.full { grid-column: 1 / -1; }
+.result-card.green { border-color: var(--accent2); background: rgba(63,185,80,.07); }
+.result-label { font-size: 9px; color: var(--muted); margin-bottom: 3px; }
+.result-value { font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; color: var(--text); }
+.result-value.big { font-size: 24px; color: var(--gold); }
+.result-value.green { color: var(--accent2); }
+.result-value.red   { color: var(--accent3); }
+.result-unit { font-size: 10px; color: var(--accent); font-weight: 600; }
+
+/* ===== テーブル ===== */
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th {
+  background: var(--surface2); padding: 6px 7px; text-align: left;
+  color: var(--muted); font-size: 10px; font-weight: 600; border-bottom: 1px solid var(--border);
+}
+.data-table td { padding: 7px; border-bottom: 1px solid var(--border); font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 600; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--surface2); }
+.data-table tr.hl td { background: rgba(227,179,65,.1); color: var(--gold); }
+.z-val { color: var(--accent); }
+.d-val { color: var(--accent4); }
+
+/* ===== big-result ===== */
+.big-result {
+  background: linear-gradient(135deg, #1a1500, #1c1a00);
+  border: 2px solid var(--gold); border-radius: 10px;
+  padding: 14px; text-align: center; margin-bottom: 12px;
+}
+.big-result-label  { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+.big-result-value  { font-family: 'Rajdhani', sans-serif; font-size: 44px; font-weight: 700; color: var(--gold); line-height: 1; }
+.big-result-unit   { font-size: 14px; color: var(--text); font-weight: 500; }
+.big-result-sub    { font-size: 11px; color: var(--muted); margin-top: 6px; }
+.big-result-sub span { color: var(--accent2); font-weight: 700; }
+
+/* ===== 選択ボタン ===== */
+.choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choice-grid.three { grid-template-columns: repeat(3, 1fr); }
+.choice-grid.four { grid-template-columns: repeat(4, 1fr); }
+.choice-btn {
+  padding: 11px 6px; border-radius: 8px; border: 2px solid var(--border);
+  background: var(--surface2); color: var(--muted);
+  font-size: 12px; font-weight: 700; text-align: center; cursor: pointer; transition: all .2s;
+}
+.choice-btn:hover { border-color: var(--accent); color: var(--accent); }
+.choice-btn.sel   { border-color: var(--accent);  background: rgba(88,166,255,.15); color: var(--accent); }
+.choice-btn.sel-g { border-color: var(--accent2); background: rgba(63,185,80,.15);  color: var(--accent2); }
+.choice-btn-icon  { font-size: 20px; display: block; margin-bottom: 3px; }
+.choice-desc { font-size: 9px; color: var(--muted); font-weight: 400; line-height: 1.5; margin-top: 4px; }
+
+/* ===== 材質ボタン ===== */
+.mat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.mat-btn {
+  padding: 8px 6px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--muted);
+  font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; transition: all .2s;
+}
+.mat-btn:hover { border-color: var(--accent); color: var(--accent); }
+.mat-btn.sel   { border-color: var(--gold); background: rgba(227,179,65,.15); color: var(--gold); }
+.mat-sub { font-size: 9px; color: var(--muted); font-weight: 400; display: block; margin-top: 2px; }
+
+/* ===== 周波数バー ===== */
+.freq-bar-wrap   { margin: 10px 0; }
+.freq-bar-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-bottom: 3px; }
+.freq-bar-track  { background: var(--surface2); border-radius: 4px; height: 14px; position: relative; overflow: visible; }
+.freq-bar-fill   { height: 100%; border-radius: 4px; position: absolute; top: 0; background: linear-gradient(90deg,#e3b341,#58a6ff); transition: all .5s; }
+.freq-bar-range  { font-size: 10px; font-weight: 700; color: var(--gold); text-align: center; margin-top: 3px; }
+
+/* ===== フェライト ===== */
+.ferrite-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 11px; margin-bottom: 7px; display: flex; align-items: center; gap: 10px; }
+.ferrite-card.mnzn { border-left: 3px solid var(--accent2); }
+.ferrite-card.nizn  { border-left: 3px solid var(--accent); }
+.ferrite-name      { font-family: 'Rajdhani', sans-serif; font-size: 17px; font-weight: 700; min-width: 48px; }
+.ferrite-name.mnzn { color: var(--accent2); }
+.ferrite-name.nizn { color: var(--accent); }
+.ferrite-name.cur  { color: var(--gold); }
+.ferrite-info { flex: 1; }
+.ferrite-freq { font-size: 11px; font-weight: 700; color: var(--text); }
+.ferrite-note { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.suit-badge { font-size: 11px; padding: 3px 8px; border-radius: 10px; font-weight: 700; white-space: nowrap; }
+.suit-best { background: rgba(227,179,65,.2); color: var(--gold); }
+.suit-good { background: rgba(63,185,80,.2);  color: var(--accent2); }
+.suit-ok   { background: rgba(88,166,255,.2); color: var(--accent); }
+.suit-poor { background: rgba(200,200,200,.1);color: var(--muted); }
+
+/* ===== フィルター ===== */
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.filter-btn { padding: 4px 11px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; transition: all .2s; }
+.filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); margin-bottom: 10px; }
+.toggle-row label { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 12px; font-weight: 700; cursor: pointer; }
+.toggle-row input { width: 10px; height: 10px; accent-color: var(--accent); }
+.mode-note { display: block; margin-top: 4px; font-size: 9px; color: var(--muted); font-weight: 400; line-height: 1.5; }
+.result-list { display: grid; gap: 8px; }
+.result-line { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.result-line:last-child { border-bottom: none; }
+.result-line span:first-child { color: var(--muted); }
+.result-line strong { color: var(--text); text-align: right; }
+.next-box { margin-top: 10px; padding: 11px; border: 1px solid rgba(63,185,80,.35); border-radius: 8px; background: rgba(63,185,80,.07); }
+.next-title { color: var(--accent2); font-weight: 700; font-size: 12px; margin-bottom: 6px; }
+
+/* ===== 情報・警告ボックス ===== */
+.info-box  { background: rgba(88,166,255,.08); border: 1px solid rgba(88,166,255,.2); border-radius: 6px; padding: 9px 11px; font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 11px; }
+.info-box strong { color: var(--accent); }
+.warn-box  { background: rgba(247,129,102,.08); border: 1px solid rgba(247,129,102,.3); border-radius: 6px; padding: 9px 11px; font-size: 11px; color: var(--accent3); line-height: 1.6; margin-bottom: 11px; }
+.warn-box strong { font-size: 12px; }
+.summary-box { border-radius: 8px; padding: 13px; margin-bottom: 10px; border: 2px solid var(--gold); background: rgba(227,179,65,.06); }
+.summary-title { font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 700; color: var(--gold); margin-bottom: 8px; }
+.summary-body  { font-size: 11px; color: var(--muted); line-height: 1.9; }
+.summary-body strong { color: var(--text); }
+.summary-compact { display: grid; gap: 5px; }
+.summary-compact div {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.summary-compact b {
+  color: var(--muted);
+  font-weight: 700;
+}
+.summary-compact span {
+  color: var(--text);
+  font-weight: 700;
+  min-width: 0;
+}
+#nav-result { scroll-margin-top: 82px; }
+.recommend-card {
+  background: linear-gradient(135deg, rgba(63,185,80,.12), rgba(88,166,255,.08));
+  border: 1px solid rgba(63,185,80,.35); border-radius: 8px;
+  padding: 12px; margin-bottom: 10px;
+}
+.recommend-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.recommend-value { font-size: 20px; font-weight: 700; color: var(--accent2); line-height: 1.35; }
+.bullet-list { list-style: none; display: grid; gap: 6px; font-size: 11px; color: var(--muted); line-height: 1.6; }
+.bullet-list li::before { content: "・"; color: var(--accent); font-weight: 700; }
+.json-box {
+  background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px; overflow-x: auto; color: var(--text);
+  font-family: Consolas, 'Courier New', monospace; font-size: 11px; line-height: 1.55;
+  white-space: pre;
+}
+.json-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-top: 12px; margin-bottom: 8px;
+}
+.json-head.compact { justify-content: flex-start; }
+.json-desc { font-size: 11px; color: var(--muted); line-height: 1.6; margin-bottom: 8px; }
+.json-hidden { display: none; }
+.copy-btn {
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface2);
+  color: var(--accent); padding: 7px 10px; font-size: 11px; font-weight: 700;
+  cursor: pointer; transition: all .2s; white-space: nowrap;
+}
+.copy-btn:hover { border-color: var(--accent); background: rgba(88,166,255,.12); }
+.copy-btn.copied { border-color: var(--accent2); color: var(--accent2); background: rgba(63,185,80,.12); }
+.detail-toggle {
+  width: 100%; margin-bottom: 12px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: all .2s;
+}
+.detail-toggle:hover { border-color: var(--accent); background: rgba(88,166,255,.08); }
+
+/* ===== その他 ===== */
+.step-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); color: white; font-size: 10px; font-weight: 700;
+  margin-right: 5px; flex-shrink: 0;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.fade-in { animation: fadeIn .3s ease; }
+
+
+.header h1 { color: var(--accent); }
+.content { max-width: 720px; }
+@media (max-width: 520px) {
+  body { font-size: 12px; }
+  .header { padding: 7px 10px; gap: 7px; }
+  .header-icon { font-size: 17px; }
+  .header h1 { font-size: 15px; letter-spacing: .6px; }
+  .header-sub { display: none; }
+  .tabs { border-bottom-width: 1px; }
+  .tab { min-width: 56px; padding: 6px 3px; font-size: 9px; }
+  .tab-icon { font-size: 13px; margin-bottom: 1px; }
+  .content { padding: 8px; }
+  .section { padding: 8px; margin-bottom: 8px; border-radius: 6px; }
+  .section-title { margin-bottom: 7px; gap: 4px; font-size: 11px; letter-spacing: .5px; }
+  .step-badge { width: 17px; height: 17px; font-size: 9px; margin-right: 3px; }
+  .input-grid, .result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .input-group { gap: 2px; }
+  .input-group.full { grid-column: 1 / -1; }
+  .input-label { font-size: 9px; }
+  .input-row { border-radius: 5px; }
+  .input-row input { padding: 5px 6px; font-size: 13px; min-width: 0; }
+  .input-unit { padding: 0 6px; font-size: 9px; }
+  .calc-btn { padding: 9px; margin-bottom: 8px; border-radius: 6px; font-size: 12px; letter-spacing: .6px; }
+  .result-card { padding: 7px; border-radius: 6px; }
+  .result-label { font-size: 8px; margin-bottom: 2px; }
+  .result-value { font-size: 16px; line-height: 1.15; }
+  .result-value.big { font-size: 22px; }
+  .result-unit { font-size: 9px; }
+  .big-result { padding: 9px; margin-bottom: 8px; border-radius: 7px; }
+  .big-result-label { font-size: 9px; }
+  .big-result-value { font-size: 34px; }
+  .big-result-unit { font-size: 11px; }
+  .big-result-sub { font-size: 9px; margin-top: 4px; }
+  .choice-grid { gap: 6px; }
+  .choice-grid.three, .choice-grid.four { grid-template-columns: 1fr 1fr; }
+  .choice-btn { padding: 8px 4px; border-radius: 6px; font-size: 11px; border-width: 1px; }
+  .choice-btn-icon { display: inline; font-size: 13px; margin: 0 3px 0 0; }
+  .choice-btn br,
+  .choice-btn small,
+  .choice-desc,
+  .mode-note,
+  .mat-sub,
+  .toggle-row .choice-desc {
+    display: none;
+  }
+  .mat-grid { gap: 5px; margin-top: 6px; }
+  .mat-btn { padding: 8px 4px; border-radius: 5px; font-size: 11px; }
+  .toggle-row { padding: 6px 7px; gap: 6px; margin-bottom: 7px; border-radius: 6px; }
+  .toggle-row label { gap: 5px; font-size: 10px; }
+  .toggle-row input { width: 9px; height: 9px; }
+  .freq-bar-wrap { margin: 7px 0; }
+  .freq-bar-track { height: 10px; }
+  .freq-bar-labels, .freq-bar-range { font-size: 8px; }
+  .ferrite-card { padding: 7px; margin-bottom: 5px; gap: 7px; border-radius: 6px; }
+  .ferrite-name { font-size: 14px; min-width: 40px; }
+  .ferrite-freq, .suit-badge { font-size: 9px; }
+  .ferrite-note { font-size: 8px; }
+  .suit-badge { padding: 2px 6px; border-radius: 8px; }
+  .filter-row { gap: 4px; margin-bottom: 7px; }
+  .filter-btn { padding: 3px 8px; font-size: 9px; border-radius: 12px; }
+  .info-box, .warn-box { padding: 7px 8px; font-size: 10px; line-height: 1.45; margin-bottom: 8px; }
+  .summary-box { padding: 9px; margin-bottom: 8px; border-radius: 6px; }
+  .summary-title { font-size: 12px; margin-bottom: 5px; }
+  .summary-body { font-size: 10px; line-height: 1.55; }
+  .summary-compact { gap: 3px; }
+  .summary-compact div { grid-template-columns: 46px minmax(0, 1fr); gap: 6px; }
+  .recommend-card { padding: 8px; margin-bottom: 7px; border-radius: 6px; }
+  .recommend-label { font-size: 9px; margin-bottom: 2px; }
+  .recommend-value { font-size: 17px; }
+  .bullet-list { gap: 4px; font-size: 10px; line-height: 1.45; }
+  .detail-toggle { padding: 8px 9px; margin-bottom: 8px; border-radius: 6px; font-size: 11px; }
+  .next-box { margin-top: 7px; padding: 8px; border-radius: 6px; }
+  .next-title { font-size: 11px; margin-bottom: 4px; }
+  .result-line { gap: 8px; padding: 6px 0; font-size: 10px; }
+  .json-head { margin-top: 8px; margin-bottom: 6px; }
+  .copy-btn { padding: 5px 8px; border-radius: 6px; font-size: 10px; }
+  .json-box { padding: 7px; border-radius: 6px; font-size: 9px; line-height: 1.4; }
+  .data-table { font-size: 10px; }
+  .data-table th { padding: 5px; font-size: 8px; }
+  .data-table td { padding: 5px; font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-icon">⚡</span>
+  <h1>ECT DESIGNER</h1>
+  <span class="header-sub">探傷条件決定<br>判断支援ツール</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="UI.switchTab('nav')"><span class="tab-icon">🔍</span>探傷ナビ</div>
+  <div class="tab" onclick="UI.switchTab('ferrite')"><span class="tab-icon">🧲</span>フェライト</div>
+</div>
+
+<div id="tab-nav" class="content active">
+  <div class="section">
+    <div class="section-title"><span class="step-badge">1</span>検査対象</div>
+    <div class="choice-grid">
+      <div class="choice-btn" id="n-btn-non" onclick="UI.navSelMag('non')">
+        <span class="choice-btn-icon">🔵</span>非磁性体<br><small style="font-size:9px;color:var(--muted)">アルミ・銅・SUS304等</small>
+      </div>
+      <div class="choice-btn" id="n-btn-mag" onclick="UI.navSelMag('mag')">
+        <span class="choice-btn-icon">🔴</span>磁性体<br><small style="font-size:9px;color:var(--muted)">鉄・炭素鋼・SUS430等</small>
+      </div>
+    </div>
+  </div>
+  <div class="section" id="nav-step2" style="display:none">
+    <div class="section-title"><span class="step-badge">2</span>材質を選択</div>
+    <div class="mat-grid" id="nav-mat-grid"></div>
+  </div>
+  <div class="section" id="nav-use-section" style="display:none">
+    <div class="section-title"><span class="step-badge">3</span>用途選択</div>
+    <div class="choice-grid">
+      <div class="choice-btn sel" id="cfg-mode-flaw" onclick="UI.navSelConfig('mode','flaw')">
+        <span class="choice-btn-icon">🔎</span>傷検出
+        <span class="mode-note">クラック・ピンホールなどの欠陥を検出</span>
+      </div>
+      <div class="choice-btn" id="cfg-mode-material" onclick="UI.navSelConfig('mode','material')">
+        <span class="choice-btn-icon">🧪</span>異材判別
+        <span class="mode-note">材質違い・熱処理違いを判別</span>
+      </div>
+    </div>
+  </div>
+  <div class="section" id="nav-step3" style="display:none">
+    <div class="section-title"><span class="step-badge">4</span>検査条件</div>
+    <div class="input-grid">
+      <div class="input-group">
+        <div class="input-label" id="nav-depth-label">検査したい深さ</div>
+        <div class="input-row"><input type="number" id="nav-depth" value="0.5" step="0.1" min="0.001"><span class="input-unit">mm</span></div>
+      </div>
+      <div class="input-group" id="nav-crack-group">
+        <div class="input-label">傷の幅（目安）</div>
+        <div class="input-row"><input type="number" id="nav-crack" value="0.1" step="0.05" min="0.01"><span class="input-unit">mm</span></div>
+      </div>
+      <div class="input-group full">
+        <div class="input-label">リフトオフ（プローブ浮き）</div>
+        <div class="input-row"><input type="number" id="nav-liftoff" value="0.1" step="0.05" min="0"><span class="input-unit">mm</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="section" id="nav-step4" style="display:none">
+    <div class="section-title"><span class="step-badge">5</span>磁性体の対策</div>
+    <div class="choice-grid">
+      <div class="choice-btn" id="n-btn-sat" onclick="UI.navSelSat('sat')">
+        <span class="choice-btn-icon">🧲</span>磁気飽和あり<br><small style="font-size:9px;color:var(--muted)">永久磁石でμrを下げる</small>
+      </div>
+      <div class="choice-btn" id="n-btn-nosat" onclick="UI.navSelSat('nosat')">
+        <span class="choice-btn-icon">⚡</span>磁気飽和なし<br><small style="font-size:9px;color:var(--muted)">表面のみ探傷</small>
+      </div>
+    </div>
+  </div>
+  <div class="section" id="nav-policy-section" style="display:none">
+    <div class="section-title"><span class="step-badge">6</span>設計方針</div>
+    <div class="choice-grid three">
+      <div class="choice-btn" id="cfg-policy-simple" onclick="UI.navSelConfig('policy','simple')">簡単<span class="mode-note">とりあえず動く</span></div>
+      <div class="choice-btn sel" id="cfg-policy-balanced" onclick="UI.navSelConfig('policy','balanced')">バランス<span class="mode-note">現場向け</span></div>
+      <div class="choice-btn" id="cfg-policy-performance" onclick="UI.navSelConfig('policy','performance')">高性能<span class="mode-note">最大性能</span></div>
+    </div>
+  </div>
+  <div class="section" id="nav-config-section" style="display:none">
+    <div class="section-title"><span class="step-badge">7</span>探傷構成ナビ</div>
+    <div class="input-group full" id="cfg-direction-group" style="margin-bottom:10px">
+      <div class="input-label">欠陥方向</div>
+      <div class="choice-grid four">
+        <div class="choice-btn sel" id="cfg-dir-vertical" onclick="UI.navSelConfig('direction','vertical')">縦</div>
+        <div class="choice-btn" id="cfg-dir-horizontal" onclick="UI.navSelConfig('direction','horizontal')">横</div>
+        <div class="choice-btn" id="cfg-dir-diagonal" onclick="UI.navSelConfig('direction','diagonal')">斜め</div>
+        <div class="choice-btn" id="cfg-dir-all" onclick="UI.navSelConfig('direction','all')">全方向</div>
+      </div>
+    </div>
+    <div class="input-group full" style="margin-bottom:10px">
+      <div class="input-label">リフトオフ変動</div>
+      <div class="choice-grid">
+        <div class="choice-btn sel" id="cfg-liftoff-small" onclick="UI.navSelConfig('liftoffVariation','small')">小<div class="choice-desc">プローブと対象物の距離変動が小さい</div></div>
+        <div class="choice-btn" id="cfg-liftoff-large" onclick="UI.navSelConfig('liftoffVariation','large')">大<div class="choice-desc">表面粗さ・振動・当て方の影響が大きい</div></div>
+      </div>
+    </div>
+    <div class="input-group full" style="margin-bottom:10px">
+      <div class="input-label">ノイズ環境</div>
+      <div class="choice-grid">
+        <div class="choice-btn sel" id="cfg-noise-low" onclick="UI.navSelConfig('noise','low')">低<div class="choice-desc">電気的・磁気的ノイズが少ない</div></div>
+        <div class="choice-btn" id="cfg-noise-high" onclick="UI.navSelConfig('noise','high')">高<div class="choice-desc">インバータ・モーター・周辺磁場など</div></div>
+      </div>
+    </div>
+  </div>
+  <button class="calc-btn" id="nav-calc-btn" style="display:none" onclick="UI.navCalc()">最適条件を計算</button>
+  <div class="warn-box" id="nav-error" style="display:none"></div>
+  <div id="nav-result" style="display:none">
+    <div class="summary-box">
+      <div class="summary-title">📋 設計まとめ</div>
+      <div class="summary-body" id="nv-summary"></div>
+      <div class="json-head compact">
+        <button class="copy-btn" id="cfg-json-copy" type="button" onclick="UI.copyCoilJSON()">JSONコピー</button>
+      </div>
+    </div>
+    <button class="detail-toggle" id="nav-config-toggle" type="button" onclick="UI.toggleConfigResult()">探傷構成ナビ結果を表示</button>
+    <div class="section" id="nav-config-result" style="display:none">
+      <div class="section-title">🧭 探傷構成ナビ結果</div>
+      <div class="recommend-card">
+        <div class="recommend-label">推奨構成</div>
+        <div class="recommend-value" id="cfg-rec-name">—</div>
+      </div>
+      <div class="section-title">推奨理由</div>
+      <ul class="bullet-list" id="cfg-reasons"></ul>
+      <div class="section-title" style="margin-top:12px">注意点</div>
+      <ul class="bullet-list" id="cfg-cautions"></ul>
+      <div class="section-title" style="margin-top:12px">推奨差動距離</div>
+      <div class="recommend-card">
+        <div class="recommend-label">差動距離の初期目安</div>
+        <div class="recommend-value" id="cfg-diff-spacing">—</div>
+      </div>
+      <div class="section-title">理由</div>
+      <ul class="bullet-list" id="cfg-diff-reasons"></ul>
+      <div class="section-title" style="margin-top:12px">COIL DESIGNERで次に決める項目</div>
+      <ul class="bullet-list" id="cfg-next-items"></ul>
+      <pre class="json-box json-hidden" id="cfg-json">{}</pre>
+    </div>
+  </div>
+</div>
+
+<div id="tab-ferrite" class="content">
+  <div class="section">
+    <div class="section-title">🔍 絞り込み</div>
+    <div class="filter-row" id="f-band-row">
+      <div class="filter-btn active" onclick="UI.fFilter('band','all',this)">全て</div>
+      <div class="filter-btn" onclick="UI.fFilter('band','100k',this)">〜100kHz</div>
+      <div class="filter-btn" onclick="UI.fFilter('band','1m',this)">〜1MHz</div>
+      <div class="filter-btn" onclick="UI.fFilter('band','10m',this)">〜10MHz</div>
+    </div>
+    <div class="filter-row" id="f-type-row">
+      <div class="filter-btn active" onclick="UI.fFilter('type','all',this)">MnZn+NiZn</div>
+      <div class="filter-btn" onclick="UI.fFilter('type','mnzn',this)">MnZn系</div>
+      <div class="filter-btn" onclick="UI.fFilter('type','nizn',this)">NiZn系</div>
+    </div>
+  </div>
+  <div id="f-list"></div>
+</div>
+
+<script>
+/* ===== common-calculations.js 統合版 ===== */
+'use strict';
+
+const Physics = (() => {
+  // ---- 物理定数 ----
+  const MU0 = 4 * Math.PI * 1e-7; // 真空の透磁率 [H/m]
+
+  /**
+   * 表皮深さを計算する（物理式ベース）
+   * δ = √( 2 / (ω · μ0 · μr · σ) )  [m]
+   * @param {number} f_Hz  - 周波数 [Hz]  ※ > 0 必須
+   * @param {number} mur   - 比透磁率      ※ > 0 必須
+   * @param {number} sigma - 導電率 [S/m]  ※ > 0 必須
+   * @returns {number} 表皮深さ [mm]。入力不正時は Infinity
+   */
+  function skinDepth_mm(f_Hz, mur, sigma) {
+    if (f_Hz <= 0 || mur <= 0 || sigma <= 0) return Infinity;
+    const omega = 2 * Math.PI * f_Hz;
+    return Math.sqrt(2 / (omega * MU0 * mur * sigma)) * 1000;
+  }
+
+  /**
+   * 最適・下限・上限の探傷周波数を計算する
+   * δ = depth のとき → f = 1 / (π · δ² · μ0 · μr · σ)
+   * @param {number} depth_m - 目標浸透深さ [m]  ※ > 0 必須
+   * @param {number} mur     - 比透磁率
+   * @param {number} sigma   - 導電率 [S/m]
+   * @returns {{ fOpt: number, fLo: number, fHi: number }} 各周波数 [Hz]
+   */
+  function optimalFrequency_Hz(depth_m, mur, sigma) {
+    const base = Math.PI * MU0 * mur * sigma;
+    return {
+      fOpt: 1 / (base * depth_m ** 2),
+      fLo:  1 / (base * (depth_m * 2)   ** 2),
+      fHi:  1 / (base * (depth_m * 0.5) ** 2),
+    };
+  }
+
+  return Object.freeze({ skinDepth_mm, optimalFrequency_Hz });
+})();
+
+const EctState = (() => {
+  let state = {
+    nav: {
+      magType: null,
+      mat: null,
+      sat: null,
+      config: {
+        mode: 'flaw',
+        direction: 'vertical',
+        liftoffVariation: 'small',
+        noise: 'low',
+        policy: 'balanced',
+      },
+    },
+    ferrite: { band: 'all', type: 'all' },
+    result: null,
+  };
+
+  const get = () => JSON.parse(JSON.stringify(state));
+  const setNav = patch => { state.nav = { ...state.nav, ...patch }; };
+  const setNavConfig = (key, val) => {
+    state.nav.config = { ...state.nav.config, [key]: val };
+  };
+  const setFerriteFilter = (key, val) => { state.ferrite[key] = val; };
+  const setResult = result => { state.result = result; };
+
+  return Object.freeze({ get, setNav, setNavConfig, setFerriteFilter, setResult });
+})();
+
+const UI = (() => {
+  const MATS = {
+    non: [
+      { id: 'al',    name: 'アルミ',      sigma: 3.5e7,  mur: 1, note: 'A2024・A7075等' },
+      { id: 'cu',    name: '銅',          sigma: 5.8e7,  mur: 1, note: '純銅・黄銅' },
+      { id: 'ti',    name: 'チタン',      sigma: 0.18e7, mur: 1, note: 'Ti-6Al-4V等' },
+      { id: 'sus304',name: 'SUS304',      sigma: 0.14e7, mur: 1, note: 'オーステナイト系' },
+      { id: 'mg',    name: 'マグネシウム',sigma: 2.2e7,  mur: 1, note: 'Mg合金' },
+      { id: 'ni_n',  name: 'Ni合金',      sigma: 0.8e7,  mur: 1, note: 'インコネル等' },
+    ],
+    mag: [
+      { id: 'steel', name: '炭素鋼',      sigma: 5e6,    mur: 200,  note: 'S45C・SS400等' },
+      { id: 'iron',  name: '鉄（純鉄）',  sigma: 1e7,    mur: 1000, note: '純鉄' },
+      { id: 'sus430',name: 'SUS430',      sigma: 1.5e6,  mur: 600,  note: 'フェライト系' },
+      { id: 'ni_m',  name: 'ニッケル',    sigma: 1.4e7,  mur: 250,  note: '純ニッケル' },
+    ],
+  };
+
+  const FERRITES = [
+    { name:'2H1', type:'mnzn', mu:15000, fmax_MHz:0.01, suit:'best', note:'超高μ電源トランス' },
+    { name:'2G4', type:'mnzn', mu:5300,  fmax_MHz:0.1,  suit:'ok',   note:'★現在お使いの材質', cur:true },
+    { name:'2G8', type:'mnzn', mu:2300,  fmax_MHz:0.5,  suit:'ok',   note:'中低周波' },
+    { name:'2H6', type:'mnzn', mu:800,   fmax_MHz:1.0,  suit:'ok',   note:'近接センサ低周波' },
+    { name:'3A8', type:'nizn', mu:1500,  fmax_MHz:1.0,  suit:'good', note:'広帯域EMI' },
+    { name:'3A7', type:'nizn', mu:2000,  fmax_MHz:1.0,  suit:'good', note:'広帯域EMI' },
+    { name:'3A4', type:'nizn', mu:800,   fmax_MHz:3.0,  suit:'good', note:'コモンモードフィルタ' },
+    { name:'4A3', type:'nizn', mu:400,   fmax_MHz:5.0,  suit:'best', note:'渦電流探傷に最適★' },
+    { name:'4D4', type:'nizn', mu:400,   fmax_MHz:3.0,  suit:'good', note:'汎用高周波' },
+    { name:'5K',  type:'nizn', mu:250,   fmax_MHz:10.0, suit:'good', note:'高周波' },
+    { name:'6D8', type:'nizn', mu:73,    fmax_MHz:10.0, suit:'best', note:'近接センサ・表面探傷★' },
+    { name:'6B2', type:'nizn', mu:30,    fmax_MHz:50.0, suit:'good', note:'超高周波' },
+    { name:'7B2', type:'nizn', mu:13,    fmax_MHz:100,  suit:'good', note:'超高周波100MHz' },
+  ];
+
+  const SUIT_LABEL = {
+    best: ['◎ 最適', 'suit-best'],
+    good: ['○ 適合', 'suit-good'],
+    ok:   ['△ 可',   'suit-ok'],
+    poor: ['× 不向き','suit-poor'],
+  };
+
+  const CONFIG_BUTTONS = {
+    mode: {
+      flaw: 'cfg-mode-flaw',
+      material: 'cfg-mode-material',
+    },
+    direction: {
+      vertical: 'cfg-dir-vertical',
+      horizontal: 'cfg-dir-horizontal',
+      diagonal: 'cfg-dir-diagonal',
+      all: 'cfg-dir-all',
+    },
+    liftoffVariation: {
+      small: 'cfg-liftoff-small',
+      large: 'cfg-liftoff-large',
+    },
+    noise: {
+      low: 'cfg-noise-low',
+      high: 'cfg-noise-high',
+    },
+    policy: {
+      simple: 'cfg-policy-simple',
+      balanced: 'cfg-policy-balanced',
+      performance: 'cfg-policy-performance',
+    },
+  };
+
+  const COIL_CONFIGS = [
+    { id: 'single', name: '単独検出コイル', differential: false, excitation: false, dualExcitation: false, crossCapable: false },
+    { id: 'differential', name: '差動コイル', differential: true, excitation: false, dualExcitation: false, crossCapable: false },
+    { id: 'separate', name: '励磁コイル＋検出コイル', differential: false, excitation: true, dualExcitation: false, crossCapable: false },
+    { id: 'separateDiff', name: '励磁コイル＋差動検出コイル', differential: true, excitation: true, dualExcitation: false, crossCapable: true },
+    { id: 'dualExcitation', name: '励磁2個＋検出コイル', differential: false, excitation: true, dualExcitation: true, crossCapable: false },
+    { id: 'dualExcitationDiff', name: '励磁2個＋差動検出コイル', differential: true, excitation: true, dualExcitation: true, crossCapable: true },
+  ];
+
+  const TAB_IDS = ['nav', 'ferrite'];
+  const setText = (id, val, isHtml = false) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (isHtml) el.innerHTML = val; else el.textContent = val;
+  };
+  const setVisible = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = visible ? 'block' : 'none';
+  };
+  const getNum = (id, minVal = -Infinity) => {
+    const el = document.getElementById(id);
+    if (!el) return null;
+    const v = parseFloat(el.value);
+    return (!isNaN(v) && v >= minVal) ? v : null;
+  };
+  function showError(msg) {
+    const el = document.getElementById('nav-error');
+    if (!el) return;
+    el.innerHTML = '<strong>入力エラー:</strong> ' + msg;
+    el.style.display = 'block';
+  }
+
+  function clearError() {
+    const el = document.getElementById('nav-error');
+    if (!el) return;
+    el.innerHTML = '';
+    el.style.display = 'none';
+  }
+  const fmt3 = v => isFinite(v) ? v.toFixed(3) : '—';
+
+  function fmtF(kHz) {
+    if (!isFinite(kHz) || kHz <= 0) return { v: '—', u: '' };
+    if (kHz >= 1000) return { v: (kHz / 1000).toFixed(1), u: 'MHz' };
+    if (kHz >= 1) return { v: Math.round(kHz).toString(), u: 'kHz' };
+    return { v: (kHz * 1000).toFixed(0), u: 'Hz' };
+  }
+  const fmtFStr = kHz => kHz >= 1000 ? (kHz / 1000) + 'MHz' : kHz + 'kHz';
+  function toHzFromKHz(kHz) {
+    const v = Number(kHz);
+    return Number.isFinite(v) ? v * 1000 : null;
+  }
+  function toKHzFromText(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const text = String(value).trim();
+    const num = parseFloat(text.replace(',', ''));
+    if (!Number.isFinite(num) || num <= 0) return null;
+    if (/MHz/i.test(text)) return num * 1000;
+    if (/kHz/i.test(text)) return num;
+    if (/Hz/i.test(text) && !/kHz/i.test(text)) return num / 1000;
+    return num;
+  }
+  function normalizeFrequencyKHz(recordOrJson) {
+    const candidates = [
+      recordOrJson.frequency_kHz,
+      recordOrJson.freq_kHz,
+      recordOrJson.frequencyKHz,
+      recordOrJson.fOpt_kHz,
+      recordOrJson.recommendedFrequency_kHz,
+      recordOrJson.frequency
+    ];
+    for (const c of candidates) {
+      const v = toKHzFromText(c);
+      if (v !== null) return v;
+    }
+    return null;
+  }
+  const listHtml = items => items.map(item => `<li>${item}</li>`).join('');
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const fmtMm1 = value => (Math.round(value * 10) / 10).toFixed(1);
+  const DEPTH_LABELS = { surface: '表面', shallow: '浅い', deep: '深い' };
+  const DIRECTION_LABELS = { vertical: '縦', horizontal: '横', diagonal: '斜め', all: '全方向' };
+  const VARIATION_LABELS = { small: '小', large: '大' };
+  const NOISE_LABELS = { low: '低', high: '高' };
+  const POLICY_LABELS = { simple: '簡単', balanced: 'バランス', performance: '高性能' };
+
+  function judgeDefectDepth(depth_mm) {
+    return depth_mm < 0.1 ? 'surface' : depth_mm < 1.0 ? 'shallow' : 'deep';
+  }
+
+  function navSelConfig(key, val) {
+    EctState.setNavConfig(key, val);
+    Object.values(CONFIG_BUTTONS[key] || {}).forEach(id => {
+      document.getElementById(id)?.classList.remove('sel', 'sel-g');
+    });
+    const selected = document.getElementById(CONFIG_BUTTONS[key]?.[val]);
+    if (selected) selected.classList.add(key === 'policy' && val === 'performance' ? 'sel-g' : 'sel');
+    if (key === 'mode') updateUseModeUI(val);
+    setVisible('nav-result', false);
+  }
+
+  function updateUseModeUI(mode) {
+    const isMaterial = mode === 'material';
+    const crackGroup = document.getElementById('nav-crack-group');
+    const directionGroup = document.getElementById('cfg-direction-group');
+    if (crackGroup) crackGroup.style.display = isMaterial ? 'none' : 'flex';
+    if (directionGroup) directionGroup.style.display = isMaterial ? 'none' : 'flex';
+    setText('nav-depth-label', isMaterial ? '影響を見たい深さ（任意）' : '検査したい深さ');
+  }
+
+  function scoreAdd(scores, ids, value) {
+    ids.forEach(id => { scores[id] += value; });
+  }
+
+  function calculateDiffSpacing(best, config, crackWidth_mm, fOpt_Hz) {
+    if (!best.differential) {
+      return {
+        label: '差動構成ではないため不要',
+        reasons: ['差動構成ではないため差動距離の設計は不要'],
+        jsonReason: '差動構成ではないため不要。',
+      };
+    }
+
+    const depth_mm = Number.isFinite(config.depth_mm) ? config.depth_mm : 0.1;
+    let min;
+    let max;
+
+    if (depth_mm < 0.1) {
+      min = crackWidth_mm * 0.5;
+      max = crackWidth_mm * 1.0;
+    } else if (depth_mm < 1.0) {
+      min = crackWidth_mm * 1.0;
+      max = crackWidth_mm * 1.5;
+    } else {
+      min = crackWidth_mm * 1.5;
+      max = crackWidth_mm * 2.5;
+    }
+
+    if (fOpt_Hz >= 1000000) {
+      max *= 0.8;
+    }
+
+    if (fOpt_Hz < 100000) {
+      max *= 1.2;
+    }
+
+    if (config.direction === 'all' || config.direction === 'diagonal') {
+      max = Math.min(max, 2.0);
+    }
+
+    min = Math.max(min, 0.3);
+    max = Math.max(max, min);
+
+    return {
+      label: `${min.toFixed(1)}〜${max.toFixed(1)} mm`,
+      jsonValue: `${min.toFixed(1)}〜${max.toFixed(1)}mm`,
+      reasons: [
+        '欠陥深さに応じて差動距離を調整',
+        '深い欠陥ほど広い差動距離が必要',
+        '高周波では局所性が高いため距離を抑制',
+        '低周波では磁場が広がるため距離を拡張',
+      ],
+      jsonReason: '深さ・周波数に基づく最適化',
+    };
+  }
+
+  function calculateMaterialDiffSpacing(best) {
+    if (!best.differential) {
+      return {
+        label: '差動構成ではないため不要',
+        reasons: ['異材判別は基準材との振幅差・位相差比較を優先'],
+        jsonReason: '差動構成ではないため不要。',
+      };
+    }
+    return {
+      label: '実機比較で調整',
+      jsonValue: '実機比較で調整',
+      reasons: [
+        '異材判別では傷幅ではなく基準材との差を評価します',
+        '差動距離は基準材との振幅差・位相差が安定する位置で調整します',
+        'リフトオフを一定に保った状態で比較してください',
+      ],
+      jsonReason: '異材判別では傷幅を使わず、基準材との信号差で調整。',
+    };
+  }
+
+  function estimateCoilDiameter(depth_mm, crackWidth_mm) {
+    const byDepth = depth_mm * 3.0;
+    const coilDia = Number.isFinite(crackWidth_mm)
+      ? Math.max(crackWidth_mm * 2.5, byDepth)
+      : byDepth;
+
+    return {
+      center: coilDia,
+      min: coilDia * 0.7,
+      max: coilDia * 1.5,
+    };
+  }
+
+  function estimateTurnsHint(fOpt_Hz, targetZ_ohm) {
+    const f_kHz = fOpt_Hz / 1000;
+    let min;
+    let max;
+
+    if (f_kHz >= 1000) {
+      min = 30;
+      max = 80;
+    } else if (f_kHz < 100) {
+      min = 150;
+      max = 300;
+    } else {
+      min = 80;
+      max = 150;
+    }
+
+    if (targetZ_ohm >= 200) {
+      min *= 1.2;
+      max *= 1.4;
+    }
+
+    return `${Math.round(min)}〜${Math.round(max)}T`;
+  }
+
+  function estimateWireHint(fOpt_Hz, skinCu_mm) {
+    const f_kHz = fOpt_Hz / 1000;
+
+    if (f_kHz >= 1000) {
+      return {
+        label: `φ${Math.min(skinCu_mm, 0.05).toFixed(3)}〜φ${Math.min(skinCu_mm * 2, 0.10).toFixed(3)} mm`,
+        note: '高周波のため細線またはリッツ線を検討',
+      };
+    }
+
+    if (f_kHz < 100) {
+      return {
+        label: 'φ0.08〜φ0.20 mm',
+        note: '低周波のため巻きやすさと抵抗値のバランスを優先',
+      };
+    }
+
+    return {
+      label: 'φ0.05〜φ0.12 mm',
+      note: '中周波のため標準的な細線で試作しやすい',
+    };
+  }
+
+  function starRating(score) {
+    const stars = Math.round(score / 20);
+    return '★★★★★'.slice(0, stars) + '☆☆☆☆☆'.slice(0, 5 - stars);
+  }
+
+  function evaluateDesignScore(params) {
+    let sensitivity = 70;
+    let depthFit = 70;
+    let noiseRobustness = 70;
+    let buildEase = 70;
+    const scoreReasons = [];
+
+    const f_kHz = params.fOpt_Hz / 1000;
+
+    if (f_kHz >= 1000 && params.crackWidth_mm !== null && params.crackWidth_mm <= 0.1) {
+      sensitivity += 15;
+      scoreReasons.push('高周波＋細い傷のため表面感度は高い');
+    }
+    if (params.crackWidth_mm !== null && params.crackWidth_mm <= 0.05) {
+      sensitivity -= 10;
+      scoreReasons.push('傷幅が非常に小さいため、コイル径と走査精度に注意');
+    }
+    if (params.depth_mm >= 1.0 && f_kHz >= 1000) {
+      sensitivity -= 15;
+      depthFit -= 20;
+      scoreReasons.push('深い欠陥に対して周波数が高いため、深さ適合が低下');
+    }
+
+    if (params.depth_mm >= 1.0 && f_kHz < 100) {
+      depthFit += 15;
+      scoreReasons.push('深い欠陥に対して低周波条件のため、浸透深さは有利');
+    }
+    if (params.depth_mm < 0.1 && f_kHz >= 1000) {
+      depthFit += 10;
+      scoreReasons.push('表面欠陥に対して高周波条件のため適合しやすい');
+    }
+
+    if (params.best.differential) {
+      noiseRobustness += 10;
+      scoreReasons.push('差動構成のためリフトオフ・温度変化に強い');
+    }
+    if (params.best.excitation) {
+      noiseRobustness += 10;
+      scoreReasons.push('励磁と検出を分けるため信号設計の自由度が高い');
+    }
+    if (params.noise === 'high' && !params.best.differential) {
+      noiseRobustness -= 20;
+      scoreReasons.push('高ノイズ環境で差動なしのためノイズ耐性が低下');
+    }
+    if (params.noise === 'high' && params.best.differential) {
+      noiseRobustness += 10;
+      scoreReasons.push('高ノイズ環境に対して差動構成が有利');
+    }
+
+    if (params.best.dualExcitation) {
+      buildEase -= 15;
+      scoreReasons.push('2励磁構成のため試作難易度は上がる');
+    }
+    if (params.needCross) {
+      buildEase -= 10;
+      scoreReasons.push('クロス差動が必要なため配線極性と配置精度に注意');
+    }
+    if (params.turnsHint.includes('150〜300')) {
+      buildEase -= 5;
+      scoreReasons.push('巻数が多めのため巻線スペースと抵抗値に注意');
+    }
+    if (params.wireHint && params.wireHint.label.includes('0.050')) {
+      buildEase -= 5;
+      scoreReasons.push('細線条件のため断線・巻き作業性に注意');
+    }
+    if (!params.best.excitation && !params.best.dualExcitation) {
+      buildEase += 10;
+      scoreReasons.push('構成がシンプルなため初期試作しやすい');
+    }
+
+    const clampScore = value => Math.max(0, Math.min(100, Math.round(value)));
+
+    sensitivity = clampScore(sensitivity);
+    depthFit = clampScore(depthFit);
+    noiseRobustness = clampScore(noiseRobustness);
+    buildEase = clampScore(buildEase);
+
+    const total = Math.round(
+      sensitivity * 0.30 +
+      depthFit * 0.30 +
+      noiseRobustness * 0.25 +
+      buildEase * 0.15
+    );
+
+    let label = '良好';
+    if (total >= 85) label = 'かなり良好';
+    else if (total >= 70) label = '良好';
+    else if (total >= 55) label = '要調整';
+    else label = '条件見直し推奨';
+
+    return {
+      total,
+      label,
+      sensitivity,
+      depthFit,
+      noiseRobustness,
+      buildEase,
+      reasons: [...new Set(scoreReasons)].slice(0, 5),
+    };
+  }
+
+  function buildCoilDiameterNote(coilEst, depth_mm, crackWidth_mm, mode) {
+    const notes = [];
+
+    if (mode === 'material') {
+      notes.push('異材判別では細かい傷の分解能より、磁場の安定性を優先');
+      notes.push('コイル径は影響深さに対して十分な磁場範囲を確保する初期値');
+    } else {
+      notes.push('コイル径は傷幅と検査深さから初期推定');
+      notes.push('小さすぎると深さ方向の磁場が不足しやすい');
+      notes.push('大きすぎると細い傷の信号が平均化されやすい');
+    }
+
+    notes.push('最終的な外径・内径・巻線スペースはCOIL DESIGNERで確認');
+
+    return notes;
+  }
+
+  function buildCoilJSON(best, config, needCross, diffSpacing) {
+    return {
+      mode: 'flaw',
+      config: best.name,
+      needDifferential: best.differential,
+      needExcitation: best.excitation,
+      needCross,
+      recommendedDiffSpacing: diffSpacing.jsonValue || '不要',
+      diffSpacingReason: diffSpacing.jsonReason,
+      defectDepthCategory: config.defectDepth,
+      defectDepthCategoryLabel: DEPTH_LABELS[config.defectDepth] || config.defectDepth,
+      recommendedCable: config.noise === 'high' || best.differential ? 'ツイストペア＋シールド' : '標準ケーブル',
+      ferrite: config.defectDepth === 'deep' ? '条件付き推奨' : '推奨',
+    };
+  }
+
+  function buildMaterialJSON(result) {
+    return {
+      mode: 'material',
+      config: result.best.name,
+      needDifferential: result.best.differential,
+      needExcitation: result.best.excitation,
+      needCross: false,
+      recommendedDiffSpacing: result.diffSpacing.jsonValue || '不要',
+      diffSpacingReason: result.diffSpacing.jsonReason,
+      recommendedCable: result.recommendedCable,
+      ferrite: result.ferrite,
+    };
+  }
+
+  function coilConfigDisplayName(result) {
+    const base = result?.best?.name || '—';
+    if (!result?.json?.needCross) return base;
+    return String(result.json.ferrite || '').includes('推奨')
+      ? base + '（クロス+フェライト）'
+      : base + '（クロスコイル）';
+  }
+
+  function formatCoilJSON(data) {
+    return JSON.stringify(data, null, 2);
+  }
+
+  async function copyCoilJSON() {
+    clearError();
+    const jsonEl = document.getElementById('cfg-json');
+    const btn = document.getElementById('cfg-json-copy');
+    const text = jsonEl?.textContent?.trim();
+    if (!text || text === '{}') {
+      showError('コピーするJSONがまだありません。先に計算してください。');
+      return;
+    }
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand('copy');
+        document.body.removeChild(area);
+      }
+      if (btn) {
+        btn.textContent = 'コピー済み';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'JSONコピー';
+          btn.classList.remove('copied');
+        }, 1400);
+      }
+    } catch (_) {
+      showError('クリップボードへコピーできませんでした。JSONを選択して手動でコピーしてください。');
+    }
+  }
+
+  function toggleConfigResult() {
+    const details = document.getElementById('nav-config-result');
+    const btn = document.getElementById('nav-config-toggle');
+    if (!details) return;
+    const willShow = details.style.display === 'none' || !details.style.display;
+    details.style.display = willShow ? 'block' : 'none';
+    if (btn) btn.textContent = willShow ? '探傷構成ナビ結果を非表示' : '探傷構成ナビ結果を表示';
+  }
+
+  function evaluateMaterialMode(p) {
+    const useStableConfig = p.liftoffVariation === 'large' || p.noise === 'high';
+    const best = useStableConfig
+      ? COIL_CONFIGS.find(c => c.id === 'separateDiff')
+      : COIL_CONFIGS.find(c => c.id === 'separate');
+    const reasons = [];
+    const cautions = [
+      '基準材との比較が重要',
+      'リフトオフを一定に保つ必要あり',
+      '単一周波数より複数周波数比較が有効',
+      '振幅だけでなく位相差を確認する',
+    ];
+
+    if (useStableConfig) {
+      reasons.push('リフトオフ・ノイズ環境のため差動構成が安定');
+    } else {
+      reasons.push('振幅・位相の変化を素直に取得できる');
+    }
+
+    if (p.materialType === 'mag') {
+      reasons.push('磁性体は透磁率差と導電率差を振幅・位相の変化として評価');
+    } else {
+      reasons.push('非磁性体は導電率差を振幅・位相の変化として評価');
+    }
+
+    reasons.push('導電率差・透磁率差を振幅と位相の変化として判別');
+    const diffSpacing = calculateMaterialDiffSpacing(best);
+    const nextItems = ['励磁コイル径', '検出コイル径', '巻数', '線径', 'フェライト有無', 'ケーブル構成'];
+    if (best.differential) nextItems.push('差動距離');
+
+    const result = {
+      best,
+      reasons: [...new Set(reasons)].slice(0, 5),
+      cautions,
+      diffSpacing,
+      nextItems,
+      recommendedCable: best.differential || p.noise === 'high' ? 'ツイストペア＋シールド' : '標準ケーブル',
+      ferrite: p.materialType === 'mag' ? '条件付き推奨' : '条件により推奨',
+    };
+    result.json = buildMaterialJSON(result);
+    return result;
+  }
+
+  function evaluateCoilConfig(config, crackWidth_mm, fOpt_Hz) {
+    const scores = Object.fromEntries(COIL_CONFIGS.map(c => [c.id, 0]));
+    const reasons = [];
+    const cautions = [];
+    const nextItems = ['検出コイル径', '巻数', '線径', 'フェライト有無', 'ケーブル構成'];
+    const depthLabel = DEPTH_LABELS[config.defectDepth] || config.defectDepth;
+    if (isFinite(config.depth_mm)) {
+      reasons.push(`検査深さ${config.depth_mm}mmのため、${depthLabel}欠陥として判定`);
+    }
+
+    scoreAdd(scores, ['separateDiff'], 2);
+    scoreAdd(scores, ['differential', 'separate', 'dualExcitationDiff'], 1);
+
+    if (config.liftoffVariation === 'large') {
+      scoreAdd(scores, ['differential', 'separateDiff', 'dualExcitationDiff'], 5);
+      scoreAdd(scores, ['single'], -2);
+      reasons.push('リフトオフ変動が大きいため差動構成が有利');
+      cautions.push('差動距離設計が重要');
+    } else {
+      scoreAdd(scores, ['single', 'separate'], 1);
+      reasons.push('リフトオフ変動が小さいため構成を過度に複雑にしなくても成立しやすい');
+    }
+
+    if (config.noise === 'high') {
+      scoreAdd(scores, ['differential', 'separateDiff', 'dualExcitationDiff'], 3);
+      scoreAdd(scores, ['separate', 'dualExcitation'], 2);
+      scoreAdd(scores, ['single'], -2);
+      reasons.push('ノイズ環境が高いため励磁と検出を分けた方が安定');
+      cautions.push('ノイズ環境が高い場合はツイストペア＋シールド推奨');
+    } else {
+      scoreAdd(scores, ['single', 'differential'], 1);
+    }
+
+    if (config.direction === 'all') {
+      scoreAdd(scores, ['separateDiff'], 5);
+      scoreAdd(scores, ['dualExcitationDiff'], 5);
+      scoreAdd(scores, ['single'], -2);
+      reasons.push('全方向欠陥にはクロス差動が有効');
+      cautions.push('斜めキズや全方向キズにはクロス差動を検討');
+    } else if (config.direction === 'diagonal') {
+      scoreAdd(scores, ['separateDiff'], 5);
+      scoreAdd(scores, ['dualExcitationDiff'], 3);
+      scoreAdd(scores, ['differential'], -1);
+      scoreAdd(scores, ['single'], -1);
+      reasons.push('斜め欠陥は単純な差動だけでは出にくいため、励磁分離＋差動検出が有利');
+      cautions.push('斜めキズはコイル方向と走査方向の組み合わせを確認');
+    } else if (config.direction === 'horizontal') {
+      scoreAdd(scores, ['separate', 'dualExcitation', 'separateDiff'], 2);
+      reasons.push('横方向欠陥は励磁磁場の向きと局所性を調整しやすい構成が有利');
+    } else {
+      scoreAdd(scores, ['single', 'differential', 'separateDiff'], 2);
+      reasons.push('縦方向欠陥は標準的な検出・差動構成で評価しやすい');
+    }
+
+    if (config.defectDepth === 'deep') {
+      scoreAdd(scores, ['separate', 'separateDiff', 'dualExcitation', 'dualExcitationDiff'], 4);
+      scoreAdd(scores, ['single'], -2);
+      reasons.push('深い欠陥を狙うため励磁と検出を分ける構成を優先');
+      nextItems.push('励磁コイル径');
+    } else if (config.defectDepth === 'shallow') {
+      scoreAdd(scores, ['differential', 'separateDiff'], 2);
+      reasons.push('浅い欠陥は感度と安定性のバランスが重要');
+    } else {
+      scoreAdd(scores, ['single', 'differential'], 2);
+      reasons.push('表面欠陥はシンプルな構成でも反応を得やすい');
+    }
+
+    if (config.policy === 'simple') {
+      scoreAdd(scores, ['single'], 6);
+      scoreAdd(scores, ['differential'], 4);
+      scoreAdd(scores, ['dualExcitation', 'dualExcitationDiff'], -4);
+      reasons.push('設計方針が簡単のため、単独検出または差動コイルを優先');
+    } else if (config.policy === 'performance') {
+      scoreAdd(scores, ['dualExcitationDiff'], 6);
+      scoreAdd(scores, ['separateDiff', 'dualExcitation'], 3);
+      scoreAdd(scores, ['single'], -4);
+      reasons.push('設計方針が高性能のため、励磁2個＋差動検出コイルを優先');
+      nextItems.push('励磁コイル間隔');
+    } else {
+      scoreAdd(scores, ['separateDiff'], 3);
+      scoreAdd(scores, ['differential', 'separate'], 1);
+      reasons.push('バランス重視のため、現場で扱いやすい励磁分離＋差動検出を優先');
+    }
+
+    const order = ['separateDiff', 'dualExcitationDiff', 'differential', 'separate', 'dualExcitation', 'single'];
+    const bestId = order.reduce((best, id) => scores[id] > scores[best] ? id : best, order[0]);
+    const best = COIL_CONFIGS.find(c => c.id === bestId);
+    const needCross =
+      best.crossCapable &&
+      (config.direction === 'all' || config.direction === 'diagonal');
+    const diffSpacing = calculateDiffSpacing(best, config, crackWidth_mm, fOpt_Hz);
+    const json = buildCoilJSON(best, config, needCross, diffSpacing);
+
+    if (best.differential) nextItems.push('差動距離');
+    if (best.excitation && !nextItems.includes('励磁コイル径')) nextItems.push('励磁コイル径');
+    if (needCross) nextItems.push('クロス差動配置');
+    if (best.dualExcitation && !nextItems.includes('励磁コイル間隔')) nextItems.push('励磁コイル間隔');
+    if (!best.differential) cautions.push('リフトオフや温度変化が大きい現場では差動化を再検討');
+    if (best.excitation) cautions.push('励磁コイルと検出コイルの結合が強すぎる場合は距離・角度を調整');
+    if (needCross) cautions.push('クロス差動は配線極性とチャンネル合成方向を確認');
+
+    return {
+      best,
+      reasons: [...new Set(reasons)].slice(0, 5),
+      cautions: [...new Set(cautions)].slice(0, 5),
+      diffSpacing,
+      nextItems: [...new Set(nextItems)],
+      json,
+    };
+  }
+
+  function switchTab(id) {
+    document.querySelectorAll('.tab').forEach((tab, i) => {
+      tab.classList.toggle('active', TAB_IDS[i] === id);
+    });
+    document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + id)?.classList.add('active');
+  }
+
+  function renderFerriteCards(list) {
+    return list.map(f => {
+      const [sl, sc] = SUIT_LABEL[f.suit] || ['—', ''];
+      const fmaxStr = f.fmax_MHz >= 1 ? f.fmax_MHz + 'MHz' : f.fmax_MHz * 1000 + 'kHz';
+      const prefix = f.cur ? '◆' : (f.suit === 'best' ? '★' : '');
+      return `<div class="ferrite-card ${f.type}">
+        <div class="ferrite-name ${f.type}${f.cur ? ' cur' : ''}">${prefix}${f.name}</div>
+        <div class="ferrite-info">
+          <div class="ferrite-freq">${f.type === 'mnzn' ? 'MnZn' : 'NiZn'}　μ=${f.mu.toLocaleString()}　〜${fmaxStr}</div>
+          <div class="ferrite-note">${f.note}</div>
+        </div>
+        <div class="suit-badge ${sc}">${sl}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function navSelMag(type) {
+    clearError();
+    EctState.setNav({ magType: type, mat: null, sat: null });
+    document.getElementById('n-btn-non').className = 'choice-btn' + (type === 'non' ? ' sel' : '');
+    document.getElementById('n-btn-mag').className = 'choice-btn' + (type === 'mag' ? ' sel' : '');
+
+    const grid = document.getElementById('nav-mat-grid');
+    grid.innerHTML = '';
+    MATS[type].forEach(m => {
+      const btn = document.createElement('div');
+      btn.className = 'mat-btn';
+      btn.id = 'nm-' + m.id;
+      btn.innerHTML = `<strong>${m.name}</strong><span class="mat-sub">${m.note}</span>`;
+      btn.onclick = () => navSelMat(m, type);
+      grid.appendChild(btn);
+    });
+
+    setVisible('nav-step2', true);
+    setVisible('nav-use-section', false);
+    setVisible('nav-step3', false);
+    setVisible('nav-step4', false);
+    setVisible('nav-policy-section', false);
+    setVisible('nav-config-section', false);
+    setVisible('nav-calc-btn', false);
+    setVisible('nav-result', false);
+  }
+
+  function navSelMat(mat, magType) {
+    clearError();
+    EctState.setNav({ mat, sat: null });
+    document.querySelectorAll('.mat-btn').forEach(b => b.classList.remove('sel'));
+    document.getElementById('nm-' + mat.id)?.classList.add('sel');
+    setVisible('nav-use-section', true);
+    setVisible('nav-step3', true);
+    setVisible('nav-step4', magType === 'mag');
+    setVisible('nav-policy-section', true);
+    setVisible('nav-config-section', true);
+    updateUseModeUI(EctState.get().nav.config.mode);
+    setVisible('nav-calc-btn', magType !== 'mag');
+    setVisible('nav-result', false);
+  }
+
+  function navSelSat(sat) {
+    clearError();
+    EctState.setNav({ sat });
+    document.getElementById('n-btn-sat').className = 'choice-btn' + (sat === 'sat' ? ' sel-g' : '');
+    document.getElementById('n-btn-nosat').className = 'choice-btn' + (sat === 'nosat' ? ' sel' : '');
+    setVisible('nav-calc-btn', true);
+  }
+
+  function navCalc() {
+    clearError();
+    const nav = EctState.get().nav;
+    if (!nav.mat) return;
+
+    const depth_mm = getNum('nav-depth', 0.001);
+    const liftoff = getNum('nav-liftoff', 0);
+    if (depth_mm === null) { showError('検査したい深さは 0 より大きい値を入力してください。'); return; }
+    if (liftoff === null) { showError('リフトオフに無効な値があります。'); return; }
+    if (nav.magType === 'mag' && !nav.sat) { showError('磁気飽和の有無を選択してください。'); return; }
+    const isMaterialMode = nav.config.mode === 'material';
+    const crackWidth_mm = isMaterialMode ? null : getNum('nav-crack', 0.01);
+    if (!isMaterialMode && crackWidth_mm === null) { showError('傷の幅は 0 より大きい値を入力してください。'); return; }
+
+    const mat = { ...nav.mat };
+    if (nav.magType === 'mag' && nav.sat === 'sat') {
+      mat.mur = Math.max(1, Math.round(mat.mur / 100));
+    }
+    if (mat.sigma <= 0 || mat.mur <= 0) { showError('材質パラメータが無効です。'); return; }
+
+    const physicalFreqs = Physics.optimalFrequency_Hz(depth_mm / 1000, mat.mur, mat.sigma);
+    if (!isFinite(physicalFreqs.fOpt) || physicalFreqs.fOpt <= 0) {
+      showError('有効な周波数を計算できませんでした。材質・深さを確認してください。');
+      return;
+    }
+    const PRACTICAL_MAX_HZ = 5e6;
+    const isFrequencyLimited = physicalFreqs.fOpt > PRACTICAL_MAX_HZ;
+    const freqs = isFrequencyLimited
+      ? { fOpt: PRACTICAL_MAX_HZ, fLo: PRACTICAL_MAX_HZ / 4, fHi: PRACTICAL_MAX_HZ }
+      : physicalFreqs;
+
+    const skinCu_mm = Physics.skinDepth_mm(freqs.fOpt, 1, 5.8e7);
+    EctState.setResult({ freqs, physicalFreqs, mat, depth_mm, skinCu_mm });
+
+    const fOpt = fmtF(freqs.fOpt / 1000);
+    const fLo = fmtF(freqs.fLo / 1000);
+    const fHi = fmtF(freqs.fHi / 1000);
+
+    const fOpt_MHz = freqs.fOpt / 1e6;
+    const recs = FERRITES.filter(f => f.fmax_MHz >= fOpt_MHz * 0.5).slice(0, 4);
+    const ferriteText = recs.length ? recs.map(f => f.name).join('、') : '条件に合う候補なし';
+
+    const satNote = nav.magType === 'mag'
+      ? (nav.sat === 'sat' ? '磁気飽和あり（永久磁石使用）。' : '磁気飽和なし → 表面のみ。')
+      : '';
+    const defectDepth = judgeDefectDepth(depth_mm);
+    const autoConfig = { ...nav.config, defectDepth, depth_mm };
+    const configResult = autoConfig.mode === 'material'
+      ? evaluateMaterialMode({
+          ...autoConfig,
+          materialType: nav.magType,
+          fOpt_Hz: freqs.fOpt,
+        })
+      : evaluateCoilConfig(autoConfig, crackWidth_mm, freqs.fOpt);
+    const coilEst = estimateCoilDiameter(depth_mm, crackWidth_mm);
+    const coilDiaNotes = buildCoilDiameterNote(coilEst, depth_mm, crackWidth_mm, autoConfig.mode);
+    const detectTargetZ = freqs.fOpt > 500000 ? 200 : 100;
+    const turnsHint = estimateTurnsHint(freqs.fOpt, detectTargetZ);
+    const wireHint = estimateWireHint(freqs.fOpt, skinCu_mm);
+    const designScore = evaluateDesignScore({
+      fOpt_Hz: freqs.fOpt,
+      depth_mm,
+      crackWidth_mm,
+      best: configResult.best,
+      needCross: configResult.json.needCross,
+      noise: autoConfig.noise,
+      turnsHint,
+      wireHint,
+    });
+    if (autoConfig.mode === 'material') {
+      configResult.reasons.push('異材判別では空間分解能より磁場の安定性を優先');
+    } else {
+      configResult.reasons.push('コイル径は傷幅と検査深さから初期推定');
+      configResult.reasons.push('小さすぎると欠陥を捉えられず、大きすぎると信号が平均化される');
+    }
+    if (autoConfig.mode === 'flaw') {
+      const f_kHz = freqs.fOpt / 1000;
+      if (f_kHz >= 1000) {
+        configResult.cautions.push('高周波条件：小径コイルが有利（表面・微小欠陥向き）');
+        configResult.cautions.push('ただし深部欠陥の検出能力は低下する');
+        if (f_kHz >= 10000) {
+          configResult.cautions.push('10MHz超の条件：発振器・アンプ・配線容量・治具の影響が大きいため実機帯域を確認');
+        }
+      } else if (f_kHz < 100) {
+        configResult.cautions.push('低周波条件：大きめのコイル径が有利（深部欠陥向き）');
+        configResult.cautions.push('ただし細かい傷の分解能は低下する');
+      } else {
+        configResult.cautions.push('中周波条件：コイル径は傷幅と検査深さのバランスで決定する');
+      }
+      if (crackWidth_mm <= 0.1) {
+        configResult.cautions.push('細い傷を狙う場合、コイル径が大きすぎると信号が平均化される');
+      }
+      if (depth_mm >= 1.0) {
+        configResult.cautions.push('深い欠陥では十分な磁場範囲が必要なため、小径コイルは不利になる');
+      }
+      configResult.cautions.push('コイル径・巻数・インピーダンスはCOIL DESIGNERで最適化する');
+    }
+    configResult.cautions.push('設計スコアは初期判断用です。最終感度・ノイズ耐性は実測で確認してください');
+    configResult.cautions.push('推奨コイル径・巻数目安・線径目安をCOIL DESIGNERへ入力して最終設計してください');
+    const fOpt_kHz = Number((freqs.fOpt / 1000).toFixed(3));
+    configResult.json.frequency_kHz = fOpt_kHz;
+    configResult.json.recommendedFrequency_kHz = fOpt_kHz;
+    configResult.json.fOpt_kHz = fOpt_kHz;
+    configResult.json.frequency = fOpt_kHz;
+    configResult.json.frequencyUnit = 'kHz';
+    configResult.json.frequencyLabel = fOpt.v + fOpt.u;
+    configResult.json.recommendedFrequencyBand_kHz = {
+      low: Number((freqs.fLo / 1000).toFixed(3)),
+      high: Number((freqs.fHi / 1000).toFixed(3)),
+    };
+    configResult.json.recommendedFrequencyBandLabel = fLo.v + fLo.u + '〜' + fHi.v + fHi.u;
+    configResult.json.initialCoilDesign = {
+      recommendedCoilDiameter: `${coilEst.center.toFixed(1)}mm`,
+      coilDiameterRange: `${coilEst.min.toFixed(1)}〜${coilEst.max.toFixed(1)}mm`,
+      turnsHint,
+      wireHint: wireHint.label,
+      detectTargetZ: `${detectTargetZ}Ω`,
+      excitationTargetZ: '100Ω',
+    };
+    configResult.json.configDisplay = coilConfigDisplayName(configResult);
+    const modeLabel = autoConfig.mode === 'material' ? '異材判別' : '傷検出';
+    const conditionWarnings = [];
+    if (nav.magType === 'mag') {
+      conditionWarnings.push(nav.sat === 'sat'
+        ? '磁気飽和あり：永久磁石でμrを約1/100に低減する前提です。'
+        : '磁気飽和なし：μrが大きく浸透深さが浅いため表面探傷向けです。');
+    }
+    if (nav.magType === 'mag' && nav.sat === 'nosat' && depth_mm > 0.1) {
+      conditionWarnings.push('この条件では検出困難：磁気飽和なしの磁性体は深部検出が難しい可能性があります。');
+    }
+    if (isFrequencyLimited) {
+      const physicalF = fmtF(physicalFreqs.fOpt / 1000);
+      conditionWarnings.push(`理想計算では${physicalF.v}${physicalF.u}ですが、実用上限として5MHzを推奨値にしています。`);
+    }
+    if (autoConfig.mode === 'flaw' && freqs.fOpt > 3000000 && depth_mm > 0.5) {
+      conditionWarnings.push('この条件では検出困難：周波数が深さに対して高すぎる可能性があります。');
+    }
+    if (autoConfig.mode === 'material') {
+      conditionWarnings.push('異材判別：基準材との比較、リフトオフ一定、振幅差＋位相差の確認が重要です。');
+    }
+
+    const basicDepthLabel = autoConfig.mode === 'material' ? '影響深さ' : '検査深さ';
+    const summaryHtml =
+      `<div class="summary-compact">
+         <div><b>条件</b><span>${mat.name} / ${modeLabel} / ${basicDepthLabel}${depth_mm}mm</span></div>
+         <div><b>周波数</b><span>${fOpt.v}${fOpt.u}（${fLo.v}${fLo.u}〜${fHi.v}${fHi.u}）</span></div>
+         <div><b>構成</b><span>${configResult.json.configDisplay}</span></div>
+         <div><b>フェライト</b><span>${autoConfig.mode === 'material' ? configResult.ferrite : ferriteText}</span></div>
+         <div><b>コイル</b><span>φ${coilEst.center.toFixed(1)}mm / ${turnsHint} / 線径${wireHint.label}</span></div>
+         <div><b>目標Z</b><span>励磁100Ω / 検出${detectTargetZ}Ω</span></div>
+         <div><b>スコア</b><span>${designScore.total}/100（${designScore.label}）</span></div>
+       </div>
+       ${conditionWarnings.length ? '<div class="warn-box" style="margin-top:8px;margin-bottom:0">' + conditionWarnings.map(w => '・' + w).join('<br>') + '</div>' : ''}`;
+    setText('nv-summary', summaryHtml, true);
+
+    setText('cfg-rec-name', configResult.json.configDisplay);
+    setText('cfg-reasons', listHtml(configResult.reasons), true);
+    setText('cfg-cautions', listHtml(configResult.cautions), true);
+    setText('cfg-diff-spacing', configResult.diffSpacing.label);
+    setText('cfg-diff-reasons', listHtml(configResult.diffSpacing.reasons), true);
+    setText('cfg-next-items', listHtml(configResult.nextItems), true);
+    setText('cfg-json', formatCoilJSON(configResult.json));
+
+    const resultEl = document.getElementById('nav-result');
+    if (resultEl) {
+      setVisible('nav-config-result', false);
+      setText('nav-config-toggle', '探傷構成ナビ結果を表示');
+      resultEl.style.display = 'block';
+      resultEl.classList.add('fade-in');
+      setTimeout(() => { try { resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {} }, 50);
+    }
+  }
+
+  function fFilter(key, val, el) {
+    EctState.setFerriteFilter(key, val);
+    const rowId = key === 'band' ? 'f-band-row' : 'f-type-row';
+    document.getElementById(rowId)?.querySelectorAll('.filter-btn')
+      .forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    renderFerrite();
+  }
+
+  function renderFerrite() {
+    const { band, type } = EctState.get().ferrite;
+    const listEl = document.getElementById('f-list');
+    if (!listEl) return;
+    const filtered = FERRITES.filter(f => {
+      const mhz = f.fmax_MHz;
+      const bandOk = band === 'all'
+        || (band === '100k' && mhz <= 0.1)
+        || (band === '1m' && mhz <= 1)
+        || (band === '10m' && mhz <= 10);
+      const typeOk = type === 'all' || f.type === type;
+      return bandOk && typeOk;
+    });
+    listEl.innerHTML = filtered.length
+      ? renderFerriteCards(filtered)
+      : '<div style="text-align:center;color:var(--muted);padding:30px">条件に合う材質なし</div>';
+  }
+
+  function init() {
+    renderFerrite();
+    updateUseModeUI(EctState.get().nav.config.mode);
+  }
+
+  return Object.freeze({
+    switchTab, navSelMag, navSelSat, navSelConfig, navCalc,
+    toggleConfigResult, copyCoilJSON, fFilter, init
+  });
+})();
+
+UI.init();
+</script>
+
+
+</body>
+</html>
+

@@ -1,0 +1,4288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1117">
+<title>WINDING CALIBRATOR</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<style>
+:root {
+  --bg:#0d1117;
+  --surface:#161b22;
+  --surface2:#1c2333;
+  --surface3:#202a3a;
+  --border:#30363d;
+  --border-strong:#445166;
+  --accent:#58a6ff;
+  --accent2:#3fb950;
+  --accent3:#f78166;
+  --gold:#e3b341;
+  --text:#e6edf3;
+  --muted:#8b949e;
+  --input-bg:#0d1117;
+}
+
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { scrollbar-gutter:stable; }
+body {
+  min-height:100vh;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Noto Sans JP', system-ui, sans-serif;
+  font-size:14px;
+  overflow-y:scroll;
+}
+
+.header {
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:10px;
+  padding:10px 16px;
+  background:linear-gradient(135deg, #1a2744 0%, #0d1117 100%);
+  border-bottom:1px solid var(--border);
+}
+.header-icon { font-size:19px; color:var(--gold); }
+.header h1 {
+  font-size:17px;
+  letter-spacing:1px;
+  color:var(--accent);
+}
+.header-sub {
+  margin-left:auto;
+  text-align:right;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.4;
+}
+
+.app {
+  max-width:1180px;
+  margin:0 auto;
+  padding:14px;
+}
+.tab-nav {
+  display:flex;
+  gap:8px;
+  margin:0 0 12px;
+  overflow-x:auto;
+  padding-bottom:2px;
+}
+.tab-button {
+  flex:0 0 auto;
+  border-color:var(--border-strong);
+  background:var(--surface2);
+  color:var(--muted);
+}
+.tab-button.active {
+  border-color:var(--accent);
+  background:#1f2f4a;
+  color:var(--text);
+}
+.tab-panel.hidden { display:none !important; }
+.layout {
+  display:grid;
+  grid-template-columns:minmax(320px, 430px) minmax(0, 1fr);
+  gap:12px;
+  align-items:start;
+}
+.layout > * { min-width:0; }
+.section {
+  min-width:0;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:13px;
+  margin-bottom:12px;
+}
+.section-title {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:11px;
+  color:var(--accent);
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+}
+.section-title small {
+  color:var(--muted);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:0;
+  text-transform:none;
+}
+.collapsible-section {
+  padding:0;
+  overflow:hidden;
+}
+.collapsible-section summary {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:9px 11px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface2);
+  color:var(--accent);
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+  list-style:none;
+}
+.collapsible-section summary::-webkit-details-marker { display:none; }
+.collapsible-section summary::after {
+  content:'▼';
+  color:var(--muted);
+  font-size:10px;
+}
+.collapsible-section[open] summary {
+  border-radius:8px 8px 0 0;
+  border-color:var(--border-strong);
+}
+.collapsible-section[open] summary::after { content:'▲'; }
+.collapsible-body {
+  padding:11px;
+}
+.storage-brief {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  color:var(--text);
+  font-weight:800;
+}
+.storage-brief small {
+  color:var(--muted);
+  font-size:10px;
+  font-weight:700;
+}
+.storage-brief strong {
+  color:var(--text);
+  font-size:13px;
+  white-space:nowrap;
+}
+.storage-detail-toggle {
+  margin-top:6px;
+}
+.storage-detail-toggle summary {
+  color:var(--accent);
+  cursor:pointer;
+  font-weight:800;
+  list-style:none;
+}
+.storage-detail-toggle summary::-webkit-details-marker { display:none; }
+.storage-detail-toggle summary::after {
+  content:' ▼';
+  color:var(--muted);
+  font-size:9px;
+}
+.storage-detail-toggle[open] summary::after { content:' ▲'; }
+.note {
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.55;
+  margin:-4px 0 10px;
+}
+
+.input-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+}
+.input-group { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.input-group.full { grid-column:1 / -1; }
+.input-subhead {
+  grid-column:1 / -1;
+  margin-top:4px;
+  color:var(--accent);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.3px;
+}
+.input-divider {
+  grid-column:1 / -1;
+  height:1px;
+  margin:4px 0 2px;
+  background:var(--border);
+}
+.input-label { color:var(--muted); font-size:10px; font-weight:700; }
+.input-row {
+  display:flex;
+  align-items:center;
+  min-height:37px;
+  background:var(--input-bg);
+  border:1px solid var(--border);
+  border-radius:6px;
+  overflow:hidden;
+}
+.input-row:focus-within { border-color:var(--accent); }
+input, select, textarea {
+  width:100%;
+  min-width:0;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--text);
+  font:inherit;
+}
+input, select { padding:8px 9px; font-size:15px; font-weight:700; }
+textarea { min-height:78px; padding:8px 9px; resize:vertical; line-height:1.45; }
+select option { background:var(--surface); color:var(--text); }
+input[type="number"] { appearance:textfield; -moz-appearance:textfield; }
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.input-unit {
+  align-self:stretch;
+  display:flex;
+  align-items:center;
+  padding:0 9px;
+  border-left:1px solid var(--border);
+  background:var(--surface2);
+  color:var(--accent);
+  font-size:10px;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.button-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+button {
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface2);
+  color:var(--text);
+  padding:9px 11px;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+button:hover { border-color:var(--accent); background:var(--surface3); }
+.primary {
+  flex:1;
+  min-width:160px;
+  border-color:#1f6feb;
+  background:linear-gradient(135deg, #1f6feb, #388bfd);
+  color:white;
+}
+.danger { color:var(--accent3); }
+.success { color:var(--accent2); }
+.compact { padding:6px 8px; font-size:11px; border-radius:6px; }
+
+.live-grid {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:8px;
+  margin-top:10px;
+}
+.metric {
+  min-height:70px;
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface2);
+}
+.metric-label { color:var(--muted); font-size:10px; line-height:1.35; }
+.metric-value { margin-top:7px; color:var(--gold); font-size:20px; font-weight:800; }
+.metric-value.good { color:var(--accent2); }
+.metric-value.muted { color:var(--muted); font-size:14px; }
+
+.status {
+  color:var(--muted);
+  font-size:11px;
+  min-height:16px;
+}
+.status-panel {
+  margin:0 0 10px;
+  padding:8px 9px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface2);
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.55;
+}
+.status-panel strong { color:var(--text); }
+.status-ok { color:var(--accent2); }
+.status-warn { color:var(--gold); }
+.status-error { color:var(--accent3); }
+.storage-lines {
+  display:grid;
+  gap:3px;
+}
+.storage-line {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  border-bottom:1px solid rgba(139,148,158,.14);
+  padding:2px 0;
+}
+.storage-line:last-child { border-bottom:0; }
+.storage-line span:first-child { color:var(--muted); }
+.storage-line span:last-child { text-align:right; color:var(--text); font-weight:800; }
+.mobile-storage-warning {
+  margin:0 0 10px;
+  padding:9px 10px;
+  border:1px solid rgba(227,179,65,.45);
+  border-radius:8px;
+  background:rgba(227,179,65,.08);
+  color:var(--gold);
+  font-size:11px;
+  line-height:1.5;
+}
+.backup-list {
+  max-height:180px;
+  overflow:auto;
+  margin-top:8px;
+  border:1px solid var(--border);
+  border-radius:8px;
+}
+.backup-item {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:7px 8px;
+  border-bottom:1px solid var(--border);
+  color:var(--muted);
+  font-size:11px;
+}
+.backup-item:last-child { border-bottom:0; }
+.backup-item strong { color:var(--text); }
+.copy-strong {
+  border-color:rgba(63,185,80,.75);
+  background:#173923;
+  color:#d7ffe0;
+}
+.quality-badge {
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:3px 7px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:var(--surface2);
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.quality-ok { color:var(--accent2); border-color:rgba(63,185,80,.45); }
+.quality-caution { color:var(--gold); border-color:rgba(227,179,65,.5); }
+.quality-low { color:var(--accent3); border-color:rgba(247,129,102,.55); }
+.quality-unknown { color:var(--muted); }
+.ferrite-phase-control .input-row {
+  align-items:center;
+  gap:8px;
+  padding:7px 9px;
+  flex-wrap:wrap;
+}
+.ferrite-phase-control input[type="checkbox"] {
+  width:18px;
+  min-width:18px;
+  height:18px;
+  padding:0;
+}
+.ferrite-phase-control input[type="number"] {
+  width:92px;
+  flex:0 0 92px;
+}
+.ferrite-phase-control .analysis-toggle {
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-height:30px;
+}
+.edit-status {
+  margin:8px 0 0;
+  color:var(--gold);
+  font-size:11px;
+  font-weight:800;
+}
+.health-summary {
+  margin:-2px 0 10px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+.health-summary strong { color:var(--text); }
+.check-ok { color:var(--accent2); font-weight:800; white-space:nowrap; }
+.check-warn { color:var(--gold); font-weight:800; min-width:120px; }
+.row-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  min-width:120px;
+}
+.table-wrap {
+  overflow:auto;
+  border:1px solid var(--border);
+  border-radius:8px;
+}
+#dataTable {
+  height:min(720px, calc(100vh - 210px));
+  min-height:360px;
+  overflow:auto;
+}
+#dataTable table { min-width:1120px; }
+#dataTable .sticky-id {
+  position:sticky;
+  left:0;
+  z-index:2;
+  min-width:118px;
+  max-width:180px;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+}
+#dataTable th.sticky-id {
+  z-index:4;
+  background:var(--surface2);
+}
+#dataTable td.sticky-id {
+  color:var(--accent);
+  font-weight:800;
+  word-break:break-all;
+}
+table {
+  width:100%;
+  border-collapse:collapse;
+  min-width:980px;
+}
+th, td {
+  padding:7px 8px;
+  border-bottom:1px solid var(--border);
+  text-align:left;
+  vertical-align:top;
+  font-size:12px;
+}
+th {
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:var(--surface2);
+  color:var(--muted);
+  font-size:10px;
+  white-space:nowrap;
+}
+td.num { text-align:right; font-variant-numeric:tabular-nums; }
+tr:last-child td { border-bottom:0; }
+.empty {
+  color:var(--muted);
+  padding:18px;
+  text-align:center;
+}
+
+.summary-grid {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:12px;
+}
+.summary-table table { min-width:260px; }
+.summary-table td:first-child { font-weight:800; }
+.summary-table .factor { color:var(--gold); font-weight:800; }
+
+.analysis-controls {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:9px;
+  margin-bottom:10px;
+}
+.analysis-control {
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  min-width:0;
+}
+.ferrite-preset-panel {
+  grid-column:1 / -1;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:9px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface2);
+}
+.ferrite-preset-title {
+  color:var(--accent);
+  font-size:11px;
+  font-weight:800;
+}
+.ferrite-preset-grid {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:8px;
+}
+.ferrite-preset-actions {
+  margin-top:0;
+}
+.analysis-toggle-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  margin:2px 0 10px;
+}
+.analysis-toggle {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+}
+.analysis-toggle input { width:auto; }
+.analysis-canvas-wrap {
+  width:100%;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#05080d;
+  overflow:hidden;
+}
+#analysisCanvas {
+  display:block;
+  width:100%;
+  height:360px;
+  touch-action:manipulation;
+}
+.ferrite-kpi-grid {
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+  margin-bottom:10px;
+}
+.ferrite-kpi {
+  min-height:74px;
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface2);
+}
+.ferrite-kpi-label {
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.35;
+  font-weight:700;
+}
+.ferrite-kpi-value {
+  margin-top:7px;
+  color:var(--gold);
+  font-size:19px;
+  line-height:1.1;
+  font-weight:800;
+}
+.ferrite-kpi-sub {
+  margin-top:4px;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.35;
+}
+.ferrite-formula {
+  margin-bottom:10px;
+}
+.ferrite-formula summary {
+  cursor:pointer;
+  color:var(--accent);
+  font-size:11px;
+  font-weight:800;
+}
+.ferrite-formula-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:8px;
+  margin-bottom:10px;
+}
+.ferrite-formula-box {
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#05080d;
+  color:#d7e7ff;
+  font-family:Consolas, Menlo, monospace;
+  font-size:12px;
+  line-height:1.5;
+}
+#ferriteAnalyzerCanvas {
+  display:block;
+  width:100%;
+  height:390px;
+  touch-action:manipulation;
+}
+#ferriteAnalyzerTable {
+  height:min(720px, calc(100vh - 210px));
+  min-height:360px;
+  overflow:auto;
+}
+#ferriteAnalyzerTable th {
+  z-index:3;
+}
+#ferriteAnalyzerTable .sticky-id {
+  position:sticky;
+  left:0;
+  z-index:2;
+  min-width:118px;
+  max-width:180px;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+}
+#ferriteAnalyzerTable th.sticky-id {
+  z-index:5;
+  background:var(--surface2);
+}
+#ferriteAnalyzerTable td.sticky-id {
+  color:var(--accent);
+  font-weight:800;
+  word-break:break-all;
+}
+.ferrite-table table { min-width:980px; }
+.ferrite-detail-actions {
+  margin:10px 0 0;
+}
+.ferrite-rankings {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+  margin-top:10px;
+}
+.ferrite-ranking {
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface2);
+  overflow:hidden;
+}
+.ferrite-ranking-title {
+  padding:8px 10px;
+  border-bottom:1px solid var(--border);
+  color:var(--text);
+  font-size:12px;
+  font-weight:800;
+}
+.ferrite-ranking .table-wrap {
+  border:0;
+  border-radius:0;
+  max-height:290px;
+}
+.ferrite-ranking table {
+  min-width:1120px;
+}
+.improvement-good { color:var(--accent2); font-weight:800; }
+.improvement-bad { color:var(--accent3); font-weight:800; }
+.improvement-neutral { color:var(--muted); }
+.analysis-info {
+  margin-top:8px;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.55;
+  min-height:34px;
+}
+.analysis-info strong { color:var(--text); }
+
+.code-box {
+  width:100%;
+  min-height:230px;
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#05080d;
+  color:#d7e7ff;
+  font-family:Consolas, Menlo, monospace;
+  font-size:12px;
+  line-height:1.55;
+  resize:vertical;
+}
+.json-preview-box {
+  white-space:pre;
+  resize:none;
+}
+.import-area { min-height:130px; font-family:Consolas, Menlo, monospace; font-size:12px; }
+.preview-area {
+  min-height:110px;
+  max-height:180px;
+  overflow:auto;
+  font-family:Consolas, Menlo, monospace;
+  font-size:12px;
+}
+.preview-actions { margin-top:8px; }
+.hidden { display:none !important; }
+
+@media (max-width:900px) {
+  .layout { grid-template-columns:1fr; }
+  .summary-grid { grid-template-columns:1fr; }
+  .ferrite-kpi-grid { grid-template-columns:1fr; }
+  .ferrite-formula-grid { grid-template-columns:1fr; }
+  .ferrite-rankings { grid-template-columns:1fr; }
+}
+@media (max-width:560px) {
+  body { font-size:12px; }
+  .header {
+    position:static;
+    align-items:center;
+    gap:7px;
+    padding:7px 10px;
+  }
+  .header-icon { font-size:16px; }
+  .header h1 { font-size:14px; letter-spacing:.6px; }
+  .header-sub { display:none; }
+  .app { padding:5px; }
+  .tab-nav {
+    gap:4px;
+    margin-bottom:5px;
+  }
+  .tab-button {
+    padding:6px 7px;
+    font-size:10px;
+  }
+  .layout { gap:4px; }
+  .section {
+    padding:5px;
+    margin-bottom:5px;
+    border-radius:6px;
+  }
+  .collapsible-section { padding:0; }
+  .collapsible-section summary {
+    padding:6px 7px;
+    border-radius:6px;
+    font-size:11px;
+  }
+  .collapsible-section[open] summary { border-radius:6px 6px 0 0; }
+  .collapsible-body { padding:6px; }
+  .section-title {
+    margin-bottom:4px;
+    font-size:10px;
+    letter-spacing:.5px;
+  }
+  .note {
+    font-size:10px;
+    line-height:1.22;
+    margin:0 0 3px;
+  }
+  .status-panel {
+    padding:5px 6px;
+    margin-bottom:5px;
+    font-size:10px;
+    line-height:1.25;
+  }
+  .storage-brief { align-items:flex-start; }
+  .storage-brief small { font-size:9px; }
+  .storage-brief strong { font-size:12px; }
+  .mobile-storage-warning {
+    margin-bottom:5px;
+    padding:5px 6px;
+    font-size:10px;
+    line-height:1.35;
+  }
+  .input-grid {
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
+    gap:4px 5px;
+  }
+  .input-group { gap:2px; }
+  .input-subhead {
+    margin-top:1px;
+    padding-top:2px;
+    border-top:1px solid var(--border);
+    font-size:9px;
+    line-height:1.1;
+  }
+  .input-divider { margin:2px 0 1px; }
+  .input-label { font-size:9px; }
+  .input-row {
+    min-height:27px;
+    border-radius:5px;
+  }
+  input, select {
+    padding:3px 5px;
+    font-size:16px;
+    font-weight:700;
+    line-height:1.15;
+  }
+  textarea {
+    min-height:44px;
+    padding:5px;
+    font-size:13px;
+    resize:none;
+  }
+  .input-unit {
+    padding:0 5px;
+    font-size:9px;
+  }
+  .button-row {
+    gap:4px;
+    margin-top:5px;
+  }
+  .button-row button {
+    flex:1;
+    min-width:112px;
+  }
+  button {
+    padding:6px 7px;
+    border-radius:6px;
+    font-size:11px;
+  }
+  .analysis-controls {
+    grid-template-columns:1fr;
+    gap:6px;
+  }
+  .ferrite-phase-control .input-row {
+    flex-direction:column;
+    align-items:stretch;
+    gap:6px;
+  }
+  .ferrite-phase-control .analysis-toggle {
+    min-height:38px;
+  }
+  .ferrite-phase-control input[type="number"] {
+    width:100%;
+    flex:auto;
+  }
+  .ferrite-preset-grid {
+    grid-template-columns:1fr;
+    gap:6px;
+  }
+  #analysisCanvas { height:300px; }
+  .live-grid {
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:4px;
+    margin-top:5px;
+  }
+  .metric {
+    min-height:34px;
+    padding:3px;
+    border-radius:6px;
+  }
+  .metric-label { font-size:8px; line-height:1.05; }
+  .metric-value {
+    margin-top:1px;
+    font-size:12px;
+  }
+  .table-wrap { border-radius:6px; }
+  #dataTable {
+    height:150px;
+    min-height:130px;
+  }
+  #ferriteAnalyzerTable {
+    height:calc(100vh - 240px);
+    min-height:260px;
+  }
+  #ferriteAnalyzerCanvas {
+    height:240px;
+  }
+  #ferriteAnalyzerTable .sticky-id {
+    min-width:96px;
+    max-width:128px;
+  }
+  #dataTable .sticky-id {
+    min-width:96px;
+    max-width:128px;
+  }
+  table { min-width:920px; }
+  th, td {
+    padding:5px 6px;
+    font-size:11px;
+  }
+  th { font-size:9px; }
+  .summary-table table { min-width:230px; }
+  .code-box {
+    min-height:120px;
+    max-height:150px;
+    padding:7px;
+    font-size:11px;
+    overflow:auto;
+    resize:none;
+  }
+  .import-area { min-height:80px; }
+  .preview-area { min-height:90px; max-height:150px; }
+  .backup-list { max-height:150px; }
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-icon">◎</div>
+  <h1>WINDING CALIBRATOR</h1>
+  <div class="header-sub">実測データから補正係数だけを抽出<br>COIL DESIGNER CONFIG helper</div>
+</header>
+
+<main class="app">
+  <nav class="tab-nav" aria-label="Winding Calibrator tabs">
+    <button class="tab-button active" data-tab="data">DATA：入力・記録</button>
+    <button class="tab-button" data-tab="analysis">ANALYSIS：グラフ解析</button>
+    <button class="tab-button" data-tab="ferrite">FERRITE：実測kL解析</button>
+    <button class="tab-button" data-tab="config">CONFIG：補正値出力</button>
+  </nav>
+
+  <section class="tab-panel" id="tab-data" data-tab-panel="data">
+  <div class="layout">
+    <div>
+      <section class="section">
+        <div class="section-title">DATA INPUT</div>
+        <div class="input-grid">
+          <div class="input-subhead">コイルタイプ</div>
+          <label class="input-group">
+            <span class="input-label">コイルタイプ</span>
+            <span class="input-row">
+              <select id="coilType">
+                <option value="air">空芯</option>
+                <option value="insert">中心フェライト</option>
+                <option value="ferrite">フェライト直巻き</option>
+              </select>
+            </span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">フェライト材質</span>
+            <span class="input-row"><select id="ferriteMaterial"></select></span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">フェライト形状</span>
+            <span class="input-row">
+              <select id="ferriteShape">
+                <option value="none">なし</option>
+                <option value="round">円柱</option>
+                <option value="rect">角柱</option>
+              </select>
+            </span>
+          </label>
+          <label class="input-group" data-ferrite-shape="round">
+            <span class="input-label">フェライト径</span>
+            <span class="input-row"><input id="ferriteDia" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <label class="input-group" data-ferrite-shape="rect">
+            <span class="input-label">フェライト高さ</span>
+            <span class="input-row"><input id="ferriteH" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <label class="input-group" data-ferrite-shape="rect">
+            <span class="input-label">フェライト幅</span>
+            <span class="input-row"><input id="ferriteW" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <div class="input-divider"></div>
+          <div class="input-subhead">巻線数</div>
+          <label class="input-group">
+            <span class="input-label">線径</span>
+            <span class="input-row"><input id="wireDia" type="number" step="0.001" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">実際に巻いた総巻数</span>
+            <span class="input-row"><input id="totalTurns" type="number" step="1" min="0"><span class="input-unit">T</span></span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">1層ターン数</span>
+            <span class="input-row"><input id="oneLayerTurns" type="number" step="0.01" min="0"><span class="input-unit">T</span></span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">層数</span>
+            <span class="input-row"><input id="layers" type="number" step="1" min="1"><span class="input-unit">層</span></span>
+          </label>
+          <div class="input-subhead">コイル寸法</div>
+          <label class="input-group">
+            <span class="input-label">コイル形状</span>
+            <span class="input-row">
+              <select id="bobbinShape">
+                <option value="round">円筒</option>
+                <option value="rect">四角</option>
+              </select>
+            </span>
+          </label>
+          <label class="input-group" data-bobbin-shape="round">
+            <span class="input-label">コイル内径</span>
+            <span class="input-row"><input id="bobbinInnerDia" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <label class="input-group" data-bobbin-shape="round">
+            <span class="input-label">コイル外径</span>
+            <span class="input-row"><input id="bobbinOuterDia" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <label class="input-group" data-bobbin-shape="rect">
+            <span class="input-label">コイル内側高さ</span>
+            <span class="input-row"><input id="bobbinInnerH" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <label class="input-group" data-bobbin-shape="rect">
+            <span class="input-label">コイル内側幅</span>
+            <span class="input-row"><input id="bobbinInnerW" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <label class="input-group" data-bobbin-shape="rect">
+            <span class="input-label">コイル外側高さ</span>
+            <span class="input-row"><input id="bobbinOuterH" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <label class="input-group" data-bobbin-shape="rect">
+            <span class="input-label">コイル外側幅</span>
+            <span class="input-row"><input id="bobbinOuterW" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">巻線長</span>
+            <span class="input-row"><input id="windingLength" type="number" step="0.01" min="0"><span class="input-unit">mm</span></span>
+          </label>
+          <div class="input-subhead">インピーダンス</div>
+          <label class="input-group">
+            <span class="input-label">周波数</span>
+            <span class="input-row"><input id="frequency" type="number" step="0.1" min="0"><span class="input-unit">kHz</span></span>
+          </label>
+        <p class="note full compact-mobile-note" style="margin:0">周波数はkHzで入力します。</p>
+          <label class="input-group">
+            <span class="input-label">実測インピーダンス</span>
+            <span class="input-row"><input id="measuredZ" type="number" step="0.01" min="0"><span class="input-unit">Ω</span></span>
+          </label>
+          <label class="input-group">
+            <span class="input-label">位相角</span>
+            <span class="input-row"><input id="phaseDeg" type="number" step="0.1"><span class="input-unit">deg</span></span>
+          </label>
+          <label class="input-group full">
+            <span class="input-label">メモ</span>
+            <span class="input-row"><textarea id="memo"></textarea></span>
+          </label>
+        </div>
+        <div class="status-panel" id="storageStatus"></div>
+        <div class="mobile-storage-warning hidden" id="mobileStorageWarning">
+      スマホでは内部保存が消えることがあります。重要データはJSONコピー/エクスポートしてください。
+        </div>
+
+        <div class="live-grid">
+          <div class="metric">
+            <div class="metric-label">理論1層ターン数</div>
+            <div class="metric-value" id="previewTheory">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">実測1層ターン数</div>
+            <div class="metric-value" id="previewMeasured">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">巻線補正係数</div>
+            <div class="metric-value good" id="previewFactor">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">実測R</div>
+            <div class="metric-value" id="previewR">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">実測X</div>
+            <div class="metric-value" id="previewX">-</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">実測L</div>
+            <div class="metric-value" id="previewL">-</div>
+          </div>
+        </div>
+        <p class="note hidden" id="phaseNote" style="margin-top:10px">位相角は将来のR/X/L補正用メモです。現在の巻線補正係数には使用していません。</p>
+
+        <div class="button-row">
+          <button class="primary" id="addBtn">追加</button>
+          <button id="clearFormBtn">入力クリア</button>
+          <button class="danger hidden" id="cancelEditBtn">編集キャンセル</button>
+        </div>
+        <div class="edit-status hidden" id="editStatus"></div>
+        <div class="status" id="formStatus"></div>
+      </section>
+
+    </div>
+
+    <div>
+      <section class="section">
+        <div class="section-title">REGISTERED DATA <small id="dataCount">0件</small></div>
+        <div class="health-summary" id="dataHealthSummary"></div>
+        <div class="table-wrap" id="dataTable"></div>
+      </section>
+
+      <details class="section collapsible-section">
+        <summary>保存・入出力</summary>
+        <div class="collapsible-body">
+          <div class="button-row" style="margin-top:0">
+            <button id="exportJsonBtn">JSONエクスポート</button>
+            <button id="importJsonBtn">JSONインポート</button>
+            <button id="storageTestBtn">保存テスト</button>
+            <button class="danger" id="deleteAllBtn">全削除</button>
+          </div>
+          <input class="hidden" id="jsonFileInput" type="file" accept=".json,application/json">
+          <p class="note" style="margin-top:10px">スマホでは「JSONコピー」推奨です。</p>
+          <div class="button-row preview-actions">
+            <button id="toggleJsonPreviewBtn">JSON表示</button>
+            <button class="copy-strong" id="copyJsonBtn">JSONコピー</button>
+          </div>
+          <div id="jsonPreviewWrap" class="hidden">
+            <div class="section-title compact-title" style="margin-top:10px"><span>JSON PREVIEW</span></div>
+            <pre class="preview-area code-box json-preview-box" id="jsonPreview" tabindex="0"></pre>
+          </div>
+          <p class="note" style="margin-top:10px">CSVは1行目ヘッダーあり/なしの両方に対応しています。</p>
+          <textarea class="import-area code-box" id="csvText" placeholder="CSVを貼り付け"></textarea>
+          <div class="button-row">
+            <button id="importCsvBtn">CSV貼り付けインポート</button>
+            <button id="clearCsvBtn">CSV欄クリア</button>
+          </div>
+          <div class="status" id="ioStatus"></div>
+        </div>
+      </details>
+
+      <details class="section collapsible-section">
+        <summary>復元・バックアップ</summary>
+        <div class="collapsible-body">
+          <div class="button-row" style="margin-top:0">
+            <button id="restoreLatestBtn">最新バックアップから復元</button>
+            <button id="restorePreviousBtn">前回バックアップから復元</button>
+            <button id="showBackupsBtn">バックアップ一覧を表示</button>
+          </div>
+          <textarea class="import-area code-box" id="restoreJsonText" placeholder="JSON貼り付け復元"></textarea>
+          <div class="button-row">
+            <button id="restoreJsonPasteBtn">JSON貼り付け復元</button>
+            <button class="copy-strong" id="copyJsonCurrentBtn">現在データをJSONコピー</button>
+            <button id="exportJsonCurrentBtn">現在データをJSONエクスポート</button>
+          </div>
+          <div class="backup-list hidden" id="backupList"></div>
+          <div class="status" id="restoreStatus"></div>
+        </div>
+      </details>
+    </div>
+  </div>
+  </section>
+
+  <section class="tab-panel hidden" id="tab-analysis" data-tab-panel="analysis">
+      <section class="section">
+        <div class="section-title">ANALYSIS MODE <small>実測データ傾向表示</small></div>
+        <div class="analysis-controls">
+          <label class="analysis-control">
+            <span class="input-label">X軸</span>
+            <span class="input-row">
+              <select id="analysisX"></select>
+            </span>
+          </label>
+          <label class="analysis-control">
+            <span class="input-label">Y軸</span>
+            <span class="input-row">
+              <select id="analysisY"></select>
+            </span>
+          </label>
+          <label class="analysis-control">
+            <span class="input-label">コイルタイプ</span>
+            <span class="input-row">
+              <select id="analysisCoilType">
+                <option value="">全て</option>
+                <option value="air">空芯</option>
+                <option value="insert">中心フェライト</option>
+                <option value="ferrite">フェライト直巻き</option>
+              </select>
+            </span>
+          </label>
+          <label class="analysis-control">
+            <span class="input-label">フェライト材質</span>
+            <span class="input-row">
+              <select id="analysisMaterial"></select>
+            </span>
+          </label>
+        </div>
+        <div class="analysis-toggle-row">
+          <label class="analysis-toggle"><input id="analysisExcludeWarnings" type="checkbox">警告除外</label>
+          <label class="analysis-toggle"><input id="analysisOnlyCorrection" type="checkbox">補正計算可能のみ</label>
+        </div>
+        <div class="analysis-canvas-wrap">
+          <canvas id="analysisCanvas"></canvas>
+        </div>
+        <div class="analysis-info" id="analysisStats"></div>
+        <div class="analysis-info" id="analysisPointInfo">点に触れると詳細を表示します。</div>
+      </section>
+  </section>
+
+  <section class="tab-panel hidden" id="tab-ferrite" data-tab-panel="ferrite">
+      <section class="section">
+        <div class="section-title">FERRITE ANALYZER <small>2G4 / Nagaoka / kL / kHz-safe</small></div>
+        <p class="note">Manus解析PDFの確認用ビューです。UI/JSONの周波数はkHz、内部計算だけHzへ変換します。COIL DESIGNERのフェライト補正式はここでは変更しません。</p>
+        <div class="ferrite-kpi-grid" id="ferriteKpis"></div>
+        <details class="ferrite-formula" id="ferriteFormulaDetails">
+          <summary>近似式を表示</summary>
+          <div class="ferrite-formula-grid">
+          <div class="ferrite-formula-box">Current app reference: k_app = 4.5 * MnZnFreqFactor(freq_kHz)</div>
+          <div class="ferrite-formula-box">PDF empirical: k_L = 647.41 * f_kHz^-0.155 * N^-0.840 * wireDia_mm^-0.113, clamped 3.5..17</div>
+          </div>
+        </details>
+        <div class="analysis-controls">
+          <label class="analysis-control">
+            <span class="input-label">表示データ</span>
+            <span class="input-row">
+              <select id="ferriteDataset">
+                <option value="2g4Direct">2G4 直巻き</option>
+                <option value="2g4All">2G4 全フェライト</option>
+                <option value="air">空芯基準</option>
+                <option value="all">全データ</option>
+              </select>
+            </span>
+          </label>
+          <label class="analysis-control">
+            <span class="input-label">X軸</span>
+            <span class="input-row">
+              <select id="ferriteXAxis">
+                <option value="turns">ターン数 N</option>
+                <option value="frequency_kHz">周波数 kHz</option>
+                <option value="wireDia">線径 mm</option>
+                <option value="appFactor">現行アプリ補正</option>
+                <option value="empiricalFactor">PDF近似式</option>
+              </select>
+            </span>
+          </label>
+        </div>
+        <div class="analysis-canvas-wrap">
+          <canvas id="ferriteAnalyzerCanvas"></canvas>
+        </div>
+        <div class="analysis-info" id="ferriteAnalyzerStats"></div>
+      </section>
+
+      <section class="section hidden" id="ferriteDetailSection">
+        <div class="section-title">DETAIL TABLE <small>実測L / 空芯計算L / kL</small></div>
+        <div class="table-wrap ferrite-table" id="ferriteAnalyzerTable"></div>
+        <div class="ferrite-rankings hidden" id="ferriteErrorRankings"></div>
+      </section>
+  </section>
+
+  <section class="tab-panel hidden" id="tab-config" data-tab-panel="config">
+      <section class="section">
+        <div class="section-title">AVERAGE TABLES</div>
+        <p class="note">平均補正テーブルには、補正係数を計算できるデータのみ使用しています。不足項目がある記録はREGISTERED DATAには残りますが、平均計算には入りません。</p>
+        <div class="summary-grid">
+          <div class="summary-table">
+            <div class="section-title"><span>WIRE DIA</span></div>
+            <div class="table-wrap" id="wireSummary"></div>
+          </div>
+          <div class="summary-table">
+            <div class="section-title"><span>COIL TYPE</span></div>
+            <div class="table-wrap" id="typeSummary"></div>
+          </div>
+          <div class="summary-table">
+            <div class="section-title"><span>FERRITE MATERIAL</span></div>
+            <div class="table-wrap" id="materialSummary"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">CONFIG JS <small>COIL DESIGNER貼り付け用</small></div>
+        <textarea class="code-box" id="configOutput" readonly></textarea>
+        <div class="button-row">
+          <button class="success" id="copyConfigBtn">CONFIG用JSコピー</button>
+        </div>
+        <div class="status" id="copyStatus"></div>
+      </section>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'windingCalibrator.records.v1';
+  const BACKUP_STORAGE_KEY = 'windingCalibrator.records.backup.latest';
+  const OLD_BACKUP_STORAGE_KEY = 'windingCalibrator.records.backup.latest.v1';
+  const PREVIOUS_BACKUP_STORAGE_KEY = 'windingCalibrator.records.backup.previous';
+  const BEFORE_RESTORE_BACKUP_STORAGE_KEY = 'windingCalibrator.records.backup.beforeRestore';
+  const HAD_RECORDS_KEY = 'windingCalibrator.records.hadRecords.v1';
+  const LAST_JSON_COPY_AT_KEY = 'windingCalibrator.lastJsonCopyAt.v1';
+  const LAST_JSON_EXPORT_AT_KEY = 'windingCalibrator.lastJsonExportAt.v1';
+  const EDIT_DRAFT_STORAGE_KEY = 'windingCalibrator.editDraft.v1';
+  const LAST_EXPORT_COUNT_KEY = 'windingCalibrator.lastExportCount.v1';
+  const FERRITE_PRESET_STORAGE_KEY = 'windingCalibrator.ferriteAnalyzerPresets.v1';
+  const DB_NAME = 'windingCalibratorDB';
+  const DB_VERSION = 2;
+  const DB_STORE = 'records';
+  const DB_BACKUP_STORE = 'backups';
+  const ferriteMaterials = ['2H1','2G4','2G8','2H6','3A8','3A7','3A4','4A3','4D4','5K','6D8','6B2','7B2','なし','その他'];
+  const coilTypeLabels = {
+    air: '空芯',
+    insert: '中心フェライト',
+    ferrite: 'フェライト直巻き'
+  };
+  const coilTypeAliases = {
+    '空芯': 'air',
+    air: 'air',
+    '中心フェライト': 'insert',
+    insert: 'insert',
+    center: 'insert',
+    'フェライト直巻き': 'ferrite',
+    ferrite: 'ferrite',
+    direct: 'ferrite'
+  };
+  const bobbinShapeLabels = { round:'円筒', rect:'四角' };
+  const bobbinShapeAliases = { '円筒':'round', round:'round', cylinder:'round', '四角':'rect', rect:'rect', square:'rect', rectangle:'rect' };
+  const ferriteShapeLabels = { none:'なし', round:'円柱', rect:'角柱' };
+  const ferriteShapeAliases = { 'なし':'none', none:'none', no:'none', '円柱':'round', round:'round', cylinder:'round', '角柱':'rect', rect:'rect', square:'rect', rectangle:'rect' };
+  const fields = [
+    'wireDia','totalTurns','oneLayerTurns','layers','bobbinShape','bobbinInnerDia','bobbinOuterDia',
+    'bobbinInnerH','bobbinInnerW','bobbinOuterH','bobbinOuterW','windingLength',
+    'frequency','measuredZ','phaseDeg','coilType','ferriteMaterial','ferriteShape',
+    'ferriteDia','ferriteH','ferriteW','memo'
+  ];
+  const numericFields = new Set([
+    'wireDia','totalTurns','oneLayerTurns','layers','bobbinInnerDia','bobbinOuterDia',
+    'bobbinInnerH','bobbinInnerW','bobbinOuterH','bobbinOuterW','windingLength',
+    'frequency','measuredZ','phaseDeg','ferriteDia','ferriteH','ferriteW'
+  ]);
+  const newCsvFields = [
+    'wireDia','oneLayerTurns','bobbinShape','bobbinInnerDia','bobbinOuterDia',
+    'bobbinInnerH','bobbinInnerW','bobbinOuterH','bobbinOuterW','windingLength',
+    'totalTurns','layers','frequency','measuredZ','phaseDeg','coilType','ferriteMaterial',
+    'ferriteShape','ferriteDia','ferriteH','ferriteW','memo'
+  ];
+  const legacyCsvFieldsWithPhase = [
+    'wireDia','oneLayerTurns','bobbinInnerDia','bobbinOuterDia','windingLength',
+    'totalTurns','layers','frequency','measuredZ','phaseDeg','coilType','ferriteMaterial','memo'
+  ];
+  const oldCsvFields = [
+    'wireDia','oneLayerTurns','bobbinInnerDia','bobbinOuterDia','windingLength',
+    'totalTurns','layers','frequency','measuredZ','coilType','ferriteMaterial','memo'
+  ];
+  const analysisOptions = [
+    { key:'frequency', label:'周波数' },
+    { key:'phaseDeg', label:'位相角' },
+    { key:'measuredZ', label:'実測Z' },
+    { key:'windingFactor', label:'巻線補正係数' },
+    { key:'wireDia', label:'線径' },
+    { key:'totalTurns', label:'総巻数' },
+    { key:'layers', label:'層数' },
+    { key:'oneLayerTurns', label:'1層ターン数' },
+    { key:'rOhm', label:'R' },
+    { key:'xOhm', label:'X' },
+    { key:'lUh', label:'L' }
+  ];
+  const analysisLabels = Object.fromEntries(analysisOptions.map(item => [item.key, item.label]));
+  const analysisColors = { air:'#58a6ff', insert:'#3fb950', ferrite:'#f78166' };
+  const csvHeaderAliases = {
+    '線径':'wireDia',
+    wireDia:'wireDia',
+    wireDia_mm:'wireDia',
+    '1層ターン数':'oneLayerTurns',
+    oneLayerTurns:'oneLayerTurns',
+    'コイル形状':'bobbinShape',
+    'ボビン形状':'bobbinShape',
+    bobbinShape:'bobbinShape',
+    'コイル内径':'bobbinInnerDia',
+    'ボビン内径':'bobbinInnerDia',
+    bobbinInnerDia:'bobbinInnerDia',
+    'コイル外径':'bobbinOuterDia',
+    'ボビン外径':'bobbinOuterDia',
+    bobbinOuterDia:'bobbinOuterDia',
+    'コイル内側高さ':'bobbinInnerH',
+    'ボビン内側高さ':'bobbinInnerH',
+    bobbinInnerH:'bobbinInnerH',
+    'コイル内側幅':'bobbinInnerW',
+    'ボビン内側幅':'bobbinInnerW',
+    bobbinInnerW:'bobbinInnerW',
+    'コイル外側高さ':'bobbinOuterH',
+    'ボビン外側高さ':'bobbinOuterH',
+    bobbinOuterH:'bobbinOuterH',
+    'コイル外側幅':'bobbinOuterW',
+    'ボビン外側幅':'bobbinOuterW',
+    bobbinOuterW:'bobbinOuterW',
+    '巻線長':'windingLength',
+    windingLength:'windingLength',
+    '実際に巻いた総巻数':'totalTurns',
+    '総巻数':'totalTurns',
+    totalTurns:'totalTurns',
+    '層数':'layers',
+    layers:'layers',
+    '周波数':'frequency',
+    frequency:'frequency',
+    frequency_kHz:'frequency',
+    freq_kHz:'frequency',
+    frequencyKHz:'frequency',
+    '実測インピーダンス':'measuredZ',
+    '実測Z':'measuredZ',
+    measuredZ:'measuredZ',
+    '位相角':'phaseDeg',
+    '位相角 deg':'phaseDeg',
+    phaseDeg:'phaseDeg',
+    phase_deg:'phaseDeg',
+    'コイルタイプ':'coilType',
+    coilType:'coilType',
+    'フェライト材質':'ferriteMaterial',
+    ferriteMaterial:'ferriteMaterial',
+    'フェライト形状':'ferriteShape',
+    ferriteShape:'ferriteShape',
+    'フェライト径':'ferriteDia',
+    ferriteDia:'ferriteDia',
+    'フェライト高さ':'ferriteH',
+    ferriteH:'ferriteH',
+    'フェライト幅':'ferriteW',
+    ferriteW:'ferriteW',
+    'メモ':'memo',
+    memo:'memo'
+  };
+  const csvHeaderAliasExtras = {
+    wirediameter:'wireDia',
+    wiredia:'wireDia',
+    wire:'wireDia',
+    diameter:'wireDia',
+    onelayerturns:'oneLayerTurns',
+    layerturns:'oneLayerTurns',
+    bobbinshape:'bobbinShape',
+    innerdia:'bobbinInnerDia',
+    outerdia:'bobbinOuterDia',
+    innerheight:'bobbinInnerH',
+    innerh:'bobbinInnerH',
+    innerwidth:'bobbinInnerW',
+    innerw:'bobbinInnerW',
+    outerheight:'bobbinOuterH',
+    outerh:'bobbinOuterH',
+    outerwidth:'bobbinOuterW',
+    outerw:'bobbinOuterW',
+    length:'windingLength',
+    windinglength:'windingLength',
+    turns:'totalTurns',
+    totalturns:'totalTurns',
+    n:'totalTurns',
+    layer:'layers',
+    layers:'layers',
+    freq:'frequency',
+    frequency:'frequency',
+    f:'frequency',
+    z:'measuredZ',
+    impedance:'measuredZ',
+    measuredz:'measuredZ',
+    phase:'phaseDeg',
+    phasedeg:'phaseDeg',
+    phasedegree:'phaseDeg',
+    coiltype:'coilType',
+    material:'ferriteMaterial',
+    ferritematerial:'ferriteMaterial',
+    ferriteshape:'ferriteShape',
+    ferritedia:'ferriteDia',
+    ferriteh:'ferriteH',
+    ferriteheight:'ferriteH',
+    ferritew:'ferriteW',
+    ferritewidth:'ferriteW',
+    memo:'memo',
+    note:'memo'
+  };
+  const normalizeCsvHeader = value => String(value ?? '')
+    .normalize('NFKC')
+    .replace(/^\uFEFF/, '')
+    .replace(/\s+/g, '')
+    .replace(/[＿_‐‑‒–—―\-()（）［\]\[\]【】:：/／.。,，]/g, '')
+    .replace(/(?:mm|khz|hz|deg|degree|degrees|ohm|Ω|uH|μH|µH)$/i, '')
+    .toLowerCase();
+  const normalizedCsvHeaderAliases = Object.assign(
+    {},
+    Object.fromEntries(Object.entries(csvHeaderAliases).map(([key, value]) => [normalizeCsvHeader(key), value])),
+    csvHeaderAliasExtras
+  );
+  let records = [];
+  let db = null;
+  let lastSaveAt = null;
+  let storageMessage = '';
+  let storageMessageClass = '';
+  let lastSaveCheck = { ok:false, idbCount:null, localCount:null, latestCount:null, message:'未確認' };
+  let editingId = null;
+  let editDraft = null;
+  let duplicateDraftActive = false;
+  let lastSavedRecordsSnapshot = [];
+  let storageRiskMessage = '';
+  let analysisPoints = [];
+  let ferriteAnalyzerPoints = [];
+  let ferriteDetailVisible = false;
+  let ferriteRankingsVisible = false;
+  let ferriteRenderCache = { key:'', filters:null };
+  let dataTableRenderKey = '';
+  let dataHealthRenderKey = '';
+  let previewUpdateTimer = null;
+  let bobbinShapeFields = null;
+  let ferriteShapeFields = null;
+  let currentTab = 'data';
+  const MU0 = 4 * Math.PI * 1e-7;
+
+  const $ = id => document.getElementById(id);
+  const round = (value, digits = 4) => Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
+  const fmt = (value, digits = 4) => Number.isFinite(value) ? String(round(value, digits)) : '-';
+  const hasPositiveFinite = value => Number.isFinite(value) && value > 0;
+  const toNumber = value => {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(String(value).trim());
+    return Number.isFinite(n) ? n : null;
+  };
+  function toHzFromKHz(kHz) {
+    const v = Number(kHz);
+    return Number.isFinite(v) ? v * 1000 : null;
+  }
+  function toKHzFromText(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const text = String(value).trim();
+    const num = parseFloat(text.replace(',', ''));
+    if (!Number.isFinite(num) || num <= 0) return null;
+    if (/MHz/i.test(text)) return num * 1000;
+    if (/kHz/i.test(text)) return num;
+    if (/Hz/i.test(text) && !/kHz/i.test(text)) return num / 1000;
+    return num;
+  }
+  function normalizeFrequencyKHz(recordOrJson) {
+    const candidates = [
+      recordOrJson.frequency_kHz,
+      recordOrJson.freq_kHz,
+      recordOrJson.frequencyKHz,
+      recordOrJson.fOpt_kHz,
+      recordOrJson.recommendedFrequency_kHz,
+      recordOrJson.frequency
+    ];
+    for (const c of candidates) {
+      const v = toKHzFromText(c);
+      if (v !== null) return v;
+    }
+    return null;
+  }
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+  }[ch]));
+
+  function calculate(record) {
+    const wireBase = record.coveredDia || record.wireDia;
+    const theoryOneLayerTurns = hasPositiveFinite(record.oneLayerTurns)
+      ? record.oneLayerTurns
+      : hasPositiveFinite(wireBase) && hasPositiveFinite(record.windingLength)
+        ? Math.floor(record.windingLength / wireBase)
+        : null;
+    const measuredOneLayerTurns = hasPositiveFinite(record.totalTurns) && hasPositiveFinite(record.layers)
+      ? record.totalTurns / record.layers
+      : null;
+    const windingFactor = hasPositiveFinite(theoryOneLayerTurns) && hasPositiveFinite(measuredOneLayerTurns)
+      ? measuredOneLayerTurns / theoryOneLayerTurns
+      : null;
+    return { theoryOneLayerTurns, measuredOneLayerTurns, windingFactor };
+  }
+
+  function calculateImpedanceParts(record) {
+    const frequency_kHz = normalizeFrequencyKHz(record);
+    if (!hasPositiveFinite(record.measuredZ) || !Number.isFinite(record.phaseDeg) || !hasPositiveFinite(frequency_kHz)) {
+      return { rOhm:null, xOhm:null, lUh:null };
+    }
+    const freq_Hz = toHzFromKHz(frequency_kHz);
+    if (!hasPositiveFinite(freq_Hz)) return { rOhm:null, xOhm:null, lUh:null };
+    const theta = record.phaseDeg * Math.PI / 180;
+    const rOhm = record.measuredZ * Math.cos(theta);
+    const xOhm = record.measuredZ * Math.sin(theta);
+    const lH = xOhm / (2 * Math.PI * freq_Hz);
+    return {
+      rOhm:Number.isFinite(rOhm) ? rOhm : null,
+      xOhm:Number.isFinite(xOhm) ? xOhm : null,
+      lUh:Number.isFinite(lH) ? lH * 1000000 : null
+    };
+  }
+
+  function nagaokaK(radius_m, length_m) {
+    if (!(radius_m > 0) || !(length_m > 0)) return null;
+    return length_m / (length_m + 0.9 * radius_m);
+  }
+
+  function inductanceCyl_uH(turns, radius_m, length_m) {
+    const k = nagaokaK(radius_m, length_m);
+    if (!(turns > 0) || !(radius_m > 0) || !(length_m > 0) || !(k > 0)) return null;
+    const area = Math.PI * radius_m ** 2;
+    return MU0 * turns ** 2 * area * k / length_m * 1e6;
+  }
+
+  function inductanceRect_uH(turns, avgH_m, avgW_m, length_m) {
+    if (!(turns > 0) || !(avgH_m > 0) || !(avgW_m > 0) || !(length_m > 0)) return null;
+    const area = avgH_m * avgW_m;
+    const equivR = Math.sqrt(area / Math.PI);
+    const k = nagaokaK(equivR, length_m);
+    if (!(k > 0)) return null;
+    return MU0 * turns ** 2 * area * k / length_m * 1e6;
+  }
+
+  function ferriteAirEquivalentDimensions(record) {
+    const wireDia = record.wireDia;
+    const clearance = Math.max(wireDia * 8, 0.4);
+    if (record.coilType === 'ferrite') {
+      if (record.ferriteShape === 'round' && record.ferriteDia > 0) {
+        return { shape:'round', innerDia:record.ferriteDia, outerDia:record.ferriteDia + clearance * 2 };
+      }
+      if (record.ferriteShape === 'rect' && record.ferriteH > 0 && record.ferriteW > 0) {
+        return { shape:'rect', innerH:record.ferriteH, innerW:record.ferriteW, outerH:record.ferriteH + clearance * 2, outerW:record.ferriteW + clearance * 2 };
+      }
+    }
+    if (record.bobbinShape === 'rect') {
+      return { shape:'rect', innerH:record.bobbinInnerH, innerW:record.bobbinInnerW, outerH:record.bobbinOuterH, outerW:record.bobbinOuterW };
+    }
+    return { shape:'round', innerDia:record.bobbinInnerDia, outerDia:record.bobbinOuterDia };
+  }
+
+  function calculateAirCoreL_uH(record) {
+    const turns = record.totalTurns;
+    const length_m = record.windingLength > 0 ? record.windingLength / 1000 : null;
+    const dims = ferriteAirEquivalentDimensions(record);
+    if (!(turns > 0) || !(length_m > 0) || !dims) return null;
+    if (dims.shape === 'rect') {
+      if (!(dims.innerH > 0) || !(dims.innerW > 0) || !(dims.outerH > 0) || !(dims.outerW > 0)) return null;
+      const avgH_m = ((dims.innerH + dims.outerH) / 2) / 1000;
+      const avgW_m = ((dims.innerW + dims.outerW) / 2) / 1000;
+      return inductanceRect_uH(turns, avgH_m, avgW_m, length_m);
+    }
+    if (!(dims.innerDia > 0) || !(dims.outerDia > 0)) return null;
+    const avgRadius_m = ((dims.innerDia / 2 + dims.outerDia / 2) / 2) / 1000;
+    return inductanceCyl_uH(turns, avgRadius_m, length_m);
+  }
+
+  function app2G4Factor(freq_kHz) {
+    if (!(freq_kHz > 0)) return null;
+    let freqFactor = 1;
+    if (freq_kHz <= 10) freqFactor = 1.20;
+    else if (freq_kHz <= 100) freqFactor = 1.00;
+    else if (freq_kHz <= 500) freqFactor = 0.60;
+    else if (freq_kHz <= 1000) freqFactor = 0.35;
+    else freqFactor = 0.20;
+    return 4.5 * freqFactor;
+  }
+
+  function empirical2G4Factor(freq_kHz, turns, wireDia_mm) {
+    const f = Math.max(Number(freq_kHz) || 0, 1);
+    const n = Math.max(Number(turns) || 0, 1);
+    const d = Math.max(Number(wireDia_mm) || 0, 0.01);
+    const kL = 647.41 * Math.pow(f, -0.155) * Math.pow(n, -0.840) * Math.pow(d, -0.113);
+    return clamp(kL, 3.5, 17);
+  }
+
+  function ferriteCrossSection_mm2(record) {
+    if (record.ferriteShape === 'round' && record.ferriteDia > 0) {
+      return Math.PI * (record.ferriteDia / 2) ** 2;
+    }
+    if (record.ferriteShape === 'rect' && record.ferriteH > 0 && record.ferriteW > 0) {
+      return record.ferriteH * record.ferriteW;
+    }
+    if (record.bobbinShape === 'round' && record.bobbinInnerDia > 0) {
+      return Math.PI * (record.bobbinInnerDia / 2) ** 2;
+    }
+    if (record.bobbinShape === 'rect' && record.bobbinInnerH > 0 && record.bobbinInnerW > 0) {
+      return record.bobbinInnerH * record.bobbinInnerW;
+    }
+    return null;
+  }
+
+  function windingDensity_T_per_mm(record) {
+    return record.totalTurns > 0 && record.windingLength > 0
+      ? record.totalTurns / record.windingLength
+      : null;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function densityCorrectionFactor(density_T_per_mm, startDensity = 60, minFactor = 0.65) {
+    if (!Number.isFinite(density_T_per_mm)) return 1;
+    if (!Number.isFinite(startDensity) || startDensity <= 0) startDensity = 60;
+    if (!Number.isFinite(minFactor) || minFactor <= 0 || minFactor > 1) minFactor = 0.65;
+    if (density_T_per_mm <= startDensity) return 1;
+    return Math.max(minFactor, 1 - (density_T_per_mm - startDensity) * 0.01);
+  }
+
+  function ferriteAnalyzerRow(record, options = {}) {
+    const parts = calculateImpedanceParts(record);
+    const airL_uH = calculateAirCoreL_uH(record);
+    const measuredL_uH = parts.lUh;
+    const frequency_kHz = normalizeFrequencyKHz(record);
+    const kL = measuredL_uH > 0 && airL_uH > 0 ? measuredL_uH / airL_uH : null;
+    if (!(kL > 0)) return null;
+    const appFactor = app2G4Factor(frequency_kHz);
+    const empiricalFactor = empirical2G4Factor(frequency_kHz, record.totalTurns, record.wireDia);
+    const appErrorPct = appFactor > 0 ? (appFactor - kL) / kL * 100 : null;
+    const appUnderRatio = appFactor > 0 ? kL / appFactor : null;
+    const windingDensity = windingDensity_T_per_mm(record);
+    const empiricalErrorPct = empiricalFactor > 0 ? (empiricalFactor - kL) / kL * 100 : null;
+    const densityFactor = options.useDensityCorrection
+      ? densityCorrectionFactor(windingDensity, options.densityStart, options.densityMinFactor)
+      : 1;
+    const empiricalFactorDensity = empiricalFactor > 0 ? empiricalFactor * densityFactor : null;
+    const empiricalDensityErrorPct = empiricalFactorDensity > 0 ? (empiricalFactorDensity - kL) / kL * 100 : empiricalErrorPct;
+    const improvementPct = Number.isFinite(empiricalErrorPct) && Number.isFinite(empiricalDensityErrorPct)
+      ? Math.abs(empiricalErrorPct) - Math.abs(empiricalDensityErrorPct)
+      : null;
+    return {
+      record,
+      id:record.id,
+      coilType:record.coilType,
+      ferriteMaterial:record.ferriteMaterial || 'なし',
+      frequency_kHz,
+      turns:record.totalTurns,
+      wireDia:record.wireDia,
+      windingLength:record.windingLength,
+      layers:record.layers,
+      phaseDeg:record.phaseDeg,
+      ferriteShape:record.ferriteShape,
+      measuredL_uH,
+      airL_uH,
+      kL,
+      appFactor,
+      empiricalFactor,
+      densityCorrectionEnabled: !!options.useDensityCorrection,
+      densityFactor,
+      empiricalFactorDensity,
+      empiricalDensityErrorPct,
+      improvementPct,
+      appErrorPct,
+      appUnderRatio,
+      appRatio: appUnderRatio,
+      ferriteArea_mm2: ferriteCrossSection_mm2(record),
+      windingDensity_T_per_mm: windingDensity,
+      empiricalErrorPct,
+    };
+  }
+
+  function ferriteAnalyzerRows(options = ferriteAnalyzerOptions()) {
+    return records.map(record => ferriteAnalyzerRow(record, options)).filter(Boolean);
+  }
+
+  function normalizeRecord(raw) {
+    const rec = {};
+    fields.forEach(key => {
+      if (numericFields.has(key)) rec[key] = toNumber(raw[key]);
+      else rec[key] = String(raw[key] ?? '').trim();
+    });
+    const frequency_kHz = normalizeFrequencyKHz(raw);
+    rec.frequency_kHz = frequency_kHz;
+    rec.frequency = frequency_kHz;
+    rec.coveredDia = toNumber(raw.coveredDia);
+    rec.coilType = coilTypeAliases[rec.coilType] || rec.coilType || 'air';
+    if (!coilTypeLabels[rec.coilType]) rec.coilType = 'air';
+    if (!rec.ferriteMaterial) rec.ferriteMaterial = 'なし';
+    rec.bobbinShape = bobbinShapeAliases[rec.bobbinShape] || rec.bobbinShape || 'round';
+    if (!bobbinShapeLabels[rec.bobbinShape]) rec.bobbinShape = 'round';
+    const defaultFerriteShape = rec.ferriteMaterial === 'なし' ? 'none' : 'round';
+    rec.ferriteShape = ferriteShapeAliases[rec.ferriteShape] || rec.ferriteShape || defaultFerriteShape;
+    if (!ferriteShapeLabels[rec.ferriteShape]) rec.ferriteShape = defaultFerriteShape;
+    rec.id = raw.id || String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
+    rec.createdAt = raw.createdAt || new Date().toISOString();
+    rec.updatedAt = raw.updatedAt || '';
+    return rec;
+  }
+
+  function serializeRecord(record) {
+    const frequency_kHz = normalizeFrequencyKHz(record);
+    const serialized = {};
+    Object.entries(record).forEach(([key, value]) => {
+      serialized[key] = typeof value === 'number' && !Number.isFinite(value) ? null : value;
+    });
+    serialized.frequency_kHz = Number.isFinite(frequency_kHz) ? frequency_kHz : null;
+    serialized.frequency = Number.isFinite(frequency_kHz) ? frequency_kHz : null;
+    return serialized;
+  }
+
+  function readForm() {
+    const raw = {};
+    fields.forEach(key => raw[key] = $(key).value);
+    return normalizeRecord(raw);
+  }
+
+  function validate(record) {
+    const errors = [];
+    if (!hasPositiveFinite(record.wireDia)) errors.push('線径');
+    if (!hasPositiveFinite(record.totalTurns)) errors.push('総巻数');
+    if (!hasPositiveFinite(record.windingLength)) errors.push('巻線長');
+    if (!hasPositiveFinite(normalizeFrequencyKHz(record))) errors.push('周波数');
+    if (!hasPositiveFinite(record.measuredZ)) errors.push('実測Z');
+    return errors;
+  }
+
+  function canCalculateCorrection(record) {
+    return calculate(record).windingFactor > 0;
+  }
+
+  function correctionReadyCount() {
+    return records.filter(canCalculateCorrection).length;
+  }
+
+  function phaseQuality(record) {
+    const phase = record?.phaseDeg;
+    if (!Number.isFinite(phase)) return { key:'unknown', label:'未評価' };
+    if (phase >= 80) return { key:'ok', label:'OK' };
+    if (phase >= 70) return { key:'caution', label:'注意' };
+    return { key:'low', label:'低位相警告' };
+  }
+
+  function phaseQualityHtml(record) {
+    const quality = phaseQuality(record);
+    return '<span class="quality-badge quality-' + quality.key + '">' + escapeHtml(quality.label) + '</span>';
+  }
+
+  function phaseHealthSummary() {
+    const analyzable = records.filter(record => {
+      const key = phaseQuality(record).key;
+      return key === 'ok' || key === 'caution';
+    }).length;
+    return { analyzable };
+  }
+
+  function missingCorrectionFields(record) {
+    const missing = [];
+    if (!(record.totalTurns > 0)) missing.push('総巻数');
+    if (!(record.layers > 0)) missing.push('層数');
+    if (!(calculate(record).theoryOneLayerTurns > 0)) missing.push('1層ターン数');
+    return missing;
+  }
+
+  function recordStatus(record) {
+    if (canCalculateCorrection(record)) return '補正OK';
+    const hasZ = record.measuredZ > 0;
+    const hasPhase = Number.isFinite(record.phaseDeg);
+    const hasMemo = String(record.memo || '').trim() !== '';
+    if (hasZ && !hasPhase) return 'Zのみ';
+    if (!hasZ && hasPhase) return '位相のみ';
+    if (!hasZ && !hasPhase && hasMemo) return 'メモのみ';
+    return '補正未計算';
+  }
+
+  function recordWarnings(record) {
+    const warnings = [];
+    const calc = calculate(record);
+    if (record.layers > record.totalTurns) warnings.push('層数>総巻数');
+    if (record.totalTurns > 0 && record.layers > 0 && record.totalTurns / record.layers < 1) warnings.push('1層<1');
+    if (calc.windingFactor > 1.2) warnings.push('factor高すぎ');
+    if (calc.windingFactor > 0 && calc.windingFactor < 0.5) warnings.push('factor低すぎ');
+    if (record.phaseDeg > 95 || record.phaseDeg < -95) warnings.push('位相角異常');
+    if (record.measuredZ < 0) warnings.push('Z異常');
+    if (normalizeFrequencyKHz(record) < 0) warnings.push('周波数異常');
+    if (record.bobbinShape === 'round' &&
+        Number.isFinite(record.bobbinOuterDia) && Number.isFinite(record.bobbinInnerDia) &&
+        record.bobbinOuterDia <= record.bobbinInnerDia) {
+      warnings.push('コイル寸法NG');
+    }
+    if (record.bobbinShape === 'rect') {
+      const heightNg = Number.isFinite(record.bobbinOuterH) && Number.isFinite(record.bobbinInnerH) && record.bobbinOuterH <= record.bobbinInnerH;
+      const widthNg = Number.isFinite(record.bobbinOuterW) && Number.isFinite(record.bobbinInnerW) && record.bobbinOuterW <= record.bobbinInnerW;
+      if (heightNg || widthNg) warnings.push('コイル寸法NG');
+    }
+    if (record.ferriteMaterial !== 'なし' && record.ferriteShape === 'round' &&
+        Number.isFinite(record.ferriteDia) && record.ferriteDia <= 0) {
+      warnings.push('フェライト寸法NG');
+    }
+    if (record.ferriteMaterial !== 'なし' && record.ferriteShape === 'rect') {
+      const ferriteHNg = Number.isFinite(record.ferriteH) && record.ferriteH <= 0;
+      const ferriteWNg = Number.isFinite(record.ferriteW) && record.ferriteW <= 0;
+      if (ferriteHNg || ferriteWNg) warnings.push('フェライト寸法NG');
+    }
+    return warnings;
+  }
+
+  function warningCount() {
+    return records.filter(rec => recordWarnings(rec).length > 0).length;
+  }
+
+  function bobbinDimensionText(record) {
+    const shape = bobbinShapeLabels[record.bobbinShape] || bobbinShapeLabels.round;
+    if (record.bobbinShape === 'rect') {
+      return shape + ' ' + fmt(record.bobbinInnerH, 2) + '×' + fmt(record.bobbinInnerW, 2) + ' → ' + fmt(record.bobbinOuterH, 2) + '×' + fmt(record.bobbinOuterW, 2);
+    }
+    return shape + ' φ' + fmt(record.bobbinInnerDia, 2) + '→φ' + fmt(record.bobbinOuterDia, 2);
+  }
+
+  function ferriteDimensionText(record) {
+    const shape = ferriteShapeLabels[record.ferriteShape] || ferriteShapeLabels.none;
+    if (record.ferriteShape === 'round') return shape + ' φ' + fmt(record.ferriteDia, 2);
+    if (record.ferriteShape === 'rect') return shape + ' ' + fmt(record.ferriteH, 2) + '×' + fmt(record.ferriteW, 2);
+    return shape;
+  }
+
+  function updateShapeVisibility() {
+    if (!bobbinShapeFields) bobbinShapeFields = Array.from(document.querySelectorAll('[data-bobbin-shape]'));
+    if (!ferriteShapeFields) ferriteShapeFields = Array.from(document.querySelectorAll('[data-ferrite-shape]'));
+    const bobbinShape = $('bobbinShape').value || 'round';
+    bobbinShapeFields.forEach(el => {
+      el.classList.toggle('hidden', el.dataset.bobbinShape !== bobbinShape);
+    });
+    const ferriteShape = $('ferriteShape').value || 'none';
+    ferriteShapeFields.forEach(el => {
+      const inactive = el.dataset.ferriteShape !== ferriteShape;
+      el.classList.toggle('hidden', inactive);
+      el.querySelectorAll('input, select, textarea').forEach(input => {
+        input.tabIndex = inactive ? -1 : 0;
+      });
+    });
+  }
+
+  function setStorageMessage(message, className = '') {
+    storageMessage = message;
+    storageMessageClass = className;
+    updateStorageStatus();
+  }
+
+  function formatDateTime(date) {
+    if (!date) return '-';
+    const pad = value => String(value).padStart(2, '0');
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + ' ' +
+      pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds());
+  }
+
+  function lastExportCount() {
+    const value = Number(localStorage.getItem(LAST_EXPORT_COUNT_KEY) || '0');
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function storageDate(key) {
+    const value = localStorage.getItem(key);
+    return value ? formatDateTime(new Date(value)) : '-';
+  }
+
+  function backupWarningNeeded() {
+    return records.length >= 10 && records.length - lastExportCount() >= 10;
+  }
+
+  function isMobileLike() {
+    return /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent || '') || Math.min(window.innerWidth, window.innerHeight) < 700;
+  }
+
+  function setMobileStorageWarning() {
+    const el = $('mobileStorageWarning');
+    if (!el) return;
+    el.classList.toggle('hidden', !isMobileLike());
+  }
+
+  function updateStorageStatus() {
+    const el = $('storageStatus');
+    if (!el) return;
+    const jsonCount = lastExportCount();
+    const saveCheckClass = lastSaveCheck.ok ? 'status-ok' : 'status-warn';
+    const jsonClass = jsonCount >= records.length && records.length > 0 ? 'status-ok' : 'status-warn';
+    const saveLabel = lastSaveCheck.ok ? '保存OK' : '保存未確認';
+    const saveClass = lastSaveCheck.ok ? 'status-ok' : 'status-warn';
+    const timeText = lastSaveAt ? formatDateTime(lastSaveAt).slice(11) : '-';
+    const jsonWarn = jsonCount < records.length ? 'JSONバックアップ推奨' : 'JSONバックアップOK';
+    const lines = [
+      ['現在表示件数', records.length + '件', ''],
+      ['IndexedDB保存件数', lastSaveCheck.idbCount === null ? '未確認' : lastSaveCheck.idbCount + '件', lastSaveCheck.idbCount === records.length ? 'status-ok' : 'status-warn'],
+      ['localStorage保存件数', lastSaveCheck.localCount === null ? '未確認' : lastSaveCheck.localCount + '件', lastSaveCheck.localCount === records.length ? 'status-ok' : 'status-warn'],
+      ['backup.latest', lastSaveCheck.latestCount === null ? readLocalStorageRecordList(BACKUP_STORAGE_KEY).length + '件' : lastSaveCheck.latestCount + '件', 'status-ok'],
+      ['JSONバックアップ件数', jsonCount + '件', jsonClass],
+      ['最終保存日時', formatDateTime(lastSaveAt), ''],
+      ['最終保存確認結果', lastSaveCheck.ok ? 'OK' : 'NG / 未確認', saveCheckClass],
+      ['最終JSONコピー日時', storageDate(LAST_JSON_COPY_AT_KEY), ''],
+      ['最終JSONエクスポート日時', storageDate(LAST_JSON_EXPORT_AT_KEY), ''],
+      ['保存方式', 'IndexedDB + localStorage + 多重バックアップ', '']
+    ];
+    let detailHtml = '<div class="storage-lines">' + lines.map(([label, value, className]) =>
+      '<div class="storage-line"><span>' + escapeHtml(label) + '</span><span class="' + className + '">' + escapeHtml(value) + '</span></div>'
+    ).join('') + '</div>';
+    if (storageMessage) detailHtml += '<div class="' + storageMessageClass + '" style="margin-top:8px">' + escapeHtml(storageMessage) + '</div>';
+    if (storageRiskMessage) detailHtml += '<div class="status-warn" style="margin-top:6px">' + escapeHtml(storageRiskMessage) + '</div>';
+    if (backupWarningNeeded() || jsonCount < records.length) {
+      detailHtml += '<div class="status-warn" style="margin-top:6px">JSONバックアップ未コピー：コピー推奨</div>';
+    }
+    const html =
+      '<div class="storage-brief">' +
+        '<span class="' + saveClass + '">' + escapeHtml(saveLabel) + '</span>' +
+        '<strong>' + records.length + '件</strong>' +
+        '<small>最終保存 ' + escapeHtml(timeText) + '</small>' +
+      '</div>' +
+      '<div class="' + jsonClass + '" style="margin-top:4px">' + escapeHtml(jsonWarn) + '</div>' +
+      '<details class="storage-detail-toggle"><summary>保存詳細</summary>' + detailHtml + '</details>';
+    el.innerHTML = html;
+  }
+
+  function openIndexedDB() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) {
+        reject(new Error('IndexedDB unavailable'));
+        return;
+      }
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = event => {
+        const database = event.target.result;
+        if (!database.objectStoreNames.contains(DB_STORE)) {
+          database.createObjectStore(DB_STORE, { keyPath:'id' });
+        }
+        if (!database.objectStoreNames.contains(DB_BACKUP_STORE)) {
+          database.createObjectStore(DB_BACKUP_STORE, { keyPath:'id' });
+        }
+      };
+      request.onsuccess = event => {
+        db = event.target.result;
+        resolve(db);
+      };
+      request.onerror = () => reject(request.error || new Error('IndexedDB open failed'));
+    });
+  }
+
+  function idbTransaction(mode, work) {
+    return idbStoreTransaction(DB_STORE, mode, work);
+  }
+
+  function idbBackupTransaction(mode, work) {
+    return idbStoreTransaction(DB_BACKUP_STORE, mode, work);
+  }
+
+  function idbStoreTransaction(storeName, mode, work) {
+    return new Promise((resolve, reject) => {
+      if (!db) {
+        reject(new Error('IndexedDB not open'));
+        return;
+      }
+      if (!db.objectStoreNames.contains(storeName)) {
+        reject(new Error('IndexedDB store not found: ' + storeName));
+        return;
+      }
+      const tx = db.transaction(storeName, mode);
+      const store = tx.objectStore(storeName);
+      let result;
+      tx.oncomplete = () => resolve(result);
+      tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
+      tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+      try {
+        result = work(store);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  function idbRequest(request) {
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('IndexedDB request failed'));
+    });
+  }
+
+  function readIndexedDBRecords() {
+    return idbTransaction('readonly', store => idbRequest(store.getAll()));
+  }
+
+  function cloneStoredRecords(list) {
+    return list.map(record => serializeRecord(normalizeRecord(record)));
+  }
+
+  function readLocalStorageRecordList(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      const list = Array.isArray(parsed) ? parsed : parsed.records;
+      return Array.isArray(list) ? list.map(normalizeRecord) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function rememberSavedSnapshot(list) {
+    lastSavedRecordsSnapshot = cloneStoredRecords(list);
+  }
+
+  function timestampKey(date = new Date()) {
+    const pad = value => String(value).padStart(2, '0');
+    return date.getFullYear() + pad(date.getMonth() + 1) + pad(date.getDate()) + '_' +
+      pad(date.getHours()) + pad(date.getMinutes()) + pad(date.getSeconds());
+  }
+
+  function nextTimestampBackupKey() {
+    let date = new Date();
+    let key = 'windingCalibrator.records.backup.' + timestampKey(date);
+    while (localStorage.getItem(key)) {
+      date = new Date(date.getTime() + 1000);
+      key = 'windingCalibrator.records.backup.' + timestampKey(date);
+    }
+    return key;
+  }
+
+  function backupPayload(list, label = 'backup') {
+    return {
+      app: 'WINDING CALIBRATOR',
+      version: 1,
+      backupLabel: label,
+      backedUpAt: new Date().toISOString(),
+      records: cloneStoredRecords(list)
+    };
+  }
+
+  function writeLocalBackup(key, list, label) {
+    if (!list.length) return;
+    localStorage.setItem(key, JSON.stringify(backupPayload(list, label)));
+  }
+
+  function backupLatestRecords(list) {
+    if (!list.length) return;
+    writeLocalBackup(BACKUP_STORAGE_KEY, list, 'latest');
+  }
+
+  function backupPreviousRecords(list) {
+    if (!list.length) return;
+    writeLocalBackup(PREVIOUS_BACKUP_STORAGE_KEY, list, 'previous');
+  }
+
+  async function saveIndexedDBBackup(label, list) {
+    if (!db || !list.length) return false;
+    const payload = backupPayload(list, label);
+    payload.id = label;
+    payload.count = payload.records.length;
+    try {
+      await idbBackupTransaction('readwrite', store => store.put(payload));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function readIndexedDBBackups() {
+    if (!db) return [];
+    try {
+      return await idbBackupTransaction('readonly', store => idbRequest(store.getAll()));
+    } catch {
+      return [];
+    }
+  }
+
+  function candidateFromRecords(source, list) {
+    const normalized = Array.isArray(list) ? list.map(normalizeRecord) : [];
+    return { source, records:normalized, count:normalized.length };
+  }
+
+  function localStorageBackupKeys() {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key && /^windingCalibrator\.records\.backup\.\d{8}_\d{6}$/.test(key)) keys.push(key);
+    }
+    return keys.sort().reverse();
+  }
+
+  function similarRecordKeys() {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key && /windingCalibrator.*records/i.test(key) && ![
+        STORAGE_KEY,
+        BACKUP_STORAGE_KEY,
+        OLD_BACKUP_STORAGE_KEY,
+        PREVIOUS_BACKUP_STORAGE_KEY,
+        BEFORE_RESTORE_BACKUP_STORAGE_KEY
+      ].includes(key) && !/^windingCalibrator\.records\.backup\.\d{8}_\d{6}$/.test(key)) {
+        keys.push(key);
+      }
+    }
+    return keys.sort();
+  }
+
+  async function collectRestoreCandidates() {
+    const candidates = [];
+    try {
+      const idbRecords = db ? (await readIndexedDBRecords()).map(normalizeRecord) : [];
+      candidates.push(candidateFromRecords('IndexedDB records', idbRecords));
+    } catch {
+      candidates.push(candidateFromRecords('IndexedDB records', []));
+    }
+    candidates.push(candidateFromRecords('localStorage main', readLocalStorageRecordList(STORAGE_KEY)));
+    candidates.push(candidateFromRecords('localStorage backup.latest', readLocalStorageRecordList(BACKUP_STORAGE_KEY)));
+    candidates.push(candidateFromRecords('localStorage backup.latest.v1', readLocalStorageRecordList(OLD_BACKUP_STORAGE_KEY)));
+    candidates.push(candidateFromRecords('localStorage backup.previous', readLocalStorageRecordList(PREVIOUS_BACKUP_STORAGE_KEY)));
+    localStorageBackupKeys().forEach(key => {
+      candidates.push(candidateFromRecords('localStorage ' + key.replace('windingCalibrator.records.', ''), readLocalStorageRecordList(key)));
+    });
+    const idbBackups = await readIndexedDBBackups();
+    idbBackups
+      .slice()
+      .sort((a, b) => String(b.backedUpAt || '').localeCompare(String(a.backedUpAt || '')))
+      .forEach(item => candidates.push(candidateFromRecords('IndexedDB backups ' + item.id, item.records)));
+    similarRecordKeys().forEach(key => {
+      candidates.push(candidateFromRecords('類似キー ' + key, readLocalStorageRecordList(key)));
+    });
+    return candidates;
+  }
+
+  function bestRestoreCandidate(candidates) {
+    return candidates.find(candidate => candidate.count > 0) || null;
+  }
+
+  async function writeBackupSet(list, options = {}) {
+    if (!list.length) return;
+    const timestampBackupKey = nextTimestampBackupKey();
+    const stamp = timestampBackupKey.replace('windingCalibrator.records.backup.', '');
+    try {
+      if (options.previous) backupPreviousRecords(list);
+      backupLatestRecords(list);
+      writeLocalBackup(timestampBackupKey, list, 'timestamp:' + stamp);
+      localStorage.setItem(HAD_RECORDS_KEY, '1');
+    } catch (err) {
+      storageRiskMessage = 'バックアップ書き込みに失敗しました。JSONコピーしてください。';
+      console.error(err);
+    }
+    await saveIndexedDBBackup('latest', list);
+    if (options.previous) await saveIndexedDBBackup('previous', list);
+    await saveIndexedDBBackup('backup.' + stamp, list);
+  }
+
+  function saveIndexedDBRecords(list) {
+    return idbTransaction('readwrite', store => {
+      const existingRequest = store.getAllKeys();
+      existingRequest.onsuccess = () => {
+        const ids = new Set(list.map(rec => rec.id));
+        list.forEach(rec => store.put(rec));
+        existingRequest.result.forEach(id => {
+          if (!ids.has(id)) store.delete(id);
+        });
+      };
+    });
+  }
+
+  function saveLocalStorageRecords(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list.map(serializeRecord)));
+  }
+
+  async function save(messagePrefix = '保存完了', options = {}) {
+    const allowEmpty = !!options.allowEmpty;
+    const previousSaved = lastSavedRecordsSnapshot.length
+      ? lastSavedRecordsSnapshot.map(normalizeRecord)
+      : readLocalStorageRecordList(STORAGE_KEY);
+    const hadRecords = previousSaved.length > 0 || localStorage.getItem(HAD_RECORDS_KEY) === '1';
+    if (!allowEmpty && records.length === 0 && hadRecords) {
+      records = previousSaved.map(normalizeRecord);
+      setStorageMessage('0件での上書きを拒否しました。全削除する場合は全削除ボタンを使ってください。', 'status-error');
+      lastSaveCheck = { ok:false, idbCount:null, localCount:null, latestCount:readLocalStorageRecordList(BACKUP_STORAGE_KEY).length, message:'0件保存拒否' };
+      updateJsonPreview();
+      return { idbOk:false, localOk:false, verified:false, blocked:true };
+    }
+    await writeBackupSet(previousSaved, { previous:true });
+    const idbResult = db
+      ? saveIndexedDBRecords(records).then(() => true).catch(() => false)
+      : Promise.resolve(false);
+    const idbOk = await idbResult;
+    let localOk = false;
+    try {
+      saveLocalStorageRecords(records);
+      localOk = true;
+    } catch {
+      localOk = false;
+    }
+    let idbCount = null;
+    try {
+      idbCount = db ? (await readIndexedDBRecords()).map(normalizeRecord).length : null;
+    } catch {
+      idbCount = null;
+    }
+    const localCount = readLocalStorageRecordList(STORAGE_KEY).length;
+    const latestCountBefore = readLocalStorageRecordList(BACKUP_STORAGE_KEY).length;
+    const idbVerified = db ? idbCount === records.length : false;
+    const localVerified = localCount === records.length;
+    const verified = idbVerified && localVerified;
+    if (verified) {
+      lastSaveAt = new Date();
+      storageRiskMessage = '';
+      rememberSavedSnapshot(records);
+      await writeBackupSet(records);
+    }
+    const latestCount = readLocalStorageRecordList(BACKUP_STORAGE_KEY).length || latestCountBefore;
+    lastSaveCheck = {
+      ok: verified,
+      idbCount,
+      localCount,
+      latestCount,
+      message: verified ? 'OK' : '保存未確認'
+    };
+    if (verified) {
+      setStorageMessage(messagePrefix + '：保存確認OK ' + records.length + '件', 'status-ok');
+    } else {
+      setStorageMessage('保存未確認：IndexedDB/localStorageの件数が一致しません。JSONバックアップしてください。', 'status-error');
+      storageRiskMessage = '画面上のデータは保持しています。閉じる前にJSONコピーを推奨します。';
+    }
+    updateJsonPreview();
+    return { idbOk, localOk, verified, idbCount, localCount, latestCount };
+  }
+
+  async function loadRecords() {
+    const candidates = await collectRestoreCandidates();
+    const best = bestRestoreCandidate(candidates);
+    if (best) {
+      records = best.records.map(normalizeRecord);
+      rememberSavedSnapshot(records);
+      await writeBackupSet(records);
+      if (best.source === 'IndexedDB records') {
+        try {
+          saveLocalStorageRecords(records);
+        } catch {}
+        const localCount = readLocalStorageRecordList(STORAGE_KEY).length;
+        lastSaveCheck = {
+          ok: localCount === records.length,
+          idbCount: records.length,
+          localCount,
+          latestCount:readLocalStorageRecordList(BACKUP_STORAGE_KEY).length,
+          message:'起動時復元'
+        };
+      } else {
+        await save(best.source + 'から復元しました');
+      }
+      setStorageMessage(best.source + 'から復元しました：' + records.length + '件', lastSaveCheck.ok ? 'status-ok' : 'status-warn');
+      return;
+    }
+
+    records = [];
+    lastSaveCheck = { ok:false, idbCount:0, localCount:0, latestCount:0, message:'復元候補なし' };
+    const hadRecords = localStorage.getItem(HAD_RECORDS_KEY) === '1' || candidates.some(candidate => candidate.count > 0);
+    if (hadRecords) {
+      storageRiskMessage = '保存データを読み込めません。復元候補を確認してください。';
+      setStorageMessage('保存データを読み込めません。復元候補を確認してください。', 'status-error');
+    } else {
+      setStorageMessage('保存データを読み込めません。復元候補を確認してください。', 'status-warn');
+    }
+  }
+
+  function groupAverage(list, keyGetter, labelGetter) {
+    const map = new Map();
+    list.forEach(rec => {
+      const calc = calculate(rec);
+      if (!(calc.windingFactor > 0)) return;
+      const key = keyGetter(rec);
+      if (key === null || key === undefined || key === '') return;
+      if (!map.has(key)) map.set(key, { key, label: labelGetter ? labelGetter(rec, key) : key, sum:0, samples:0 });
+      const item = map.get(key);
+      item.sum += calc.windingFactor;
+      item.samples += 1;
+    });
+    return Array.from(map.values()).map(item => ({
+      key:item.key,
+      label:item.label,
+      factor:round(item.sum / item.samples, 4),
+      samples:item.samples
+    }));
+  }
+
+  function buildSummaries() {
+    return {
+      byWireDiameter: groupAverage(records, r => r.wireDia, null).sort((a, b) => Number(a.key) - Number(b.key)),
+      byCoilType: groupAverage(records, r => r.coilType, (r, key) => coilTypeLabels[key] || key),
+      byFerriteMaterial: groupAverage(records, r => r.ferriteMaterial || 'なし', null).sort((a, b) => String(a.key).localeCompare(String(b.key), 'ja'))
+    };
+  }
+
+  function renderSummaryTable(el, rows, firstLabel) {
+    if (!rows.length) {
+      el.innerHTML = '<div class="empty">データなし</div>';
+      return;
+    }
+    el.innerHTML = '<table><thead><tr><th>' + firstLabel + '</th><th>factor</th><th>samples</th></tr></thead><tbody>' +
+      rows.map(row => '<tr><td>' + escapeHtml(row.label) + '</td><td class="num factor">' + fmt(row.factor, 4) + '</td><td class="num">' + row.samples + '</td></tr>').join('') +
+      '</tbody></table>';
+  }
+
+  function configCode() {
+    const summary = buildSummaries();
+    const byType = {};
+    ['air','insert','ferrite'].forEach(key => {
+      const row = summary.byCoilType.find(item => item.key === key);
+      if (row) byType[key] = { factor: row.factor, samples: row.samples };
+    });
+    const byMaterial = {};
+    summary.byFerriteMaterial.forEach(row => {
+      byMaterial[row.key] = { factor: row.factor, samples: row.samples };
+    });
+    const config = {
+      byWireDiameter: summary.byWireDiameter.map(row => ({
+        wireDia_mm: Number(row.key),
+        factor: row.factor,
+        samples: row.samples
+      })),
+      byCoilType: byType,
+      byFerriteMaterial: byMaterial
+    };
+    return 'CONFIG.windingCorrection = ' + JSON.stringify(config, null, 2) + ';';
+  }
+
+  function getAnalysisValue(record, key) {
+    if (key === 'windingFactor') return calculate(record).windingFactor;
+    if (key === 'rOhm' || key === 'xOhm' || key === 'lUh') return calculateImpedanceParts(record)[key];
+    return record[key];
+  }
+
+  function updateAnalysisMaterialOptions() {
+    const select = $('analysisMaterial');
+    if (!select) return;
+    const current = select.value;
+    const materials = Array.from(new Set(records.map(rec => rec.ferriteMaterial || 'なし'))).sort((a, b) => a.localeCompare(b, 'ja'));
+    select.innerHTML = '<option value="">全て</option>' + materials.map(item => '<option value="' + escapeHtml(item) + '">' + escapeHtml(item) + '</option>').join('');
+    select.value = materials.includes(current) ? current : '';
+  }
+
+  function filterAnalysisRecords() {
+    const xKey = $('analysisX') ? $('analysisX').value : 'frequency';
+    const yKey = $('analysisY') ? $('analysisY').value : 'phaseDeg';
+    const coilType = $('analysisCoilType') ? $('analysisCoilType').value : '';
+    const material = $('analysisMaterial') ? $('analysisMaterial').value : '';
+    const excludeWarnings = $('analysisExcludeWarnings') && $('analysisExcludeWarnings').checked;
+    const onlyCorrection = $('analysisOnlyCorrection') && $('analysisOnlyCorrection').checked;
+    return records.map(record => {
+      const x = getAnalysisValue(record, xKey);
+      const y = getAnalysisValue(record, yKey);
+      return { record, x, y, warnings:recordWarnings(record) };
+    }).filter(item => {
+      if (coilType && item.record.coilType !== coilType) return false;
+      if (material && item.record.ferriteMaterial !== material) return false;
+      if (excludeWarnings && item.warnings.length) return false;
+      if (onlyCorrection && !canCalculateCorrection(item.record)) return false;
+      return Number.isFinite(item.x) && Number.isFinite(item.y);
+    });
+  }
+
+  function stableCanvasSize(canvas, fallbackWidth, fallbackHeight, retryDraw, didRetry) {
+    const rect = canvas.getBoundingClientRect();
+    const parentRect = canvas.parentElement?.getBoundingClientRect?.() || { width:0, height:0 };
+    const width = rect.width || parentRect.width || canvas.parentElement?.clientWidth || 0;
+    const height = rect.height || parentRect.height || canvas.parentElement?.clientHeight || 0;
+    if ((!width || !height) && !didRetry) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(retryDraw);
+      });
+      setTimeout(retryDraw, 80);
+    }
+    return {
+      width: width || fallbackWidth,
+      height: height || fallbackHeight,
+      ready: !!(width && height)
+    };
+  }
+
+  function drawAnalysisChart(didRetry = false) {
+    const canvas = $('analysisCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const size = stableCanvasSize(canvas, 600, 360, () => drawAnalysisChart(true), didRetry);
+    if (!size.ready && !didRetry) return;
+    const dpr = window.devicePixelRatio || 1;
+    const cssWidth = Math.max(280, size.width);
+    const cssHeight = Math.max(260, size.height);
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+    ctx.fillStyle = '#05080d';
+    ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+    const xKey = $('analysisX').value;
+    const yKey = $('analysisY').value;
+    const data = filterAnalysisRecords();
+    analysisPoints = [];
+    if (!data.length) {
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('表示可能データなし', cssWidth / 2, cssHeight / 2);
+      $('analysisStats').innerHTML = '表示件数：<strong>0件</strong>';
+      return;
+    }
+
+    const xs = data.map(item => item.x);
+    const ys = data.map(item => item.y);
+    let minX = Math.min(...xs);
+    let maxX = Math.max(...xs);
+    let minY = Math.min(...ys);
+    let maxY = Math.max(...ys);
+    if (minX === maxX) { minX -= 1; maxX += 1; }
+    if (minY === maxY) { minY -= 1; maxY += 1; }
+    const padX = (maxX - minX) * 0.06;
+    const padY = (maxY - minY) * 0.08;
+    minX -= padX; maxX += padX; minY -= padY; maxY += padY;
+
+    const plot = { left:54, right:14, top:24, bottom:48 };
+    const width = cssWidth - plot.left - plot.right;
+    const height = cssHeight - plot.top - plot.bottom;
+    const xPos = value => plot.left + ((value - minX) / (maxX - minX)) * width;
+    const yPos = value => plot.top + height - ((value - minY) / (maxY - minY)) * height;
+
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(plot.left, plot.top);
+    ctx.lineTo(plot.left, plot.top + height);
+    ctx.lineTo(plot.left + width, plot.top + height);
+    ctx.stroke();
+
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(analysisLabels[yKey] || yKey, 8, 15);
+    ctx.textAlign = 'right';
+    ctx.fillText(analysisLabels[xKey] || xKey, plot.left + width, cssHeight - 12);
+    ctx.textAlign = 'left';
+    ctx.fillText(fmt(minY, 3), 8, plot.top + height);
+    ctx.fillText(fmt(maxY, 3), 8, plot.top + 4);
+    ctx.textAlign = 'center';
+    ctx.fillText(fmt(minX, 3), plot.left, cssHeight - 28);
+    ctx.fillText(fmt(maxX, 3), plot.left + width, cssHeight - 28);
+
+    data.forEach(item => {
+      const px = xPos(item.x);
+      const py = yPos(item.y);
+      const color = analysisColors[item.record.coilType] || '#d7e7ff';
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fill();
+      if (item.warnings.length) {
+        ctx.strokeStyle = '#ff5f56';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      analysisPoints.push({ ...item, px, py });
+    });
+
+    const yAvg = ys.reduce((sum, value) => sum + value, 0) / ys.length;
+    $('analysisStats').innerHTML =
+      '表示件数：<strong>' + data.length + '件</strong> / ' +
+      'X min/max：<strong>' + fmt(Math.min(...xs), 3) + ' / ' + fmt(Math.max(...xs), 3) + '</strong> / ' +
+      'Y min/max：<strong>' + fmt(Math.min(...ys), 3) + ' / ' + fmt(Math.max(...ys), 3) + '</strong> / ' +
+      'Y平均：<strong>' + fmt(yAvg, 3) + '</strong>';
+  }
+
+  function average(list, getter) {
+    const vals = list.map(getter).filter(Number.isFinite);
+    return vals.length ? vals.reduce((sum, value) => sum + value, 0) / vals.length : null;
+  }
+
+  function median(list, getter) {
+    const vals = list.map(getter).filter(Number.isFinite).sort((a, b) => a - b);
+    if (!vals.length) return null;
+    const mid = Math.floor(vals.length / 2);
+    return vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2;
+  }
+
+  function corr(list, xGetter, yGetter, logX = false, logY = false) {
+    const pts = list.map(item => {
+      const x0 = xGetter(item);
+      const y0 = yGetter(item);
+      const x = logX ? Math.log(x0) : x0;
+      const y = logY ? Math.log(y0) : y0;
+      return { x, y };
+    }).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+    if (pts.length < 2) return null;
+    const mx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+    const my = pts.reduce((s, p) => s + p.y, 0) / pts.length;
+    let num = 0, dx2 = 0, dy2 = 0;
+    pts.forEach(p => {
+      const dx = p.x - mx;
+      const dy = p.y - my;
+      num += dx * dy;
+      dx2 += dx * dx;
+      dy2 += dy * dy;
+    });
+    return dx2 > 0 && dy2 > 0 ? num / Math.sqrt(dx2 * dy2) : null;
+  }
+
+  function filteredFerriteAnalyzerRows() {
+    return ferriteFilterState().filteredRows;
+  }
+
+  function baseFerriteAnalyzerRows() {
+    const mode = $('ferriteDataset') ? $('ferriteDataset').value : '2g4Direct';
+    const rows = ferriteAnalyzerRows();
+    if (mode === '2g4Direct') return rows.filter(row => row.coilType === 'ferrite' && row.ferriteMaterial === '2G4');
+    if (mode === '2g4All') return rows.filter(row => row.ferriteMaterial === '2G4' && row.coilType !== 'air');
+    if (mode === 'air') return rows.filter(row => row.coilType === 'air');
+    return rows;
+  }
+
+  function ferriteOutlierThresholdPct() {
+    const value = Number($('ferriteOutlierThreshold')?.value);
+    return Number.isFinite(value) && value >= 0 ? value : 20;
+  }
+
+  function ferriteOutlierOnly() {
+    return !!$('ferriteOutlierOnly')?.checked;
+  }
+
+  function ferriteUseDensityCorrection() {
+    return !!$('ferriteDensityCorrection')?.checked;
+  }
+
+  function ferriteDensityStart() {
+    const value = Number($('ferriteDensityStart')?.value);
+    return Number.isFinite(value) && value > 0 ? value : 60;
+  }
+
+  function ferriteDensityMinFactor() {
+    const value = Number($('ferriteDensityMinFactor')?.value);
+    return Number.isFinite(value) && value > 0 && value <= 1 ? value : 0.65;
+  }
+
+  function ferriteAnalyzerOptions() {
+    return {
+      useDensityCorrection: ferriteUseDensityCorrection(),
+      densityStart: ferriteDensityStart(),
+      densityMinFactor: ferriteDensityMinFactor(),
+    };
+  }
+
+  function ferritePhaseThresholdDeg() {
+    const value = Number($('ferritePhaseThreshold')?.value);
+    return Number.isFinite(value) && value >= 0 ? value : 75;
+  }
+
+  function ferriteExcludeLowPhase() {
+    return !!$('ferriteExcludeLowPhase')?.checked;
+  }
+
+  function isFerritePhaseAccepted(row, thresholdDeg = ferritePhaseThresholdDeg()) {
+    return Number.isFinite(row.phaseDeg) && row.phaseDeg >= thresholdDeg;
+  }
+
+  function ferritePhaseExclusionReason(row, thresholdDeg = ferritePhaseThresholdDeg()) {
+    if (!Number.isFinite(row?.phaseDeg)) return 'phase未入力';
+    if (row.phaseDeg < thresholdDeg) return 'phase < ' + fmt(thresholdDeg, 1) + '°';
+    return 'OK';
+  }
+
+  function applyFerritePhaseFilter(rows) {
+    if (!ferriteExcludeLowPhase()) return rows;
+    const thresholdDeg = ferritePhaseThresholdDeg();
+    return rows.filter(row => isFerritePhaseAccepted(row, thresholdDeg));
+  }
+
+  function isFerriteOutlier(row, thresholdPct = ferriteOutlierThresholdPct()) {
+    const errorPct = ferriteDisplayManusErrorPct(row);
+    return Number.isFinite(errorPct) && Math.abs(errorPct) >= thresholdPct;
+  }
+
+  function applyFerriteOutlierFilter(rows) {
+    if (!ferriteOutlierOnly()) return rows;
+    const thresholdPct = ferriteOutlierThresholdPct();
+    return rows.filter(row => isFerriteOutlier(row, thresholdPct));
+  }
+
+  function ferriteFilterState() {
+    const baseRows = baseFerriteAnalyzerRows();
+    const phaseRows = applyFerritePhaseFilter(baseRows);
+    const filteredRows = applyFerriteOutlierFilter(phaseRows);
+    const thresholdDeg = ferritePhaseThresholdDeg();
+    return {
+      baseRows,
+      phaseRows,
+      filteredRows,
+      thresholdDeg,
+      excludeLowPhase: ferriteExcludeLowPhase(),
+      phaseExcludedCount: baseRows.length - phaseRows.length,
+      phaseAcceptedCount: phaseRows.length,
+      phaseMissingCount: baseRows.filter(row => !Number.isFinite(row.phaseDeg)).length,
+      phaseLowCount: baseRows.filter(row => Number.isFinite(row.phaseDeg) && row.phaseDeg < thresholdDeg).length,
+    };
+  }
+
+  const ferriteAxisOptions = [
+    ['kL', '実測kL'],
+    ['empiricalFactor', 'PDF式kL'],
+    ['empiricalErrorPct', 'PDF式誤差 %'],
+    ['densityFactor', '高密度補正係数'],
+    ['empiricalFactorDensity', '高密度補正後PDF式kL'],
+    ['empiricalDensityErrorPct', '高密度補正後誤差 %'],
+    ['improvementPct', '改善量 %'],
+    ['appFactor', '現行アプリ補正'],
+    ['appErrorPct', '現行アプリ誤差 %'],
+    ['turns', 'ターン数 N'],
+    ['frequency_kHz', '周波数 kHz'],
+    ['wireDia', '線径 mm'],
+    ['ferriteArea_mm2', 'フェライト断面積'],
+    ['windingDensity_T_per_mm', '巻線密度 T/mm'],
+    ['measuredL_uH', '実測L uH'],
+    ['airL_uH', '空芯L uH'],
+  ];
+
+  function ferriteAxisLabel(key) {
+    return ferriteAxisOptions.find(item => item[0] === key)?.[1] || key;
+  }
+
+  function setupFerriteAnalyzerUi() {
+    const xSelect = $('ferriteXAxis');
+    if (!xSelect) return;
+    xSelect.innerHTML = ferriteAxisOptions.map(([key, label]) =>
+      '<option value="' + key + '">' + label + '</option>'
+    ).join('');
+    xSelect.value = 'turns';
+    if (!$('ferriteYAxis')) {
+      xSelect.closest('.analysis-control')?.insertAdjacentHTML('afterend',
+        '<label class="analysis-control">' +
+        '<span class="input-label">Y軸</span>' +
+        '<span class="input-row"><select id="ferriteYAxis"></select></span>' +
+        '</label>');
+    }
+    const ySelect = $('ferriteYAxis');
+    ySelect.innerHTML = ferriteAxisOptions.map(([key, label]) =>
+      '<option value="' + key + '">' + label + '</option>'
+    ).join('');
+    ySelect.value = 'empiricalErrorPct';
+    setupFerriteOutlierUi();
+    setupFerritePresetUi();
+    const stats = $('ferriteAnalyzerStats');
+    if (stats && !$('ferritePointInfo')) {
+      stats.insertAdjacentHTML('afterend',
+        '<div class="analysis-info" id="ferritePointInfo">点をクリック/タップすると詳細を表示します。</div>' +
+        '<div class="button-row ferrite-detail-actions">' +
+        '<button id="toggleFerriteDetailBtn" type="button">詳細テーブルを表示</button>' +
+        '<button id="toggleFerriteRankingsBtn" type="button">ランキングを表示</button>' +
+        '</div>' +
+        '<div class="button-row"><button class="success" id="copyFerriteValidationBtn">補正JSONコピー</button></div>' +
+        '<textarea class="preview-area code-box hidden" id="ferriteValidationJson" readonly></textarea>' +
+        '<div class="status" id="ferriteCopyStatus"></div>');
+    }
+  }
+
+  function setupFerriteOutlierUi() {
+    const controls = document.querySelector('#tab-ferrite .analysis-controls');
+    if (!controls || $('ferriteOutlierOnly')) return;
+    controls.insertAdjacentHTML('beforeend',
+      '<label class="analysis-control">' +
+      '<span class="input-label">高密度補正テスト</span>' +
+      '<span class="input-row" style="gap:8px;padding:0 9px;flex-wrap:wrap">' +
+      '<label class="analysis-toggle" style="margin:0"><input id="ferriteDensityCorrection" type="checkbox">高密度補正を試す</label>' +
+      '<span>開始</span><input id="ferriteDensityStart" type="number" min="0" step="1" value="60" style="width:84px"><span class="input-unit">T/mm</span>' +
+      '<span>下限</span><input id="ferriteDensityMinFactor" type="number" min="0.01" max="1" step="0.01" value="0.65" style="width:84px">' +
+      '</span></label>' +
+      '<label class="analysis-control ferrite-phase-control">' +
+      '<span class="input-label">位相角フィルター</span>' +
+      '<span class="input-row">' +
+      '<label class="analysis-toggle" style="margin:0"><input id="ferriteExcludeLowPhase" type="checkbox">低位相データを除外</label>' +
+      '<span>phase min deg</span><input id="ferritePhaseThreshold" type="number" min="0" step="0.1" value="75"><span class="input-unit">deg</span>' +
+      '</span></label>' +
+      '<label class="analysis-control">' +
+      '<span class="input-label">外れ点フィルター</span>' +
+      '<span class="input-row" style="gap:8px;padding:0 9px">' +
+      '<label class="analysis-toggle" style="margin:0"><input id="ferriteOutlierOnly" type="checkbox">外れ点だけ表示</label>' +
+      '</span></label>' +
+      '<label class="analysis-control">' +
+      '<span class="input-label">外れ判定しきい値 [%]</span>' +
+      '<span class="input-row"><input id="ferriteOutlierThreshold" type="number" min="0" step="1" value="20"><span class="input-unit">%</span></span>' +
+      '</label>');
+  }
+
+  function setupFerritePresetUi() {
+    const controls = document.querySelector('#tab-ferrite .analysis-controls');
+    if (!controls || $('ferritePresetPanel')) return;
+    controls.insertAdjacentHTML('beforeend',
+      '<div class="ferrite-preset-panel" id="ferritePresetPanel">' +
+      '<div class="ferrite-preset-title">解析プリセット</div>' +
+      '<div class="ferrite-preset-grid">' +
+      '<label class="analysis-control">' +
+      '<span class="input-label">プリセット名</span>' +
+      '<span class="input-row"><input id="ferritePresetName" type="text" placeholder="2G4 高密度検証"></span>' +
+      '</label>' +
+      '<label class="analysis-control">' +
+      '<span class="input-label">保存済みプリセット</span>' +
+      '<span class="input-row"><select id="ferritePresetSelect"></select></span>' +
+      '</label>' +
+      '</div>' +
+      '<div class="button-row ferrite-preset-actions">' +
+      '<button class="success" id="saveFerritePresetBtn" type="button">保存</button>' +
+      '<button id="loadFerritePresetBtn" type="button">読込</button>' +
+      '<button class="danger" id="deleteFerritePresetBtn" type="button">削除</button>' +
+      '</div>' +
+      '<div class="status" id="ferritePresetStatus"></div>' +
+      '</div>');
+    renderFerritePresetList();
+  }
+
+  function readFerritePresets() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(FERRITE_PRESET_STORAGE_KEY) || '{}');
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeFerritePresets(presets) {
+    localStorage.setItem(FERRITE_PRESET_STORAGE_KEY, JSON.stringify(presets));
+  }
+
+  function ferritePresetSettings() {
+    return {
+      dataset: $('ferriteDataset')?.value || '2g4Direct',
+      xAxis: $('ferriteXAxis')?.value || 'turns',
+      yAxis: $('ferriteYAxis')?.value || 'empiricalErrorPct',
+
+      excludeLowPhase: !!$('ferriteExcludeLowPhase')?.checked,
+      phaseThresholdDeg: $('ferritePhaseThreshold')?.value || '75',
+
+      outlierOnly: !!$('ferriteOutlierOnly')?.checked,
+      outlierThresholdPct: $('ferriteOutlierThreshold')?.value || '20',
+
+      useDensityCorrection: !!$('ferriteDensityCorrection')?.checked,
+      densityStart: $('ferriteDensityStart')?.value || '60',
+      densityMinFactor: $('ferriteDensityMinFactor')?.value || '0.65'
+    };
+  }
+
+  function setFerritePresetStatus(message, className = '') {
+    const status = $('ferritePresetStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.className = 'status ' + className;
+  }
+
+  function renderFerritePresetList(selectedName = '') {
+    const select = $('ferritePresetSelect');
+    if (!select) return;
+    const presets = readFerritePresets();
+    const names = Object.keys(presets).sort((a, b) => a.localeCompare(b, 'ja'));
+    const current = selectedName || select.value;
+    if (!names.length) {
+      select.innerHTML = '<option value="">保存済みなし</option>';
+      select.value = '';
+      return;
+    }
+    select.innerHTML = names.map(name =>
+      '<option value="' + escapeHtml(name) + '">' + escapeHtml(name) + '</option>'
+    ).join('');
+    select.value = names.includes(current) ? current : names[0];
+  }
+
+  function applyFerritePresetSettings(settings) {
+    const setValue = (id, value) => {
+      const el = $(id);
+      if (el && value !== undefined && value !== null) el.value = String(value);
+    };
+    const setChecked = (id, value) => {
+      const el = $(id);
+      if (el) el.checked = !!value;
+    };
+    setValue('ferriteDataset', settings.dataset);
+    setValue('ferriteXAxis', settings.xAxis);
+    setValue('ferriteYAxis', settings.yAxis);
+    setChecked('ferriteExcludeLowPhase', settings.excludeLowPhase);
+    setValue('ferritePhaseThreshold', settings.phaseThresholdDeg);
+    setChecked('ferriteOutlierOnly', settings.outlierOnly);
+    setValue('ferriteOutlierThreshold', settings.outlierThresholdPct);
+    setChecked('ferriteDensityCorrection', settings.useDensityCorrection);
+    setValue('ferriteDensityStart', settings.densityStart);
+    setValue('ferriteDensityMinFactor', settings.densityMinFactor);
+  }
+
+  function saveFerritePreset() {
+    const nameInput = $('ferritePresetName');
+    const name = (nameInput?.value || '').trim();
+    if (!name) {
+      setFerritePresetStatus('プリセット名を入力してください。', 'status-warn');
+      return;
+    }
+    const presets = readFerritePresets();
+    presets[name] = ferritePresetSettings();
+    writeFerritePresets(presets);
+    renderFerritePresetList(name);
+    setFerritePresetStatus('保存しました：' + name, 'status-ok');
+  }
+
+  function loadFerritePreset() {
+    const presets = readFerritePresets();
+    const name = $('ferritePresetSelect')?.value || '';
+    if (!name || !presets[name]) {
+      setFerritePresetStatus('読み込むプリセットを選択してください。', 'status-warn');
+      return;
+    }
+    applyFerritePresetSettings(presets[name]);
+    if ($('ferritePresetName')) $('ferritePresetName').value = name;
+    setFerritePresetStatus('読み込みました：' + name, 'status-ok');
+    if (currentTab === 'ferrite') renderFerriteAnalyzer();
+  }
+
+  function deleteFerritePreset() {
+    const presets = readFerritePresets();
+    const name = $('ferritePresetSelect')?.value || '';
+    if (!name || !presets[name]) {
+      setFerritePresetStatus('削除するプリセットを選択してください。', 'status-warn');
+      return;
+    }
+    delete presets[name];
+    writeFerritePresets(presets);
+    if ($('ferritePresetName')?.value === name) $('ferritePresetName').value = '';
+    renderFerritePresetList();
+    setFerritePresetStatus('削除しました：' + name, 'status-warn');
+  }
+
+  function ferriteValidationSummary(rows) {
+    const valid = rows.filter(row => Number.isFinite(ferriteDisplayManusErrorPct(row)));
+    const beforeValid = rows.filter(row => Number.isFinite(row.empiricalErrorPct));
+    const densityValid = rows.filter(row => Number.isFinite(row.empiricalDensityErrorPct));
+    const improvementValid = rows.filter(row => Number.isFinite(row.improvementPct));
+    const appValid = rows.filter(row => Number.isFinite(row.appErrorPct));
+    const underValid = rows.filter(row => Number.isFinite(row.appUnderRatio));
+    return {
+      meanErrorPct: average(valid, row => ferriteDisplayManusErrorPct(row)),
+      meanAbsErrorPct: average(valid, row => Math.abs(ferriteDisplayManusErrorPct(row))),
+      within20PctCount: valid.filter(row => Math.abs(ferriteDisplayManusErrorPct(row)) <= 20).length,
+      totalCount: valid.length,
+      beforeMeanErrorPct: average(beforeValid, row => row.empiricalErrorPct),
+      beforeMeanAbsErrorPct: average(beforeValid, row => Math.abs(row.empiricalErrorPct)),
+      beforeWithin20PctCount: beforeValid.filter(row => Math.abs(row.empiricalErrorPct) <= 20).length,
+      densityMeanErrorPct: average(densityValid, row => row.empiricalDensityErrorPct),
+      densityMeanAbsErrorPct: average(densityValid, row => Math.abs(row.empiricalDensityErrorPct)),
+      densityWithin20PctCount: densityValid.filter(row => Math.abs(row.empiricalDensityErrorPct) <= 20).length,
+      improvedCount: improvementValid.filter(row => row.improvementPct > 0).length,
+      worsenedCount: improvementValid.filter(row => row.improvementPct < 0).length,
+      maxImprovementPct: improvementValid.length ? Math.max(...improvementValid.map(row => row.improvementPct)) : null,
+      maxWorseningPct: improvementValid.length ? Math.min(...improvementValid.map(row => row.improvementPct)) : null,
+      currentAppMeanAbsErrorPct: average(appValid, row => Math.abs(row.appErrorPct)),
+      currentAppMeanUnderRatio: average(underValid, row => row.appUnderRatio),
+    };
+  }
+
+  function ferriteOutlierSummary(rows) {
+    const thresholdPct = ferriteOutlierThresholdPct();
+    const valid = rows.filter(row => Number.isFinite(ferriteDisplayManusErrorPct(row)));
+    const outliers = valid.filter(row => Math.abs(ferriteDisplayManusErrorPct(row)) >= thresholdPct);
+    const plus = outliers.filter(row => ferriteDisplayManusErrorPct(row) > 0);
+    const minus = outliers.filter(row => ferriteDisplayManusErrorPct(row) < 0);
+    return {
+      thresholdPct,
+      outliers,
+      count: outliers.length,
+      total: valid.length,
+      ratePct: valid.length ? outliers.length / valid.length * 100 : null,
+      maxPlus: plus.length ? Math.max(...plus.map(row => ferriteDisplayManusErrorPct(row))) : null,
+      maxMinus: minus.length ? Math.min(...minus.map(row => ferriteDisplayManusErrorPct(row))) : null,
+    };
+  }
+
+  function ferriteValidationPayload() {
+    const options = ferriteAnalyzerOptions();
+    const rows = ferriteAnalyzerRows(options).filter(row => row.coilType === 'ferrite' && row.ferriteMaterial === '2G4');
+    const validation = ferriteValidationSummary(rows);
+    return {
+      formula: '647.41 * f_kHz^-0.155 * turns^-0.840 * wireDia_mm^-0.113',
+      clamp: [3.5, 17.0],
+      validation: {
+        meanErrorPct: round(validation.meanErrorPct, 3),
+        meanAbsErrorPct: round(validation.meanAbsErrorPct, 3),
+        within20PctCount: validation.within20PctCount,
+        totalCount: validation.totalCount,
+        currentAppMeanUnderRatio: round(validation.currentAppMeanUnderRatio, 3),
+      },
+      densityCorrection: {
+        enabledForTest: options.useDensityCorrection,
+        startDensity_T_per_mm: options.densityStart,
+        minFactor: options.densityMinFactor,
+        formula: 'density <= start ? 1 : max(minFactor, 1 - (density - start) * 0.01)',
+        validation: {
+          meanAbsErrorBeforePct: round(validation.beforeMeanAbsErrorPct, 3),
+          meanAbsErrorAfterPct: round(validation.densityMeanAbsErrorPct, 3),
+          within20Before: validation.beforeWithin20PctCount,
+          within20After: validation.densityWithin20PctCount,
+          improvedCount: validation.improvedCount,
+          worsenedCount: validation.worsenedCount,
+          maxImprovementPct: round(validation.maxImprovementPct, 3),
+          maxWorseningPct: round(validation.maxWorseningPct, 3),
+        },
+      }
+    };
+  }
+
+  function ferriteRenderKey() {
+    const state = ferritePresetSettings();
+    return JSON.stringify({
+      records: records.map(record => record.id + ':' + (record.updatedAt || record.createdAt || '')).join('|'),
+      state
+    });
+  }
+
+  function currentFerriteFilters() {
+    const key = ferriteRenderKey();
+    if (ferriteRenderCache.key !== key) {
+      ferriteRenderCache = { key, filters: ferriteFilterState() };
+    }
+    return ferriteRenderCache.filters;
+  }
+
+  function clearFerriteDetailDom() {
+    if ($('ferriteAnalyzerTable')) $('ferriteAnalyzerTable').innerHTML = '';
+    if ($('ferriteErrorRankings')) $('ferriteErrorRankings').innerHTML = '';
+  }
+
+  function syncFerriteDetailUi(rows = currentFerriteFilters().filteredRows) {
+    const section = $('ferriteDetailSection');
+    const table = $('ferriteAnalyzerTable');
+    const rankings = $('ferriteErrorRankings');
+    const detailBtn = $('toggleFerriteDetailBtn');
+    const rankingsBtn = $('toggleFerriteRankingsBtn');
+    if (detailBtn) detailBtn.textContent = ferriteDetailVisible ? '詳細テーブルを閉じる' : '詳細テーブルを表示';
+    if (rankingsBtn) rankingsBtn.textContent = ferriteRankingsVisible ? 'ランキングを閉じる' : 'ランキングを表示';
+    if (!section) return;
+    const showSection = ferriteDetailVisible || ferriteRankingsVisible;
+    section.classList.toggle('hidden', !showSection);
+    table?.classList.toggle('hidden', !ferriteDetailVisible);
+    rankings?.classList.toggle('hidden', !ferriteRankingsVisible);
+    if (!showSection) {
+      clearFerriteDetailDom();
+      return;
+    }
+    if (ferriteDetailVisible) renderFerriteTableV4(rows);
+    else if (table) table.innerHTML = '';
+    if (ferriteRankingsVisible) renderFerriteErrorRankings(rows);
+    else if (rankings) rankings.innerHTML = '';
+  }
+
+  function toggleFerriteDetail() {
+    ferriteDetailVisible = !ferriteDetailVisible;
+    syncFerriteDetailUi();
+  }
+
+  function toggleFerriteRankings() {
+    ferriteRankingsVisible = !ferriteRankingsVisible;
+    syncFerriteDetailUi();
+  }
+
+  function renderFerriteKpis(rows, filterState = ferriteFilterState()) {
+    const lightValidation = ferriteValidationSummary(rows);
+    const lightKpis = [
+      ['実測kL平均', fmt(average(rows, r => r.kL), 3), rows.length + '件 / 中央 ' + fmt(median(rows, r => r.kL), 3)],
+      ['現行アプリ補正の誤差', fmt(lightValidation.currentAppMeanAbsErrorPct, 1) + '%', '平均絶対誤差'],
+      ['PDF近似式の誤差', fmt(lightValidation.meanAbsErrorPct, 1) + '%', '平均絶対誤差'],
+      ['解析対象', rows.length + '件', '表示データ ' + filterState.baseRows.length + '件'],
+      ['低位相除外', filterState.excludeLowPhase ? filterState.phaseExcludedCount + '件' : 'OFF', 'phase min ' + fmt(filterState.thresholdDeg, 1) + ' deg'],
+      ['低位相候補', filterState.phaseLowCount + '件', '現在の表示データ内']
+    ];
+    $('ferriteKpis').innerHTML = lightKpis.map(item =>
+      '<div class="ferrite-kpi"><div class="ferrite-kpi-label">' + escapeHtml(item[0]) + '</div>' +
+      '<div class="ferrite-kpi-value">' + escapeHtml(item[1]) + '</div>' +
+      '<div class="ferrite-kpi-sub">' + escapeHtml(item[2]) + '</div></div>'
+    ).join('');
+    return;
+    const allRows = ferriteAnalyzerRows();
+    const airRows = allRows.filter(row => row.coilType === 'air');
+    const direct2G4 = allRows.filter(row => row.coilType === 'ferrite' && row.ferriteMaterial === '2G4');
+    const insert2G4 = allRows.filter(row => row.coilType === 'insert' && row.ferriteMaterial === '2G4');
+    const validation = ferriteValidationSummary(direct2G4);
+    const worst = direct2G4.slice().sort((a, b) =>
+      Math.abs(ferriteDisplayManusErrorPct(b) || 0) - Math.abs(ferriteDisplayManusErrorPct(a) || 0)
+    )[0] || null;
+    const kpis = [
+      ['空芯 kL 平均', fmt(average(airRows, r => r.kL), 3), airRows.length + '件 / PDF目安 0.944'],
+      ['2G4直巻き kL', fmt(average(direct2G4, r => r.kL), 3), direct2G4.length + '件 / 中央 ' + fmt(median(direct2G4, r => r.kL), 3)],
+      ['2G4インサート kL', fmt(average(insert2G4, r => r.kL), 3), insert2G4.length + '件 / PDF目安 4.472'],
+      ['現行補正との差', fmt(average(direct2G4, r => r.appRatio), 2) + 'x', '実測kL / 現行app補正'],
+      ['相関 N vs kL', fmt(corr(direct2G4, r => r.turns, r => r.kL, true, true), 3), 'PDF目安 r=-0.702']
+    ];
+    kpis.push(
+      ['Manus式 平均誤差%', fmt(validation.meanErrorPct, 1) + '%', '+なら高め予測 / -なら低め予測'],
+      ['Manus式 平均絶対誤差%', fmt(validation.meanAbsErrorPct, 1) + '%', 'abs((Manus-実測)/実測)'],
+      ['Manus式 ±20%以内', validation.within20PctCount + ' / ' + validation.totalCount + '件', '信頼範囲の目安'],
+      ['現行app 平均絶対誤差%', fmt(validation.currentAppMeanAbsErrorPct, 1) + '%', '現行補正 vs 実測kL'],
+      ['現行app 平均過小倍率', fmt(validation.currentAppMeanUnderRatio, 2) + 'x', '実測kL / 現行app補正'],
+      ['最大外れデータ', worst ? fmtSignedPct(ferriteDisplayManusErrorPct(worst), 1) : '-', worst ? 'N=' + fmt(worst.turns, 0) + ' / ' + fmt(worst.frequency_kHz, 1) + 'kHz' : '-']
+    );
+    kpis.push(
+      ['位相フィルター除外数', filterState.excludeLowPhase ? filterState.phaseExcludedCount + '件' : 'OFF', 'しきい値 ' + fmt(filterState.thresholdDeg, 1) + '°'],
+      ['位相フィルター後の対象数', filterState.phaseAcceptedCount + '件', '元データ ' + filterState.baseRows.length + '件']
+    );
+    const densityValidation = ferriteValidationSummary(rows);
+    kpis.push(
+      ['補正前 平均絶対誤差%', fmt(densityValidation.beforeMeanAbsErrorPct, 1) + '%', 'PDF式kL vs 実測kL'],
+      ['補正後 平均絶対誤差%', fmt(densityValidation.densityMeanAbsErrorPct, 1) + '%', ferriteUseDensityCorrection() ? '高密度補正後PDF式' : '補正OFF：補正前と同じ'],
+      ['補正前 ±20%以内', densityValidation.beforeWithin20PctCount + ' / ' + densityValidation.totalCount + '件', 'abs(補正前誤差) <= 20%'],
+      ['補正後 ±20%以内', densityValidation.densityWithin20PctCount + ' / ' + densityValidation.totalCount + '件', 'abs(補正後誤差) <= 20%'],
+      ['改善件数', densityValidation.improvedCount + '件', '改善量% > 0'],
+      ['悪化件数', densityValidation.worsenedCount + '件', '改善量% < 0'],
+      ['最大改善', fmtSignedPct(densityValidation.maxImprovementPct, 1), 'abs前 - abs後'],
+      ['最大悪化', fmtSignedPct(densityValidation.maxWorseningPct, 1), 'abs前 - abs後']
+    );
+    $('ferriteKpis').innerHTML = kpis.map(item =>
+      '<div class="ferrite-kpi"><div class="ferrite-kpi-label">' + escapeHtml(item[0]) + '</div>' +
+      '<div class="ferrite-kpi-value">' + escapeHtml(item[1]) + '</div>' +
+      '<div class="ferrite-kpi-sub">' + escapeHtml(item[2]) + '</div></div>'
+    ).join('');
+  }
+
+  function ferriteXValue(row, key) {
+    if (key === 'empiricalFactor') return ferriteDisplayManusFactor(row);
+    if (key === 'empiricalErrorPct') return ferriteDisplayManusErrorPct(row);
+    return row[key];
+  }
+
+  function fmtSignedPct(value, digits = 1) {
+    if (!Number.isFinite(value)) return '-';
+    return (value > 0 ? '+' : '') + fmt(value, digits) + '%';
+  }
+
+  function improvementClass(value) {
+    if (!Number.isFinite(value) || Math.abs(value) < 0.05) return 'improvement-neutral';
+    return value > 0 ? 'improvement-good' : 'improvement-bad';
+  }
+
+  function ferriteDisplayManusFactor(row) {
+    return row.densityCorrectionEnabled && Number.isFinite(row.empiricalFactorDensity)
+      ? row.empiricalFactorDensity
+      : row.empiricalFactor;
+  }
+
+  function ferriteDisplayManusErrorPct(row) {
+    return row.densityCorrectionEnabled && Number.isFinite(row.empiricalDensityErrorPct)
+      ? row.empiricalDensityErrorPct
+      : row.empiricalErrorPct;
+  }
+
+  function drawFerriteAnalyzerChart(rows, didRetry = false) {
+    const canvas = $('ferriteAnalyzerCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const size = stableCanvasSize(canvas, 720, 390, () => drawFerriteAnalyzerChart(rows, true), didRetry);
+    if (!size.ready && !didRetry) return;
+    const dpr = window.devicePixelRatio || 1;
+    const cssWidth = Math.max(280, size.width);
+    const cssHeight = Math.max(220, size.height);
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(cssHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#05080d';
+    ctx.fillRect(0, 0, cssWidth, cssHeight);
+    ferriteAnalyzerPoints = [];
+    const xKey = $('ferriteXAxis') ? $('ferriteXAxis').value : 'turns';
+    const yKey = $('ferriteYAxis') ? $('ferriteYAxis').value : 'empiricalErrorPct';
+    const data = rows.map(row => ({ row, x:ferriteXValue(row, xKey), y:ferriteXValue(row, yKey) }))
+      .filter(item => Number.isFinite(item.x) && Number.isFinite(item.y));
+    if (!data.length) {
+      ctx.fillStyle = '#8b949e';
+      ctx.font = '13px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('表示可能なkLデータがありません', cssWidth / 2, cssHeight / 2);
+      return;
+    }
+    const xs = data.map(item => item.x);
+    const ys = data.map(item => item.y);
+    let minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    if (minX === maxX) { minX -= 1; maxX += 1; }
+    if (minY === maxY) { minY -= 1; maxY += 1; }
+    const padX = (maxX - minX) * 0.08;
+    const padY = (maxY - minY) * 0.12;
+    minX -= padX; maxX += padX; minY -= padY; maxY += padY;
+    const plot = { left:58, right:18, top:22, bottom:48 };
+    const w = cssWidth - plot.left - plot.right;
+    const h = cssHeight - plot.top - plot.bottom;
+    const xPos = value => plot.left + ((value - minX) / (maxX - minX)) * w;
+    const yPos = value => plot.top + h - ((value - minY) / (maxY - minY)) * h;
+
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(plot.left, plot.top);
+    ctx.lineTo(plot.left, plot.top + h);
+    ctx.lineTo(plot.left + w, plot.top + h);
+    ctx.stroke();
+
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('kL = 実測L / 空芯計算L', 8, 14);
+    ctx.textAlign = 'right';
+    ctx.fillText($('ferriteXAxis')?.selectedOptions[0]?.textContent || xKey, plot.left + w, cssHeight - 13);
+    ctx.fillStyle = '#05080d';
+    ctx.fillRect(0, 0, Math.min(240, cssWidth), 20);
+    ctx.fillStyle = '#8b949e';
+    ctx.textAlign = 'left';
+    ctx.fillText(ferriteAxisLabel(yKey), 8, 14);
+    ctx.textAlign = 'right';
+    ctx.fillText(ferriteAxisLabel(xKey), plot.left + w, cssHeight - 13);
+    ctx.textAlign = 'left';
+    ctx.fillText(fmt(minY, 2), 8, plot.top + h);
+    ctx.fillText(fmt(maxY, 2), 8, plot.top + 4);
+    ctx.textAlign = 'center';
+    ctx.fillText(fmt(minX, 2), plot.left, cssHeight - 28);
+    ctx.fillText(fmt(maxX, 2), plot.left + w, cssHeight - 28);
+
+    const drawReference = (value, color, label) => {
+      if (!(value > minY) || !(value < maxY)) return;
+      const py = yPos(value);
+      ctx.strokeStyle = color;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(plot.left, py);
+      ctx.lineTo(plot.left + w, py);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = color;
+      ctx.textAlign = 'left';
+      ctx.fillText(label, plot.left + 8, py - 6);
+    };
+    if (yKey === 'kL') {
+      drawReference(0.944, '#58a6ff', 'air avg 0.944');
+      drawReference(6.923, '#f78166', '2G4 direct avg 6.923');
+    }
+    if (yKey === 'empiricalErrorPct' || yKey === 'empiricalDensityErrorPct' || yKey === 'improvementPct' || yKey === 'appErrorPct') {
+      const thresholdPct = yKey === 'appErrorPct' ? 20 : ferriteOutlierThresholdPct();
+      drawReference(thresholdPct, '#e3b341', '+' + fmt(thresholdPct, 1) + '%');
+      drawReference(-thresholdPct, '#e3b341', '-' + fmt(thresholdPct, 1) + '%');
+      drawReference(0, '#8b949e', '0%');
+    }
+
+    data.forEach(item => {
+      const px = xPos(item.x);
+      const py = yPos(item.y);
+      let color = item.row.coilType === 'air' ? '#58a6ff' : item.row.coilType === 'insert' ? '#3fb950' : '#f78166';
+      if (yKey === 'empiricalDensityErrorPct' || yKey === 'improvementPct') {
+        if (item.row.improvementPct > 0) color = '#3fb950';
+        else if (item.row.improvementPct < 0) color = '#e3b341';
+        else color = '#58a6ff';
+      } else if (ferriteOutlierOnly()) {
+        color = ferriteDisplayManusErrorPct(item.row) >= 0 ? '#f78166' : '#e3b341';
+      } else if (yKey === 'empiricalErrorPct') {
+        const thresholdPct = ferriteOutlierThresholdPct();
+        const errorPct = ferriteDisplayManusErrorPct(item.row);
+        if (errorPct >= thresholdPct) color = '#f78166';
+        else if (errorPct <= -thresholdPct) color = '#e3b341';
+        else color = '#58a6ff';
+      }
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ferriteAnalyzerPoints.push({ row:item.row, x:item.x, y:item.y, px, py });
+    });
+  }
+
+
+
+  function renderFerriteTableV4(rows) {
+    const target = $('ferriteAnalyzerTable');
+    if (!target) return;
+    const phaseNote = ferriteExcludeLowPhase()
+      ? '<div class="analysis-info">低位相データ除外中：位相角' + fmt(ferritePhaseThresholdDeg(), 1) + '°未満を除外</div>'
+      : '';
+    const outlierNote = ferriteOutlierOnly()
+      ? '<div class="analysis-info">外れ点だけ表示中：Manus式誤差 ±' + fmt(ferriteOutlierThresholdPct(), 1) + '%以上</div>'
+      : '';
+    if (!rows.length) {
+      target.innerHTML = phaseNote + outlierNote +
+        '<div class="empty">条件に合うデータがありません。位相角しきい値、外れ点しきい値、表示データ条件を確認してください。</div>';
+      return;
+    }
+    target.innerHTML = phaseNote + outlierNote + '<table><thead><tr>' +
+      '<th class="sticky-id">id</th><th>type</th><th>material</th><th>N</th><th>wire</th><th>length</th><th>layers</th><th>freq</th><th>位相角 deg</th><th>除外理由</th><th>measured L</th><th>air L</th><th>実測kL</th><th>巻線密度 T/mm</th><th>高密度補正係数</th><th>補正前PDF式kL</th><th>補正前誤差 %</th><th>補正後PDF式kL</th><th>補正後誤差 %</th><th>改善量 %</th><th>現行app</th><th>現行app誤差%</th><th>現行app過小倍率</th><th>フェライト断面積</th>' +
+      '</tr></thead><tbody>' +
+      rows.map(row => '<tr>' +
+        '<td class="sticky-id">' + escapeHtml(row.id) + '</td>' +
+        '<td>' + escapeHtml(coilTypeLabels[row.coilType] || row.coilType) + '</td>' +
+        '<td>' + escapeHtml(row.ferriteMaterial) + '</td>' +
+        '<td class="num">' + fmt(row.turns, 0) + '</td>' +
+        '<td class="num">' + fmt(row.wireDia, 3) + ' mm</td>' +
+        '<td class="num">' + fmt(row.windingLength, 2) + ' mm</td>' +
+        '<td class="num">' + fmt(row.layers, 0) + '</td>' +
+        '<td class="num">' + fmt(row.frequency_kHz, 3) + ' kHz</td>' +
+        '<td class="num">' + fmt(row.phaseDeg, 1) + ' deg</td>' +
+        '<td>' + escapeHtml(ferritePhaseExclusionReason(row)) + '</td>' +
+        '<td class="num">' + fmt(row.measuredL_uH, 3) + ' uH</td>' +
+        '<td class="num">' + fmt(row.airL_uH, 3) + ' uH</td>' +
+        '<td class="num" style="color:var(--gold);font-weight:800">' + fmt(row.kL, 3) + '</td>' +
+        '<td class="num">' + fmt(row.windingDensity_T_per_mm, 3) + ' T/mm</td>' +
+        '<td class="num">' + fmt(row.densityFactor, 3) + '</td>' +
+        '<td class="num">' + fmt(row.empiricalFactor, 3) + '</td>' +
+        '<td class="num">' + fmtSignedPct(row.empiricalErrorPct, 1) + '</td>' +
+        '<td class="num">' + fmt(row.empiricalFactorDensity, 3) + '</td>' +
+        '<td class="num">' + fmtSignedPct(row.empiricalDensityErrorPct, 1) + '</td>' +
+        '<td class="num ' + improvementClass(row.improvementPct) + '">' + fmtSignedPct(row.improvementPct, 1) + '</td>' +
+        '<td class="num">' + fmt(row.appFactor, 3) + '</td>' +
+        '<td class="num">' + fmt(row.appErrorPct, 1) + '%</td>' +
+        '<td class="num">' + fmt(row.appUnderRatio, 2) + 'x</td>' +
+        '<td class="num">' + fmt(row.ferriteArea_mm2, 3) + ' mm2</td>' +
+      '</tr>').join('') +
+      '</tbody></table>';
+  }
+
+  function ferriteRankingRowHtml(row) {
+    return '<tr>' +
+      '<td>' + escapeHtml(row.id) + '</td>' +
+      '<td>' + escapeHtml(row.ferriteMaterial) + '</td>' +
+      '<td>' + escapeHtml(coilTypeLabels[row.coilType] || row.coilType) + '</td>' +
+      '<td class="num">' + fmt(row.frequency_kHz, 3) + '</td>' +
+      '<td class="num">' + fmt(row.turns, 0) + '</td>' +
+      '<td class="num">' + fmt(row.wireDia, 3) + '</td>' +
+      '<td class="num">' + fmt(row.windingLength, 2) + '</td>' +
+      '<td class="num">' + fmt(row.windingDensity_T_per_mm, 3) + '</td>' +
+      '<td class="num">' + fmt(row.kL, 3) + '</td>' +
+      '<td class="num">' + fmt(row.empiricalFactor, 3) + '</td>' +
+      '<td class="num">' + fmt(row.empiricalFactorDensity, 3) + '</td>' +
+      '<td class="num">' + fmtSignedPct(row.empiricalErrorPct, 1) + '</td>' +
+      '<td class="num">' + fmtSignedPct(row.empiricalDensityErrorPct, 1) + '</td>' +
+      '<td class="num ' + improvementClass(row.improvementPct) + '">' + fmtSignedPct(row.improvementPct, 1) + '</td>' +
+      '</tr>';
+  }
+
+  function renderFerriteRankingBlock(title, rows) {
+    const header =
+      '<table><thead><tr>' +
+      '<th>id</th><th>材質</th><th>coilType</th><th>周波数 kHz</th><th>N</th><th>線径</th><th>巻線長</th><th>巻線密度</th><th>実測kL</th><th>PDF式kL</th><th>補正後kL</th><th>補正前誤差%</th><th>補正後誤差%</th><th>改善量%</th>' +
+      '</tr></thead><tbody>';
+    const body = rows.length
+      ? rows.map(ferriteRankingRowHtml).join('')
+      : '<tr><td colspan="14">該当データなし</td></tr>';
+    return '<div class="ferrite-ranking">' +
+      '<div class="ferrite-ranking-title">' + escapeHtml(title) + '</div>' +
+      '<div class="table-wrap">' + header + body + '</tbody></table></div>' +
+      '</div>';
+  }
+
+  function renderFerriteErrorRankings(rows) {
+    const target = $('ferriteErrorRankings');
+    if (!target) return;
+    const validBefore = rows.filter(row => Number.isFinite(row.empiricalErrorPct));
+    const validAfter = rows.filter(row => Number.isFinite(row.empiricalDensityErrorPct));
+    const validImprovement = rows.filter(row => Number.isFinite(row.improvementPct));
+    const beforeTop = validBefore.slice().sort((a, b) => Math.abs(b.empiricalErrorPct) - Math.abs(a.empiricalErrorPct)).slice(0, 10);
+    const afterTop = validAfter.slice().sort((a, b) => Math.abs(b.empiricalDensityErrorPct) - Math.abs(a.empiricalDensityErrorPct)).slice(0, 10);
+    const improvedTop = validImprovement.filter(row => row.improvementPct > 0).sort((a, b) => b.improvementPct - a.improvementPct).slice(0, 10);
+    const worsenedTop = validImprovement.filter(row => row.improvementPct < 0).sort((a, b) => a.improvementPct - b.improvementPct).slice(0, 10);
+    target.innerHTML =
+      renderFerriteRankingBlock('誤差ランキング：補正前誤差 TOP10', beforeTop) +
+      renderFerriteRankingBlock('誤差ランキング：補正後誤差 TOP10', afterTop) +
+      renderFerriteRankingBlock('誤差ランキング：改善量 TOP10', improvedTop) +
+      renderFerriteRankingBlock('誤差ランキング：悪化 TOP10', worsenedTop);
+  }
+
+
+
+  function showFerritePoint(event) {
+    const canvas = $('ferriteAnalyzerCanvas');
+    const info = $('ferritePointInfo');
+    if (!canvas || !info || !ferriteAnalyzerPoints.length) return;
+    const rect = canvas.getBoundingClientRect();
+    const source = event.touches && event.touches[0] ? event.touches[0] : event;
+    const x = source.clientX - rect.left;
+    const y = source.clientY - rect.top;
+    let best = null;
+    let bestDist = Infinity;
+    ferriteAnalyzerPoints.forEach(point => {
+      const dist = Math.hypot(point.px - x, point.py - y);
+      if (dist < bestDist) {
+        best = point;
+        bestDist = dist;
+      }
+    });
+    if (!best || bestDist > 18) return;
+    const row = best.row;
+    const displayManusFactor = ferriteDisplayManusFactor(row);
+    const displayManusErrorPct = ferriteDisplayManusErrorPct(row);
+    info.innerHTML =
+      'id: <strong>' + escapeHtml(row.id) + '</strong><br>' +
+      '材質: <strong>' + escapeHtml(row.ferriteMaterial) + '</strong> / ' +
+      'coilType: <strong>' + escapeHtml(coilTypeLabels[row.coilType] || row.coilType) + '</strong> / ' +
+      'フェライト形状: <strong>' + escapeHtml(ferriteShapeLabels[row.ferriteShape] || row.ferriteShape || '-') + '</strong><br>' +
+      '周波数: <strong>' + fmt(row.frequency_kHz, 3) + ' kHz</strong> / ' +
+      'ターン数: <strong>' + fmt(row.turns, 0) + ' T</strong> / ' +
+      '線径: <strong>' + fmt(row.wireDia, 3) + ' mm</strong> / ' +
+      '巻線長: <strong>' + fmt(row.windingLength, 2) + ' mm</strong> / ' +
+      '層数: <strong>' + fmt(row.layers, 0) + '</strong><br>' +
+      '実測kL: <strong>' + fmt(row.kL, 3) + '</strong> / ' +
+      '高密度補正: <strong>' + (row.densityCorrectionEnabled ? 'ON' : 'OFF') + '</strong> / ' +
+      '高密度補正係数: <strong>' + fmt(row.densityFactor, 3) + '</strong><br>' +
+      '表示PDF式kL: <strong>' + fmt(displayManusFactor, 3) + '</strong> / ' +
+      '表示誤差: <strong>' + fmtSignedPct(displayManusErrorPct, 1) + '</strong><br>' +
+      '補正前PDF式kL: <strong>' + fmt(row.empiricalFactor, 3) + '</strong> / ' +
+      '補正前誤差: <strong>' + fmtSignedPct(row.empiricalErrorPct, 1) + '</strong><br>' +
+      '補正後PDF式kL: <strong>' + fmt(row.empiricalFactorDensity, 3) + '</strong> / ' +
+      '補正後誤差: <strong>' + fmtSignedPct(row.empiricalDensityErrorPct, 1) + '</strong> / ' +
+      '改善量: <strong>' + fmtSignedPct(row.improvementPct, 1) + '</strong><br>' +
+      '現行アプリ補正: <strong>' + fmt(row.appFactor, 3) + '</strong> / ' +
+      '現行アプリ過小倍率: <strong>' + fmt(row.appUnderRatio, 2) + 'x</strong><br>' +
+      'フェライト断面積: <strong>' + fmt(row.ferriteArea_mm2, 3) + ' mm2</strong> / ' +
+      '巻線密度: <strong>' + fmt(row.windingDensity_T_per_mm, 3) + ' T/mm</strong> / ' +
+      '位相角: <strong>' + fmt(row.phaseDeg, 1) + ' deg</strong>';
+  }
+
+  async function copyFerriteValidationJson() {
+    const text = JSON.stringify(ferriteValidationPayload(), null, 2);
+    const area = $('ferriteValidationJson');
+    if (area) {
+      area.value = text;
+      area.classList.remove('hidden');
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      $('ferriteCopyStatus').textContent = '補正JSONをコピーしました。';
+    } catch {
+      if (area) {
+        area.focus();
+        area.select();
+        document.execCommand('copy');
+      }
+      $('ferriteCopyStatus').textContent = '補正JSONを選択してコピーしました。';
+    }
+  }
+
+
+
+  function renderFerriteAnalyzer() {
+    if (!$('ferriteKpis')) return;
+    const filters = currentFerriteFilters();
+    const rows = filters.filteredRows;
+    renderFerriteKpis(rows, filters);
+    drawFerriteAnalyzerChart(rows);
+    syncFerriteDetailUi(rows);
+    const outlier = ferriteOutlierSummary(filters.phaseRows);
+    const phaseNote = filters.excludeLowPhase
+      ? '<br>低位相除外: <strong>' + filters.phaseExcludedCount + '件</strong> / 対象 <strong>' + filters.phaseAcceptedCount + '件</strong>'
+      : '<br>低位相除外: <strong>OFF</strong>';
+    const outlierNote = ferriteOutlierOnly() ? ' / <strong>外れ点のみ表示中</strong>' : '';
+    const emptyNote = !rows.length ? '<br>条件に合うフェライト解析データがありません。' : '';
+    $('ferriteAnalyzerStats').innerHTML =
+      '表示: <strong>' + rows.length + '件</strong> / ' +
+      '元データ: <strong>' + filters.baseRows.length + '件</strong> / ' +
+      'kL平均: <strong>' + fmt(average(rows, r => r.kL), 3) + '</strong> / ' +
+      '外れ点: <strong>' + outlier.count + ' / ' + outlier.total + '件 (' + fmt(outlier.ratePct, 1) + '%)</strong>' +
+      phaseNote + outlierNote + emptyNote;
+  }
+
+  function renderAnalysis() {
+    if (!$('analysisCanvas')) return;
+    updateAnalysisMaterialOptions();
+    drawAnalysisChart();
+  }
+
+  function showAnalysisPoint(event) {
+    const canvas = $('analysisCanvas');
+    if (!canvas || !analysisPoints.length) return;
+    const rect = canvas.getBoundingClientRect();
+    const source = event.touches && event.touches[0] ? event.touches[0] : event;
+    const x = source.clientX - rect.left;
+    const y = source.clientY - rect.top;
+    let best = null;
+    let bestDist = Infinity;
+    analysisPoints.forEach(point => {
+      const dist = Math.hypot(point.px - x, point.py - y);
+      if (dist < bestDist) {
+        best = point;
+        bestDist = dist;
+      }
+    });
+    if (!best || bestDist > 18) return;
+    const rec = best.record;
+    const calc = calculate(rec);
+    $('analysisPointInfo').innerHTML =
+      'ID: <strong>' + escapeHtml(rec.id) + '</strong><br>' +
+      'φ' + fmt(rec.wireDia, 3) + ' / ' + escapeHtml(rec.ferriteMaterial || 'なし') + ' / ' +
+      fmt(rec.frequency, 2) + 'kHz / 位相 ' + fmt(rec.phaseDeg, 1) + '° / factor ' + fmt(calc.windingFactor, 4);
+  }
+
+  function renderDataTable() {
+    $('dataCount').textContent = records.length + '件';
+    const phaseHealth = phaseHealthSummary();
+    const readyCount = correctionReadyCount();
+    const warnings = warningCount();
+    const healthKey = [
+      records.length,
+      readyCount,
+      warnings,
+      phaseHealth.analyzable
+    ].join('|');
+    if (healthKey !== dataHealthRenderKey) {
+      dataHealthRenderKey = healthKey;
+      $('dataHealthSummary').innerHTML =
+        '登録済み：<strong>' + records.length + '件</strong> / ' +
+        '補正計算可能：<strong>' + readyCount + '件</strong> / ' +
+        '警告：<strong>' + warnings + '件</strong> / ' +
+        '解析対象：<strong>' + phaseHealth.analyzable + '件</strong>';
+    }
+    if (!records.length) {
+      if (dataTableRenderKey !== 'empty') {
+        $('dataTable').innerHTML = '<div class="empty">保存データを読み込めません。復元候補を確認してください。</div>';
+      }
+      dataTableRenderKey = 'empty';
+      return;
+    }
+    const renderKey = records.map(rec => [
+      rec.id,
+      rec.updatedAt || rec.createdAt || '',
+      rec.memo,
+      rec.wireDia,
+      rec.totalTurns,
+      rec.windingLength,
+      rec.frequency,
+      rec.measuredZ,
+      rec.phaseDeg
+    ].join(':')).join('|');
+    if (renderKey === dataTableRenderKey && $('dataTable').querySelector('table')) return;
+    dataTableRenderKey = renderKey;
+    $('dataTable').innerHTML =
+      '<table><thead><tr>' +
+      '<th class="sticky-id">id</th>' +
+      '<th>操作</th><th>状態</th><th>チェック</th><th>線径</th><th>コイル形状</th><th>コイル寸法</th><th>フェライト形状</th><th>フェライト寸法</th><th>1層ターン数</th><th>巻線長</th><th>総巻数</th><th>層数</th><th>理論/実測 1層</th><th>巻線補正</th><th>周波数</th><th>実測Z</th><th>位相角</th><th>位相品質</th><th>タイプ</th><th>材質</th><th>メモ</th>' +
+      '</tr></thead><tbody>' +
+      records.slice().reverse().map(rec => {
+        const calc = calculate(rec);
+        const warnings = recordWarnings(rec);
+        const safeId = escapeHtml(rec.id);
+        return '<tr>' +
+          '<td class="sticky-id">' + safeId + '</td>' +
+          '<td><div class="row-actions">' +
+          '<button class="compact" data-edit="' + safeId + '">編集</button>' +
+          '<button class="compact" data-duplicate="' + safeId + '">複製</button>' +
+          '<button class="compact danger" data-delete="' + safeId + '">削除</button>' +
+          '</div></td>' +
+          '<td>' + recordStatus(rec) + '</td>' +
+          '<td class="' + (warnings.length ? 'check-warn' : 'check-ok') + '">' + (warnings.length ? escapeHtml(warnings.join(' / ')) : 'OK') + '</td>' +
+          '<td class="num">' + fmt(rec.wireDia, 3) + '</td>' +
+          '<td>' + escapeHtml(bobbinShapeLabels[rec.bobbinShape] || rec.bobbinShape) + '</td>' +
+          '<td>' + escapeHtml(bobbinDimensionText(rec)) + '</td>' +
+          '<td>' + escapeHtml(ferriteShapeLabels[rec.ferriteShape] || rec.ferriteShape) + '</td>' +
+          '<td>' + escapeHtml(ferriteDimensionText(rec)) + '</td>' +
+          '<td class="num">' + fmt(rec.oneLayerTurns, 2) + '</td>' +
+          '<td class="num">' + fmt(rec.windingLength, 2) + '</td>' +
+          '<td class="num">' + fmt(rec.totalTurns, 0) + '</td>' +
+          '<td class="num">' + fmt(rec.layers, 0) + '</td>' +
+          '<td class="num">' + fmt(calc.theoryOneLayerTurns, 0) + ' / ' + fmt(calc.measuredOneLayerTurns, 2) + '</td>' +
+          '<td class="num" style="color:var(--gold);font-weight:800">' + fmt(calc.windingFactor, 4) + '</td>' +
+          '<td class="num">' + fmt(rec.frequency, 2) + ' kHz</td>' +
+          '<td class="num">' + fmt(rec.measuredZ, 2) + '</td>' +
+          '<td class="num">' + (Number.isFinite(rec.phaseDeg) ? fmt(rec.phaseDeg, 1) + ' deg' : '-') + '</td>' +
+          '<td>' + phaseQualityHtml(rec) + '</td>' +
+          '<td>' + escapeHtml(coilTypeLabels[rec.coilType] || rec.coilType) + '</td>' +
+          '<td>' + escapeHtml(rec.ferriteMaterial) + '</td>' +
+          '<td>' + escapeHtml(rec.memo) + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  function renderDataTab() {
+    renderDataTable();
+    if ($('jsonPreview') && $('jsonPreview').textContent) updateJsonPreview();
+  }
+
+  function renderConfigTab() {
+    const summaries = buildSummaries();
+    renderSummaryTable($('wireSummary'), summaries.byWireDiameter.map(row => ({...row, label: fmt(Number(row.key), 3) + ' mm'})), '線径');
+    renderSummaryTable($('typeSummary'), summaries.byCoilType, 'タイプ');
+    renderSummaryTable($('materialSummary'), summaries.byFerriteMaterial, '材質');
+    $('configOutput').value = configCode();
+  }
+
+  function render() {
+    updateStorageStatus();
+    if (currentTab === 'data') renderDataTab();
+    if (currentTab === 'analysis') renderAnalysis();
+    if (currentTab === 'ferrite') renderFerriteAnalyzer();
+    if (currentTab === 'config') renderConfigTab();
+  }
+
+  function switchTab(tabName) {
+    currentTab = tabName;
+    document.querySelectorAll('[data-tab-panel]').forEach(panel => {
+      panel.classList.toggle('hidden', panel.dataset.tabPanel !== tabName);
+    });
+    document.querySelectorAll('[data-tab]').forEach(button => {
+      button.classList.toggle('active', button.dataset.tab === tabName);
+    });
+    if (tabName === 'data') {
+      renderDataTab();
+      updateStorageStatus();
+    } else if (tabName === 'analysis') {
+      renderAnalysis();
+    } else if (tabName === 'ferrite') {
+      renderFerriteAnalyzer();
+    } else if (tabName === 'config') {
+      renderConfigTab();
+    }
+  }
+
+  function updatePreview() {
+    if (previewUpdateTimer) {
+      clearTimeout(previewUpdateTimer);
+      previewUpdateTimer = null;
+    }
+    updateShapeVisibility();
+    const rec = readForm();
+    const calc = calculate(rec);
+    const parts = calculateImpedanceParts(rec);
+    $('previewTheory').textContent = fmt(calc.theoryOneLayerTurns, 0);
+    $('previewMeasured').textContent = fmt(calc.measuredOneLayerTurns, 2);
+    $('previewFactor').textContent = fmt(calc.windingFactor, 4);
+    $('previewR').textContent = Number.isFinite(parts.rOhm) ? fmt(parts.rOhm, 3) + ' Ω' : '-';
+    $('previewX').textContent = Number.isFinite(parts.xOhm) ? fmt(parts.xOhm, 3) + ' Ω' : '-';
+    $('previewL').textContent = Number.isFinite(parts.lUh) ? fmt(parts.lUh, 3) + ' µH' : '-';
+    $('phaseNote').classList.toggle('hidden', !Number.isFinite(rec.phaseDeg));
+  }
+
+  function schedulePreviewUpdate() {
+    if (previewUpdateTimer) clearTimeout(previewUpdateTimer);
+    previewUpdateTimer = setTimeout(() => {
+      previewUpdateTimer = null;
+      updatePreview();
+    }, 60);
+  }
+
+  function syncEditUi() {
+    const editing = !!editingId;
+    $('addBtn').textContent = editing ? '更新' : '追加';
+    $('cancelEditBtn').classList.toggle('hidden', !editing);
+    $('editStatus').classList.toggle('hidden', !editing && !duplicateDraftActive);
+    $('editStatus').textContent = editing
+      ? '編集中：ID ' + editingId
+      : duplicateDraftActive
+        ? '複製元から入力中：必要箇所を変更して追加してください'
+        : '';
+  }
+
+  function persistEditDraft() {
+    if (!editingId) {
+      sessionStorage.removeItem(EDIT_DRAFT_STORAGE_KEY);
+      return;
+    }
+    editDraft = {
+      editingId,
+      form: Object.fromEntries(fields.map(key => [key, $(key)?.value ?? ''])),
+      savedAt: new Date().toISOString()
+    };
+    sessionStorage.setItem(EDIT_DRAFT_STORAGE_KEY, JSON.stringify(editDraft));
+  }
+
+  function discardEditDraft() {
+    editDraft = null;
+    sessionStorage.removeItem(EDIT_DRAFT_STORAGE_KEY);
+  }
+
+  function updateEditDraftFromForm() {
+    if (editingId) persistEditDraft();
+  }
+
+  function exitDuplicateDraft() {
+    duplicateDraftActive = false;
+    syncEditUi();
+  }
+
+  function exitEditMode() {
+    editingId = null;
+    discardEditDraft();
+    duplicateDraftActive = false;
+    syncEditUi();
+  }
+
+  function fillForm(record) {
+    fields.forEach(key => {
+      if ($(key)) $(key).value = record[key] ?? '';
+    });
+    updateShapeVisibility();
+    updatePreview();
+  }
+
+  function restoreEditDraft() {
+    let draft = null;
+    try {
+      draft = JSON.parse(sessionStorage.getItem(EDIT_DRAFT_STORAGE_KEY) || 'null');
+    } catch {
+      draft = null;
+    }
+    if (!draft || !draft.editingId || !draft.form || !records.some(record => record.id === draft.editingId)) {
+      discardEditDraft();
+      return false;
+    }
+    editingId = draft.editingId;
+    editDraft = draft;
+    fields.forEach(key => {
+      if ($(key)) $(key).value = draft.form[key] ?? '';
+    });
+    syncEditUi();
+    updateShapeVisibility();
+    updatePreview();
+    $('formStatus').textContent = '前回の編集中入力を復元しました。更新またはキャンセルしてください。';
+    return true;
+  }
+
+  function clearForm(options = {}) {
+    if (editingId && !options.force) {
+      const ok = confirm('編集中です。編集をキャンセルして入力をクリアしますか？');
+      if (!ok) return false;
+    }
+    exitEditMode();
+    fields.forEach(key => {
+      if (key === 'coilType') $(key).value = 'air';
+      else if (key === 'ferriteMaterial') $(key).value = 'なし';
+      else if (key === 'bobbinShape') $(key).value = 'round';
+      else if (key === 'ferriteShape') $(key).value = 'none';
+      else $(key).value = '';
+    });
+    updatePreview();
+    if (!options.keepStatus) $('formStatus').textContent = '';
+    return true;
+  }
+
+  async function addRecord() {
+    const rec = readForm();
+    const errors = validate(rec);
+    if (errors.length) {
+      $('formStatus').textContent = '不足または不正: ' + errors.join(' / ');
+      return;
+    }
+    if (editingId) {
+      const idx = records.findIndex(item => item.id === editingId);
+      if (idx === -1) {
+        $('formStatus').textContent = '編集中のデータが見つかりません。';
+        exitEditMode();
+        return;
+      }
+      const original = records[idx];
+      records[idx] = {
+        ...rec,
+        id:original.id,
+        createdAt:original.createdAt,
+        updatedAt:new Date().toISOString()
+      };
+      const result = await save('更新保存');
+      const total = records.length;
+      clearForm({ force:true, keepStatus:true });
+      render();
+      updatePreview();
+      updateJsonPreview();
+      mobileAutoBackup('更新保存');
+      $('formStatus').textContent = result.verified
+        ? '更新保存OK。現在' + total + '件保存。'
+        : '更新しましたが保存未確認です。JSONバックアップしてください。現在' + total + '件。';
+      return;
+    }
+    records.push(rec);
+    const result = await save('追加保存');
+    const total = records.length;
+    const ready = correctionReadyCount();
+    const missing = missingCorrectionFields(rec);
+    clearForm({ force:true, keepStatus:true });
+    render();
+    updatePreview();
+    updateJsonPreview();
+    exitDuplicateDraft();
+    mobileAutoBackup('追加保存');
+    $('formStatus').textContent = !result.verified
+      ? '追加しましたが保存未確認です。JSONバックアップしてください。現在 ' + total + ' 件。'
+      : missing.length
+      ? '追加しました。ただし補正係数は未計算です。不足項目：' + missing.join(' / ') + '。現在 ' + total + ' 件保存。補正計算可能 ' + ready + ' 件。'
+      : '追加しました。現在 ' + total + ' 件保存。補正計算可能 ' + ready + ' 件。';
+  }
+
+  async function deleteRecord(id) {
+    const rec = records.find(item => item.id === id);
+    if (!rec) return;
+    const ok = confirm(
+      'このデータを削除しますか？\n' +
+      '線径: ' + fmt(rec.wireDia, 3) + 'mm\n' +
+      '総巻数: ' + fmt(rec.totalTurns, 0) + 'T\n' +
+      '周波数: ' + fmt(rec.frequency, 2) + 'kHz\n' +
+      'この操作は元に戻せません。'
+    );
+    if (!ok) return;
+    if (records.length === 1) {
+      await deleteAllRecords('1件削除しました。現在0件保存。');
+      return;
+    }
+    records = records.filter(rec => rec.id !== id);
+    if (editingId === id) clearForm({ force:true, keepStatus:true });
+    const result = await save('削除保存');
+    render();
+    updatePreview();
+    updateJsonPreview();
+    mobileAutoBackup('削除保存');
+    $('formStatus').textContent = result.verified
+      ? '1件削除しました。現在' + records.length + '件保存。'
+      : '1件削除しましたが保存未確認です。JSONバックアップしてください。現在' + records.length + '件。';
+  }
+
+  async function deleteAllRecords(doneMessage = '全削除しました。') {
+    if (!records.length) return;
+    await writeBackupSet(records, { previous:true });
+    records = [];
+    clearForm({ force:true, keepStatus:true });
+    const result = await save('全削除しました', { allowEmpty:true });
+    localStorage.setItem(STORAGE_KEY, '[]');
+    localStorage.setItem(LAST_EXPORT_COUNT_KEY, '0');
+    rememberSavedSnapshot(records);
+    lastSaveAt = new Date();
+    dataTableRenderKey = '';
+    setStorageMessage(result.verified ? '全削除しました' : '全削除しました。保存確認は未完了です', result.verified ? 'status-warn' : 'status-error');
+    render();
+    updatePreview();
+    updateJsonPreview();
+    $('ioStatus').textContent = doneMessage;
+    $('formStatus').textContent = doneMessage;
+  }
+
+  function editRecord(id) {
+    const rec = records.find(item => item.id === id);
+    if (!rec) return;
+    editingId = id;
+    fillForm(rec);
+    persistEditDraft();
+    syncEditUi();
+    $('formStatus').textContent = '';
+    $('editStatus').scrollIntoView({ block:'nearest' });
+  }
+
+  function duplicateRecord(id) {
+    const rec = records.find(item => item.id === id);
+    if (!rec) return;
+    exitEditMode();
+    editingId = null;
+    discardEditDraft();
+    const duplicated = serializeRecord(rec);
+    delete duplicated.id;
+    delete duplicated.createdAt;
+    delete duplicated.updatedAt;
+    fillForm(duplicated);
+    duplicateDraftActive = true;
+    syncEditUi();
+    updatePreview();
+    $('formStatus').textContent = '複製＝入力欄へコピー。変更後に追加で保存してください。';
+    $('editStatus').scrollIntoView({ block:'nearest' });
+  }
+
+  function jsonExportText() {
+    const payload = {
+      app: 'WINDING CALIBRATOR',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      records: records.map(serializeRecord)
+    };
+    return JSON.stringify(payload, null, 2);
+  }
+
+  function updateJsonPreview(force = false) {
+    if (!$('jsonPreview')) return;
+    if (!force && $('jsonPreviewWrap')?.classList.contains('hidden')) return;
+    $('jsonPreview').textContent = jsonExportText();
+  }
+
+  function jsonPreviewText() {
+    return $('jsonPreview') ? $('jsonPreview').textContent : jsonExportText();
+  }
+
+  function timestampFilePart(date = new Date()) {
+    const pad = value => String(value).padStart(2, '0');
+    return date.getFullYear() + pad(date.getMonth() + 1) + pad(date.getDate()) + '-' +
+      pad(date.getHours()) + pad(date.getMinutes()) + pad(date.getSeconds());
+  }
+
+  function downloadJsonText(jsonText, filename) {
+    $('jsonPreview').textContent = jsonText;
+    $('jsonPreviewWrap').classList.remove('hidden');
+    $('toggleJsonPreviewBtn').textContent = 'JSON非表示';
+    const blob = new Blob([jsonText], { type:'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function markJsonBackedUp(message, target = 'ioStatus') {
+    localStorage.setItem(LAST_EXPORT_COUNT_KEY, String(records.length));
+    localStorage.setItem(LAST_JSON_EXPORT_AT_KEY, new Date().toISOString());
+    setStorageMessage(message, 'status-ok');
+    if ($(target)) $(target).textContent = message;
+    updateStorageStatus();
+  }
+
+  function exportJson() {
+    const jsonText = jsonExportText();
+    downloadJsonText(jsonText, 'winding-calibrator-records.json');
+    markJsonBackedUp('JSONエクスポート済み：' + records.length + '件');
+  }
+
+  function mobileAutoBackup(actionLabel, target = 'ioStatus') {
+    if (!isMobileLike() || !records.length) return;
+    updateJsonPreview(true);
+    const details = $('toggleJsonPreviewBtn')?.closest('details');
+    if (details) details.open = true;
+    const message =
+      actionLabel + 'しました。スマホのファイル起動では内部保存が消える場合があるため、JSONバックアップを作成しました：' +
+      records.length + '件。次回データが空なら「復元・バックアップ」からこのJSONを貼り付け復元してください。';
+    try {
+      downloadJsonText(jsonPreviewText(), 'winding-calibrator-autobackup-' + timestampFilePart() + '.json');
+      markJsonBackedUp(message, target);
+    } catch {
+      if ($(target)) $(target).textContent = message + ' ダウンロードできない場合はJSONコピーを押してください。';
+    }
+  }
+
+  async function copyJson() {
+    updateJsonPreview(true);
+    const text = jsonPreviewText();
+    try {
+      await navigator.clipboard.writeText(text);
+      localStorage.setItem(LAST_EXPORT_COUNT_KEY, String(records.length));
+      localStorage.setItem(LAST_JSON_COPY_AT_KEY, new Date().toISOString());
+      $('ioStatus').textContent = 'JSONをコピーしました：' + records.length + '件';
+    } catch {
+      $('jsonPreviewWrap').classList.remove('hidden');
+      $('toggleJsonPreviewBtn').textContent = 'JSON非表示';
+      const range = document.createRange();
+      range.selectNodeContents($('jsonPreview'));
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.execCommand('copy');
+      selection.removeAllRanges();
+      localStorage.setItem(LAST_EXPORT_COUNT_KEY, String(records.length));
+      localStorage.setItem(LAST_JSON_COPY_AT_KEY, new Date().toISOString());
+      $('ioStatus').textContent = 'JSONを選択してコピーしました：' + records.length + '件';
+    }
+    updateStorageStatus();
+  }
+
+  function toggleJsonPreview() {
+    const willOpen = $('jsonPreviewWrap').classList.contains('hidden');
+    if (willOpen) updateJsonPreview(true);
+    $('jsonPreviewWrap').classList.toggle('hidden', !willOpen);
+    $('toggleJsonPreviewBtn').textContent = willOpen ? 'JSON非表示' : 'JSON表示';
+  }
+
+  function parseRecordsFromJsonText(text) {
+    const parsed = JSON.parse(String(text || ''));
+    const list = Array.isArray(parsed) ? parsed : parsed.records;
+    if (!Array.isArray(list)) throw new Error('records配列が見つかりません');
+    return list.map(normalizeRecord);
+  }
+
+  async function restoreRecordsFromList(list, source) {
+    if (!Array.isArray(list) || !list.length) {
+      $('restoreStatus').textContent = source + 'に復元できるデータがありません。';
+      return;
+    }
+    await writeBackupSet(records, { previous:true });
+    localStorage.setItem(BEFORE_RESTORE_BACKUP_STORAGE_KEY, JSON.stringify(backupPayload(records, 'beforeRestore')));
+    records = list.map(normalizeRecord);
+    clearForm({ force:true, keepStatus:true });
+    const result = await save(source + 'から復元しました');
+    render();
+    updatePreview();
+    updateJsonPreview();
+    mobileAutoBackup('復元保存', 'restoreStatus');
+    $('restoreStatus').textContent = source + 'から復元しました：' + records.length + '件 / ' + (result.verified ? '保存確認OK' : '保存未確認。JSONコピーしてください。');
+  }
+
+  async function restoreFromLocalBackup(key, label) {
+    await restoreRecordsFromList(readLocalStorageRecordList(key), label);
+  }
+
+  async function showBackupList() {
+    const candidates = (await collectRestoreCandidates()).filter(candidate => candidate.count > 0);
+    const el = $('backupList');
+    el.classList.remove('hidden');
+    if (!candidates.length) {
+      el.innerHTML = '<div class="backup-item">復元候補がありません。</div>';
+      return;
+    }
+    el.innerHTML = candidates.map((candidate, idx) =>
+      '<div class="backup-item">' +
+      '<span><strong>' + escapeHtml(candidate.source) + '</strong><br>' + candidate.count + '件</span>' +
+      '<button class="compact" data-restore-candidate="' + idx + '">復元</button>' +
+      '</div>'
+    ).join('');
+    el.dataset.candidates = JSON.stringify(candidates.map(candidate => ({
+      source: candidate.source,
+      records: candidate.records.map(serializeRecord)
+    })));
+  }
+
+  async function restoreCandidateFromList(index) {
+    let candidates = [];
+    try {
+      candidates = JSON.parse($('backupList').dataset.candidates || '[]');
+    } catch {
+      candidates = [];
+    }
+    const candidate = candidates[index];
+    if (!candidate) return;
+    await restoreRecordsFromList(candidate.records.map(normalizeRecord), candidate.source);
+  }
+
+  async function restoreJsonPaste() {
+    try {
+      await restoreRecordsFromList(parseRecordsFromJsonText($('restoreJsonText').value), 'JSON貼り付け');
+    } catch (err) {
+      $('restoreStatus').textContent = 'JSON復元失敗: ' + err.message;
+    }
+  }
+
+  function importJsonFile(file) {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const list = parseRecordsFromJsonText(String(reader.result || ''));
+        records = records.concat(list);
+        await save('JSONインポート保存');
+        render();
+        updateJsonPreview();
+        $('ioStatus').textContent = list.length + '件インポートしました。';
+      } catch (err) {
+        $('ioStatus').textContent = 'JSONインポート失敗: ' + err.message;
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let cell = '';
+    let inQuote = false;
+    for (let i = 0; i < text.length; i += 1) {
+      const ch = text[i];
+      const next = text[i + 1];
+      if (ch === '"' && inQuote && next === '"') {
+        cell += '"';
+        i += 1;
+      } else if (ch === '"') {
+        inQuote = !inQuote;
+      } else if (ch === ',' && !inQuote) {
+        row.push(cell);
+        cell = '';
+      } else if ((ch === '\n' || ch === '\r') && !inQuote) {
+        if (ch === '\r' && next === '\n') i += 1;
+        row.push(cell);
+        if (row.some(value => String(value).trim() !== '')) rows.push(row);
+        row = [];
+        cell = '';
+      } else {
+        cell += ch;
+      }
+    }
+    row.push(cell);
+    if (row.some(value => String(value).trim() !== '')) rows.push(row);
+    return rows;
+  }
+
+  function csvHeaderField(cell) {
+    const raw = String(cell ?? '').trim();
+    return csvHeaderAliases[raw] || normalizedCsvHeaderAliases[normalizeCsvHeader(raw)] || null;
+  }
+
+  async function importCsv() {
+    const text = $('csvText').value.trim();
+    if (!text) {
+      $('ioStatus').textContent = 'CSVが空です。';
+      return;
+    }
+    const rows = parseCsv(text);
+    const headerMatches = rows[0] ? rows[0].map(csvHeaderField).filter(Boolean).length : 0;
+    const hasHeader = headerMatches >= 2;
+    const dataRows = hasHeader ? rows.slice(1) : rows;
+    const headerFields = hasHeader
+      ? rows[0].map(csvHeaderField)
+      : [];
+    const imported = [];
+    let skipped = 0;
+    dataRows.forEach(row => {
+      const raw = {};
+      const csvFields = hasHeader
+        ? headerFields
+        : row.length >= newCsvFields.length
+          ? newCsvFields
+          : row.length >= legacyCsvFieldsWithPhase.length
+            ? legacyCsvFieldsWithPhase
+            : oldCsvFields;
+      csvFields.forEach((key, idx) => {
+        if (key) raw[key] = row[idx] ?? '';
+      });
+      const rec = normalizeRecord(raw);
+      if (validate(rec).length === 0) imported.push(rec);
+      else skipped += 1;
+    });
+    records = records.concat(imported);
+    const result = await save('CSVインポート保存');
+    render();
+    updateJsonPreview();
+    mobileAutoBackup('CSVインポート保存');
+    $('ioStatus').textContent = imported.length + '件インポートしました。不正/不足スキップ ' + skipped + ' 件。現在 ' + records.length + ' 件。補正計算可能 ' + correctionReadyCount() + ' 件。' + (result.verified ? ' 保存確認OK。' : ' 保存未確認。JSONバックアップしてください。');
+  }
+
+  async function storageTest() {
+    const testId = '__storage_test__';
+    const testRecord = normalizeRecord({ id:testId, wireDia:0.01, memo:'storage test' });
+    let idbOk = false;
+    let localOk = false;
+    try {
+      await idbTransaction('readwrite', store => store.put(testRecord));
+      const found = await idbTransaction('readonly', store => idbRequest(store.get(testId)));
+      await idbTransaction('readwrite', store => store.delete(testId));
+      idbOk = !!found && found.id === testId;
+    } catch {
+      idbOk = false;
+    }
+    try {
+      const key = STORAGE_KEY + '.test';
+      localStorage.setItem(key, JSON.stringify([serializeRecord(testRecord)]));
+      const found = readLocalStorageRecordList(key)[0];
+      localStorage.removeItem(key);
+      localOk = !!found && found.id === testId;
+    } catch {
+      localOk = false;
+    }
+    const beforeCount = records.length;
+    const idbCount = db ? (await readIndexedDBRecords().catch(() => [])).length : null;
+    const localCount = readLocalStorageRecordList(STORAGE_KEY).length;
+    const latestCount = readLocalStorageRecordList(BACKUP_STORAGE_KEY).length;
+    const countOk = idbCount === beforeCount && localCount === beforeCount;
+    const message = '保存テスト: IndexedDB ' + (idbOk ? 'OK' : 'NG') +
+      ' / localStorage ' + (localOk ? 'OK' : 'NG') +
+      ' / 件数一致 ' + (countOk ? 'OK' : 'NG') +
+      '（表示 ' + beforeCount + '件 / IDB ' + (idbCount ?? '未確認') + '件 / localStorage ' + localCount + '件 / backup.latest ' + latestCount + '件）。アプリ再起動後も同じ件数か確認してください。';
+    $('ioStatus').textContent = message;
+    setStorageMessage(message, idbOk && localOk && countOk ? 'status-ok' : 'status-warn');
+  }
+
+  async function copyConfig() {
+    const text = $('configOutput').value;
+    try {
+      await navigator.clipboard.writeText(text);
+      $('copyStatus').textContent = 'CONFIG用JSをコピーしました。';
+    } catch {
+      $('configOutput').focus();
+      $('configOutput').select();
+      document.execCommand('copy');
+      $('copyStatus').textContent = 'CONFIG用JSを選択してコピーしました。';
+    }
+  }
+
+  function bindEvents() {
+    document.querySelectorAll('[data-tab]').forEach(button => {
+      button.addEventListener('click', () => switchTab(button.dataset.tab));
+    });
+    fields.forEach(key => {
+      $(key).addEventListener('input', () => {
+        schedulePreviewUpdate();
+        updateEditDraftFromForm();
+      });
+    });
+    $('bobbinShape').addEventListener('change', () => {
+      schedulePreviewUpdate();
+      updateEditDraftFromForm();
+    });
+    $('ferriteShape').addEventListener('change', () => {
+      schedulePreviewUpdate();
+      updateEditDraftFromForm();
+    });
+    $('coilType').addEventListener('change', () => {
+      schedulePreviewUpdate();
+      updateEditDraftFromForm();
+    });
+    $('ferriteMaterial').addEventListener('change', () => {
+      schedulePreviewUpdate();
+      updateEditDraftFromForm();
+    });
+    $('addBtn').addEventListener('click', addRecord);
+    $('clearFormBtn').addEventListener('click', clearForm);
+    $('cancelEditBtn').addEventListener('click', () => clearForm({ force:true }));
+    $('exportJsonBtn').addEventListener('click', exportJson);
+    $('toggleJsonPreviewBtn').addEventListener('click', toggleJsonPreview);
+    $('copyJsonBtn').addEventListener('click', copyJson);
+    $('copyJsonCurrentBtn')?.addEventListener('click', copyJson);
+    $('exportJsonCurrentBtn')?.addEventListener('click', exportJson);
+    $('restoreLatestBtn')?.addEventListener('click', () => restoreFromLocalBackup(BACKUP_STORAGE_KEY, '最新バックアップ'));
+    $('restorePreviousBtn')?.addEventListener('click', () => restoreFromLocalBackup(PREVIOUS_BACKUP_STORAGE_KEY, '前回バックアップ'));
+    $('showBackupsBtn')?.addEventListener('click', showBackupList);
+    $('restoreJsonPasteBtn')?.addEventListener('click', restoreJsonPaste);
+    $('backupList')?.addEventListener('click', event => {
+      const button = event.target.closest('[data-restore-candidate]');
+      if (button) restoreCandidateFromList(Number(button.dataset.restoreCandidate));
+    });
+    $('storageTestBtn').addEventListener('click', storageTest);
+    $('importJsonBtn').addEventListener('click', () => $('jsonFileInput').click());
+    $('jsonFileInput').addEventListener('change', event => {
+      const file = event.target.files && event.target.files[0];
+      if (file) importJsonFile(file);
+      event.target.value = '';
+    });
+    $('deleteAllBtn').addEventListener('click', async () => {
+      if (!records.length) return;
+      if (!confirm('全データを削除しますか？')) return;
+      if (!confirm('本当に削除しますか？この操作は元に戻せません。先にJSONエクスポートを推奨します。')) return;
+      await deleteAllRecords('全削除しました。');
+    });
+    $('importCsvBtn').addEventListener('click', importCsv);
+    $('clearCsvBtn').addEventListener('click', () => {
+      $('csvText').value = '';
+      $('ioStatus').textContent = '';
+    });
+    $('copyConfigBtn').addEventListener('click', copyConfig);
+    $('dataTable').addEventListener('click', event => {
+      const editBtn = event.target.closest('[data-edit]');
+      const duplicateBtn = event.target.closest('[data-duplicate]');
+      const deleteBtn = event.target.closest('[data-delete]');
+      if (editBtn) editRecord(editBtn.dataset.edit);
+      else if (duplicateBtn) duplicateRecord(duplicateBtn.dataset.duplicate);
+      else if (deleteBtn) deleteRecord(deleteBtn.dataset.delete);
+    });
+    ['analysisX','analysisY','analysisCoilType','analysisMaterial','analysisExcludeWarnings','analysisOnlyCorrection'].forEach(id => {
+      $(id).addEventListener('change', () => {
+        if (currentTab === 'analysis') drawAnalysisChart();
+      });
+    });
+    ['ferriteDataset','ferriteXAxis','ferriteYAxis','ferriteDensityCorrection','ferriteDensityStart','ferriteDensityMinFactor','ferriteExcludeLowPhase','ferritePhaseThreshold','ferriteOutlierOnly','ferriteOutlierThreshold'].forEach(id => {
+      $(id).addEventListener('change', () => {
+        if (currentTab === 'ferrite') renderFerriteAnalyzer();
+      });
+    });
+    ['ferritePhaseThreshold','ferriteOutlierThreshold','ferriteDensityStart','ferriteDensityMinFactor'].forEach(id => {
+      $(id)?.addEventListener('input', () => {
+        if (currentTab === 'ferrite') renderFerriteAnalyzer();
+      });
+    });
+    $('saveFerritePresetBtn')?.addEventListener('click', saveFerritePreset);
+    $('loadFerritePresetBtn')?.addEventListener('click', loadFerritePreset);
+    $('deleteFerritePresetBtn')?.addEventListener('click', deleteFerritePreset);
+    $('ferritePresetSelect')?.addEventListener('change', () => {
+      if ($('ferritePresetName')) $('ferritePresetName').value = $('ferritePresetSelect').value;
+    });
+    $('copyFerriteValidationBtn')?.addEventListener('click', copyFerriteValidationJson);
+    $('toggleFerriteDetailBtn')?.addEventListener('click', toggleFerriteDetail);
+    $('toggleFerriteRankingsBtn')?.addEventListener('click', toggleFerriteRankings);
+    $('analysisCanvas').addEventListener('mousemove', showAnalysisPoint);
+    $('analysisCanvas').addEventListener('click', showAnalysisPoint);
+    $('analysisCanvas').addEventListener('touchstart', showAnalysisPoint, { passive:true });
+    $('ferriteAnalyzerCanvas')?.addEventListener('mousemove', showFerritePoint);
+    $('ferriteAnalyzerCanvas')?.addEventListener('click', showFerritePoint);
+    $('ferriteAnalyzerCanvas')?.addEventListener('touchstart', showFerritePoint, { passive:true });
+    window.addEventListener('resize', () => {
+      if (currentTab === 'analysis') drawAnalysisChart();
+      if (currentTab === 'ferrite') drawFerriteAnalyzerChart(currentFerriteFilters().filteredRows);
+    });
+    window.addEventListener('beforeunload', event => {
+      if (!editingId && !duplicateDraftActive && (lastSaveCheck.ok || records.length === 0)) return;
+      const message = editingId
+        ? '編集中です。更新またはキャンセルしてください'
+        : duplicateDraftActive
+          ? '複製元から入力中です。追加または入力クリアしてください'
+        : '保存未確認です。閉じる前にJSONバックアップしてください';
+      event.preventDefault();
+      event.returnValue = message;
+      return message;
+    });
+    window.addEventListener('pagehide', () => {
+      if (records.length) {
+        try {
+          backupLatestRecords(records);
+          localStorage.setItem(HAD_RECORDS_KEY, '1');
+        } catch {}
+      }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && records.length) {
+        try {
+          backupLatestRecords(records);
+          localStorage.setItem(HAD_RECORDS_KEY, '1');
+        } catch {}
+      }
+    });
+  }
+
+  async function init() {
+    $('ferriteMaterial').innerHTML = ferriteMaterials.map(item => '<option value="' + item + '">' + item + '</option>').join('');
+    $('analysisX').innerHTML = analysisOptions.map(item => '<option value="' + item.key + '">' + item.label + '</option>').join('');
+    $('analysisY').innerHTML = $('analysisX').innerHTML;
+    $('analysisX').value = 'frequency';
+    $('analysisY').value = 'phaseDeg';
+    setupFerriteAnalyzerUi();
+    $('analysisMaterial').innerHTML = '<option value="">全て</option>';
+    setMobileStorageWarning();
+    try {
+      await openIndexedDB();
+    } catch {
+      setStorageMessage('IndexedDBを開けませんでした。localStorageバックアップで起動します。', 'status-warn');
+    }
+    await loadRecords();
+    if (!restoreEditDraft()) clearForm();
+    render();
+    updatePreview();
+    updateJsonPreview();
+    bindEvents();
+  }
+
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
