@@ -1375,6 +1375,9 @@ const AppState = (() => {
   const isSimpleExcitationDetect = () => state.config === 'excitationDetect';
   const isCross = () => isDifferential() && ['cross', 'crossFerrite'].includes(state.roles.detect.type);
   const hasCrossFerrite = () => isDifferential() && state.roles.detect.type === 'crossFerrite';
+  const usesDistanceConditions = () => !['insert', 'through'].includes(state.probeStyle);
+  const usesDifferentialDistanceConditions = () => isDifferential() && !isCross() && usesDistanceConditions();
+  const usesExcitationDistanceConditions = () => hasExcitation() && usesDistanceConditions();
 
   function resetDifferentialDistanceInputs() {
     state.diffDistanceMode = 'recommend';
@@ -1469,6 +1472,9 @@ const AppState = (() => {
     isSimpleExcitationDetect,
     isCross,
     hasCrossFerrite,
+    usesDistanceConditions,
+    usesDifferentialDistanceConditions,
+    usesExcitationDistanceConditions,
     setValue,
     setRoleValue,
     setInputValue,
@@ -1996,32 +2002,34 @@ const Calculation = (() => {
     result.detectCorrectionLabel = correctionLabel(result.detectTypeFactor);
     result.detectEstimated = singles.detect.fwd.Z * result.detectTypeFactor * result.loadFactor;
 
+    const usesExcitationDistance = AppState.usesExcitationDistanceConditions();
+
     if (AppState.hasDualExcitation()) {
       const d1 = readNumber('ex1Distance', 1);
       const d2 = readNumber('ex2Distance', 1);
       const gap = readNumber('excitationGap', 2);
-      result.couplingFactor1 = couplingByDistance(d1);
-      result.couplingFactor2 = couplingByDistance(d2);
+      result.couplingFactor1 = usesExcitationDistance ? couplingByDistance(d1) : 1;
+      result.couplingFactor2 = usesExcitationDistance ? couplingByDistance(d2) : 1;
       result.excitation1TypeFactor = typeFactor('excitation1');
       result.excitation2TypeFactor = typeFactor('excitation2');
       result.excitation1CorrectionLabel = correctionLabel(result.excitation1TypeFactor);
       result.excitation2CorrectionLabel = correctionLabel(result.excitation2TypeFactor);
       result.excitation1Estimated = singles.excitation1.fwd.Z * result.excitation1TypeFactor * result.couplingFactor1;
       result.excitation2Estimated = singles.excitation2.fwd.Z * result.excitation2TypeFactor * result.couplingFactor2;
-      result.balanceDelta = Math.abs(d1 - d2);
+      result.balanceDelta = usesExcitationDistance ? Math.abs(d1 - d2) : 0;
       result.excitationGap = gap;
-      if (result.balanceDelta > 0.5) result.warnings.push('励磁1と励磁2の距離差が大きいため、磁気バランスが崩れる可能性があります。');
+      if (usesExcitationDistance && result.balanceDelta > 0.5) result.warnings.push('励磁1と励磁2の距離差が大きいため、磁気バランスが崩れる可能性があります。');
       if (readValue('excitationPolarity', 'same') === 'reverse') result.warnings.push('逆相励磁では磁界分布が変わります。実測確認を推奨します。');
-      if (Math.min(d1, d2) < 0.2) result.warnings.push('結合が強すぎる可能性があります。共振・飽和・信号漏れに注意してください。');
+      if (usesExcitationDistance && Math.min(d1, d2) < 0.2) result.warnings.push('結合が強すぎる可能性があります。共振・飽和・信号漏れに注意してください。');
     } else if (AppState.hasExcitation()) {
       const distance = readNumber('exciteDetectDistance', 1);
-      result.positionFactor = AppState.isSimpleExcitationDetect() ? excitationPositionFactor() : 1;
-      result.couplingFactor = couplingByDistance(distance) * result.positionFactor;
+      result.positionFactor = AppState.isSimpleExcitationDetect() && usesExcitationDistance ? excitationPositionFactor() : 1;
+      result.couplingFactor = (usesExcitationDistance ? couplingByDistance(distance) : 1) * result.positionFactor;
       if (AppState.isSimpleExcitationDetect()) result.detectEstimated *= result.positionFactor;
       result.excitationTypeFactor = typeFactor('excitation');
       result.excitationCorrectionLabel = correctionLabel(result.excitationTypeFactor);
       result.excitationEstimated = singles.excitation.fwd.Z * result.excitationTypeFactor * result.couplingFactor;
-      if (distance < 0.2) result.warnings.push('結合が強すぎる可能性があります。共振・飽和・信号漏れに注意してください。');
+      if (usesExcitationDistance && distance < 0.2) result.warnings.push('結合が強すぎる可能性があります。共振・飽和・信号漏れに注意してください。');
     }
     return result;
   }
@@ -2162,6 +2170,7 @@ const Calculation = (() => {
   function optimizeDifferentialByProbeStyleV2() {
     if (!AppState.isDifferential()) return null;
     if (AppState.isCross()) return null;
+    if (!AppState.usesDifferentialDistanceConditions()) return null;
 
     const probeStyle = AppState.state.probeStyle || 'surface';
     const probeLabel = AppState.PROBE_STYLES[probeStyle] || AppState.PROBE_STYLES.surface;
@@ -3079,17 +3088,20 @@ const Render = (() => {
   function renderCouplingInputs() {
     const diffRows = [];
     const excitationRows = [];
-    if (AppState.isDifferential() && !AppState.isCross()) {
+    const showDistanceSections = AppState.usesDistanceConditions();
+    const showDifferentialDistance = AppState.usesDifferentialDistanceConditions();
+    const showExcitationDistance = AppState.usesExcitationDistanceConditions();
+    if (showDifferentialDistance) {
       diffRows.push(
         numberInput('flawWidth', 'きず幅', '0.5', 'mm'),
         numberInput('inspectDepth', '検査深さ', '0.05', 'mm', '0.01', '0'),
         numberInput('diffDistance', '端面ギャップ', '0.5', 'mm')
       );
     }
-    if (AppState.isSimpleExcitationDetect()) {
+    if (showExcitationDistance && AppState.isSimpleExcitationDetect()) {
       excitationRows.push(excitationPositionSelect());
     }
-    if (AppState.hasExcitation()) {
+    if (showExcitationDistance) {
       if (AppState.hasDualExcitation()) excitationRows.push(
         numberInput('ex1Distance', '励磁1-検出コイル距離', '1.0', 'mm'),
         numberInput('ex2Distance', '励磁2-検出コイル距離', '1.0', 'mm'),
@@ -3098,8 +3110,8 @@ const Render = (() => {
       );
       else excitationRows.push(numberInput('exciteDetectDistance', '励磁コイル-検出コイル距離', '1.0', 'mm'));
     }
-    $('couplingSection').classList.toggle('hidden', false);
-    $('excitationCouplingSection')?.classList.toggle('hidden', excitationRows.length === 0);
+    $('couplingSection').classList.toggle('hidden', !showDistanceSections);
+    $('excitationCouplingSection')?.classList.toggle('hidden', !showExcitationDistance || excitationRows.length === 0);
     $('diffEmptyMessage')?.classList.toggle('hidden', AppState.isDifferential());
     setHtml('couplingInputs', diffRows.join(''));
     setHtml('excitationCouplingInputs', excitationRows.join(''));
@@ -3176,21 +3188,24 @@ const Render = (() => {
 
   function renderExcitationEstimatedCards(estimated) {
     const cards = [];
+    const showExcitationDistance = AppState.usesExcitationDistanceConditions();
     if (AppState.hasExcitation() && !AppState.hasDualExcitation()) cards.push(
       estimatedZCard(estimated, 'excitation'),
       card('励磁補正', estimated.excitationCorrectionLabel),
       card('励磁・検出結合', format(estimated.couplingFactor, 2), 'x')
     );
-    if (AppState.isSimpleExcitationDetect()) cards.push(card('励磁位置補正', format(estimated.positionFactor, 2), 'x'));
-    if (AppState.hasDualExcitation()) cards.push(
-      estimatedZCard(estimated, 'excitation1'),
-      estimatedZCard(estimated, 'excitation2'),
-      card('励磁1補正', estimated.excitation1CorrectionLabel),
-      card('励磁2補正', estimated.excitation2CorrectionLabel),
-      card('励磁1結合', format(estimated.couplingFactor1, 2), 'x'),
-      card('励磁2結合', format(estimated.couplingFactor2, 2), 'x'),
-      card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm')
-    );
+    if (showExcitationDistance && AppState.isSimpleExcitationDetect()) cards.push(card('励磁位置補正', format(estimated.positionFactor, 2), 'x'));
+    if (AppState.hasDualExcitation()) {
+      cards.push(
+        estimatedZCard(estimated, 'excitation1'),
+        estimatedZCard(estimated, 'excitation2'),
+        card('励磁1補正', estimated.excitation1CorrectionLabel),
+        card('励磁2補正', estimated.excitation2CorrectionLabel),
+        card('励磁1結合', format(estimated.couplingFactor1, 2), 'x'),
+        card('励磁2結合', format(estimated.couplingFactor2, 2), 'x')
+      );
+      if (showExcitationDistance) cards.push(card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm'));
+    }
     return cards.join('');
   }
 
@@ -3199,21 +3214,24 @@ const Render = (() => {
       estimatedZCard(estimated, 'detect'),
       card('検出補正', estimated.detectCorrectionLabel),
     ];
+    const showExcitationDistance = AppState.usesExcitationDistanceConditions();
     if (AppState.hasExcitation() && !AppState.hasDualExcitation()) cards.push(
       estimatedZCard(estimated, 'excitation'),
       card('励磁補正', estimated.excitationCorrectionLabel),
       card('励磁・検出結合', format(estimated.couplingFactor, 2), 'x')
     );
-    if (AppState.isSimpleExcitationDetect()) cards.push(card('コイル配置補正', format(estimated.positionFactor, 2), 'x'));
-    if (AppState.hasDualExcitation()) cards.push(
-      estimatedZCard(estimated, 'excitation1'),
-      estimatedZCard(estimated, 'excitation2'),
-      card('励磁1補正', estimated.excitation1CorrectionLabel),
-      card('励磁2補正', estimated.excitation2CorrectionLabel),
-      card('励磁1結合', format(estimated.couplingFactor1, 2), 'x'),
-      card('励磁2結合', format(estimated.couplingFactor2, 2), 'x'),
-      card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm')
-    );
+    if (showExcitationDistance && AppState.isSimpleExcitationDetect()) cards.push(card('コイル配置補正', format(estimated.positionFactor, 2), 'x'));
+    if (AppState.hasDualExcitation()) {
+      cards.push(
+        estimatedZCard(estimated, 'excitation1'),
+        estimatedZCard(estimated, 'excitation2'),
+        card('励磁1補正', estimated.excitation1CorrectionLabel),
+        card('励磁2補正', estimated.excitation2CorrectionLabel),
+        card('励磁1結合', format(estimated.couplingFactor1, 2), 'x'),
+        card('励磁2結合', format(estimated.couplingFactor2, 2), 'x')
+      );
+      if (showExcitationDistance) cards.push(card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm'));
+    }
     return cards.join('');
   }
 
@@ -3406,6 +3424,7 @@ const Render = (() => {
 
   function renderExcitationSummary(estimated) {
     const hasExcitation = AppState.hasExcitation();
+    const showExcitationDistance = AppState.usesExcitationDistanceConditions();
     $('excitationEstimateSection')?.classList.toggle('hidden', !hasExcitation);
     if (!hasExcitation) {
       setHtml('excitationEstimatedResults', '');
@@ -3416,21 +3435,23 @@ const Render = (() => {
       const d1 = readRenderNumber('ex1Distance', 1);
       const d2 = readRenderNumber('ex2Distance', 1);
       const gap = readRenderNumber('excitationGap', 2);
+      if (showExcitationDistance) {
+        cards.push(
+          card('励磁1-検出距離', format(d1, 2), 'mm'),
+          card('励磁2-検出距離', format(d2, 2), 'mm'),
+          card('励磁1-励磁2距離', format(gap, 2), 'mm'),
+          card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm')
+        );
+      }
       cards.push(
-        card('励磁1-検出距離', format(d1, 2), 'mm'),
-        card('励磁2-検出距離', format(d2, 2), 'mm'),
-        card('励磁1-励磁2距離', format(gap, 2), 'mm'),
         card('励磁1結合', format(estimated.couplingFactor1, 2), 'x'),
-        card('励磁2結合', format(estimated.couplingFactor2, 2), 'x'),
-        card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm')
+        card('励磁2結合', format(estimated.couplingFactor2, 2), 'x')
       );
     } else {
       const distance = readRenderNumber('exciteDetectDistance', 1);
-      cards.push(
-        card('励磁-検出距離', format(distance, 2), 'mm'),
-        card('結合係数', format(estimated.couplingFactor, 2), 'x')
-      );
-      if (AppState.isSimpleExcitationDetect()) cards.push(card('励磁位置補正', format(estimated.positionFactor, 2), 'x'));
+      if (showExcitationDistance) cards.push(card('励磁-検出距離', format(distance, 2), 'mm'));
+      cards.push(card('結合係数', format(estimated.couplingFactor, 2), 'x'));
+      if (showExcitationDistance && AppState.isSimpleExcitationDetect()) cards.push(card('励磁位置補正', format(estimated.positionFactor, 2), 'x'));
     }
     setHtml('excitationEstimatedResults', renderExcitationEstimatedCards(estimated));
   }
@@ -3515,27 +3536,34 @@ const Render = (() => {
       ]));
     }
     if (AppState.hasExcitation()) {
+      const showExcitationDistance = AppState.usesExcitationDistanceConditions();
       const role = AppState.hasDualExcitation() ? 'excitation1' : 'excitation';
       const estimatedZ = AppState.hasDualExcitation() ? tunedEstimatedZ(result.estimated, 'excitation1') : tunedEstimatedZ(result.estimated, 'excitation');
       const items = ['励磁：<strong>あり</strong>'];
       items.push(...roleSpecItems(role, result.singles[role], estimatedZ));
       if (AppState.hasDualExcitation()) {
         items.splice(1, 0, '励磁コイル：<strong>共通設計 ×2</strong>', '配置：<strong>左右対称</strong>');
+        if (showExcitationDistance) {
+          items.push(
+            '励磁1-検出距離：<strong>' + format(readRenderNumber('ex1Distance', 1), 2) + 'mm</strong>',
+            '励磁2-検出距離：<strong>' + format(readRenderNumber('ex2Distance', 1), 2) + 'mm</strong>',
+            '励磁1-励磁2距離：<strong>' + format(readRenderNumber('excitationGap', 2), 2) + 'mm</strong>',
+            '極性：<strong>' + polarityLabel(getInputValue('excitationPolarity', 'same')) + '</strong>',
+            '2励磁バランス：<strong>' + format(result.estimated.balanceDelta, 2) + 'mm</strong>'
+          );
+        }
         items.push(
-          '励磁1-検出距離：<strong>' + format(readRenderNumber('ex1Distance', 1), 2) + 'mm</strong>',
-          '励磁2-検出距離：<strong>' + format(readRenderNumber('ex2Distance', 1), 2) + 'mm</strong>',
-          '励磁1-励磁2距離：<strong>' + format(readRenderNumber('excitationGap', 2), 2) + 'mm</strong>',
-          '極性：<strong>' + polarityLabel(getInputValue('excitationPolarity', 'same')) + '</strong>',
           '励磁1結合：<strong>' + format(result.estimated.couplingFactor1, 2) + 'x</strong>',
-          '励磁2結合：<strong>' + format(result.estimated.couplingFactor2, 2) + 'x</strong>',
-          '2励磁バランス：<strong>' + format(result.estimated.balanceDelta, 2) + 'mm</strong>'
+          '励磁2結合：<strong>' + format(result.estimated.couplingFactor2, 2) + 'x</strong>'
         );
       } else {
-        items.push(
-          '励磁-検出距離：<strong>' + format(readRenderNumber('exciteDetectDistance', 1), 2) + 'mm</strong>',
-          AppState.isSimpleExcitationDetect() ? '励磁位置：<strong>' + getExcitationPositionLabel(getInputValue('excitationPosition', 'outer')) + '</strong>' : '',
-          '結合：<strong>' + format(result.estimated.couplingFactor, 2) + 'x</strong>'
-        );
+        if (showExcitationDistance) {
+          items.push(
+            '励磁-検出距離：<strong>' + format(readRenderNumber('exciteDetectDistance', 1), 2) + 'mm</strong>',
+            AppState.isSimpleExcitationDetect() ? '励磁位置：<strong>' + getExcitationPositionLabel(getInputValue('excitationPosition', 'outer')) + '</strong>' : ''
+          );
+        }
+        items.push('結合：<strong>' + format(result.estimated.couplingFactor, 2) + 'x</strong>');
       }
       blocks.push(specBlock('励磁条件', items));
     } else {
@@ -3843,7 +3871,7 @@ const Render = (() => {
     }
     lines.push(previewLine('L', format(fwd.L_uH, 2) + ' uH'));
     lines.push(previewLine('表皮深さ', format(fwd.skinD_mm, 3) + ' mm', 'text-muted'));
-    if (role === 'detect' && AppState.hasExcitation()) {
+    if (role === 'detect' && AppState.usesExcitationDistanceConditions()) {
       const position = Calculation.readValue('excitationPosition', 'outer');
       lines.push(previewSeparator());
       lines.push(previewLine('配置', getExcitationPositionLabel(position)) + '（結合 ' + textSpan('text-info', getCouplingStrengthLabel(position)) + '・' + textSpan('text-muted', getExcitationUsageLabel(position)) + '）');

@@ -1279,6 +1279,7 @@ tr:last-child td { border-bottom:0; }
   const LAST_JSON_COPY_AT_KEY = 'windingCalibrator.lastJsonCopyAt.v1';
   const LAST_JSON_EXPORT_AT_KEY = 'windingCalibrator.lastJsonExportAt.v1';
   const EDIT_DRAFT_STORAGE_KEY = 'windingCalibrator.editDraft.v1';
+  const FORM_DRAFT_STORAGE_KEY = 'windingCalibrator.formDraft.v1';
   const LAST_EXPORT_COUNT_KEY = 'windingCalibrator.lastExportCount.v1';
   const FERRITE_PRESET_STORAGE_KEY = 'windingCalibrator.ferriteAnalyzerPresets.v1';
   const DB_NAME = 'windingCalibratorDB';
@@ -1472,6 +1473,7 @@ tr:last-child td { border-bottom:0; }
   let lastSaveCheck = { ok:false, idbCount:null, localCount:null, latestCount:null, message:'未確認' };
   let editingId = null;
   let editDraft = null;
+  let formDraft = null;
   let duplicateDraftActive = false;
   let lastSavedRecordsSnapshot = [];
   let storageRiskMessage = '';
@@ -3603,6 +3605,41 @@ tr:last-child td { border-bottom:0; }
         : '';
   }
 
+  function formValuesFromInputs() {
+    return Object.fromEntries(fields.map(key => [key, $(key)?.value ?? '']));
+  }
+
+  function formHasUserInput(values) {
+    return fields.some(key => {
+      const value = String(values?.[key] ?? '').trim();
+      if (!value) return false;
+      if (key === 'coilType') return value !== 'air';
+      if (key === 'bobbinShape') return value !== 'round';
+      if (key === 'ferriteShape') return value !== 'none';
+      return true;
+    });
+  }
+
+  function persistFormDraft() {
+    if (editingId) return;
+    const values = formValuesFromInputs();
+    if (!formHasUserInput(values) && !duplicateDraftActive) {
+      discardFormDraft();
+      return;
+    }
+    formDraft = {
+      form: values,
+      duplicateDraftActive,
+      savedAt: new Date().toISOString()
+    };
+    sessionStorage.setItem(FORM_DRAFT_STORAGE_KEY, JSON.stringify(formDraft));
+  }
+
+  function discardFormDraft() {
+    formDraft = null;
+    sessionStorage.removeItem(FORM_DRAFT_STORAGE_KEY);
+  }
+
   function persistEditDraft() {
     if (!editingId) {
       sessionStorage.removeItem(EDIT_DRAFT_STORAGE_KEY);
@@ -3623,6 +3660,10 @@ tr:last-child td { border-bottom:0; }
 
   function updateEditDraftFromForm() {
     if (editingId) persistEditDraft();
+  }
+
+  function updateFormDraftFromForm() {
+    if (!editingId) persistFormDraft();
   }
 
   function exitDuplicateDraft() {
@@ -3668,6 +3709,31 @@ tr:last-child td { border-bottom:0; }
     return true;
   }
 
+  function restoreFormDraft() {
+    let draft = null;
+    try {
+      draft = JSON.parse(sessionStorage.getItem(FORM_DRAFT_STORAGE_KEY) || 'null');
+    } catch {
+      draft = null;
+    }
+    if (!draft || !draft.form || !formHasUserInput(draft.form)) {
+      discardFormDraft();
+      return false;
+    }
+    editingId = null;
+    editDraft = null;
+    formDraft = draft;
+    duplicateDraftActive = !!draft.duplicateDraftActive;
+    fields.forEach(key => {
+      if ($(key)) $(key).value = draft.form[key] ?? '';
+    });
+    syncEditUi();
+    updateShapeVisibility();
+    updatePreview();
+    $('formStatus').textContent = '前回の入力途中の値を復元しました。追加または入力クリアしてください。';
+    return true;
+  }
+
   function clearForm(options = {}) {
     if (editingId && !options.force) {
       const ok = confirm('編集中です。編集をキャンセルして入力をクリアしますか？');
@@ -3682,6 +3748,7 @@ tr:last-child td { border-bottom:0; }
       else $(key).value = '';
     });
     updatePreview();
+    discardFormDraft();
     if (!options.keepStatus) $('formStatus').textContent = '';
     return true;
   }
@@ -3786,6 +3853,7 @@ tr:last-child td { border-bottom:0; }
   function editRecord(id) {
     const rec = records.find(item => item.id === id);
     if (!rec) return;
+    discardFormDraft();
     editingId = id;
     fillForm(rec);
     persistEditDraft();
@@ -3808,6 +3876,7 @@ tr:last-child td { border-bottom:0; }
     duplicateDraftActive = true;
     syncEditUi();
     updatePreview();
+    persistFormDraft();
     $('formStatus').textContent = '複製＝入力欄へコピー。変更後に追加で保存してください。';
     $('editStatus').scrollIntoView({ block:'nearest' });
   }
@@ -4129,23 +4198,28 @@ tr:last-child td { border-bottom:0; }
       $(key).addEventListener('input', () => {
         schedulePreviewUpdate();
         updateEditDraftFromForm();
+        updateFormDraftFromForm();
       });
     });
     $('bobbinShape').addEventListener('change', () => {
       schedulePreviewUpdate();
       updateEditDraftFromForm();
+      updateFormDraftFromForm();
     });
     $('ferriteShape').addEventListener('change', () => {
       schedulePreviewUpdate();
       updateEditDraftFromForm();
+      updateFormDraftFromForm();
     });
     $('coilType').addEventListener('change', () => {
       schedulePreviewUpdate();
       updateEditDraftFromForm();
+      updateFormDraftFromForm();
     });
     $('ferriteMaterial').addEventListener('change', () => {
       schedulePreviewUpdate();
       updateEditDraftFromForm();
+      updateFormDraftFromForm();
     });
     $('addBtn').addEventListener('click', addRecord);
     $('clearFormBtn').addEventListener('click', clearForm);
@@ -4225,6 +4299,7 @@ tr:last-child td { border-bottom:0; }
       if (currentTab === 'ferrite') drawFerriteAnalyzerChart(currentFerriteFilters().filteredRows);
     });
     window.addEventListener('beforeunload', event => {
+      persistFormDraft();
       if (!editingId && !duplicateDraftActive && (lastSaveCheck.ok || records.length === 0)) return;
       const message = editingId
         ? '編集中です。更新またはキャンセルしてください'
@@ -4236,6 +4311,7 @@ tr:last-child td { border-bottom:0; }
       return message;
     });
     window.addEventListener('pagehide', () => {
+      persistFormDraft();
       if (records.length) {
         try {
           backupLatestRecords(records);
@@ -4244,6 +4320,7 @@ tr:last-child td { border-bottom:0; }
       }
     });
     document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') persistFormDraft();
       if (document.visibilityState === 'hidden' && records.length) {
         try {
           backupLatestRecords(records);
@@ -4268,7 +4345,7 @@ tr:last-child td { border-bottom:0; }
       setStorageMessage('IndexedDBを開けませんでした。localStorageバックアップで起動します。', 'status-warn');
     }
     await loadRecords();
-    if (!restoreEditDraft()) clearForm();
+    if (!restoreEditDraft() && !restoreFormDraft()) clearForm();
     render();
     updatePreview();
     updateJsonPreview();
