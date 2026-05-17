@@ -1497,6 +1497,69 @@ const UI = (() => {
       conditionWarnings.push('異材判別：基準材との比較、リフトオフ一定、振幅差＋位相差の確認が重要です。');
     }
 
+    const targetSkinDepth_mm = Physics.skinDepth_mm(freqs.fOpt, mat.mur, mat.sigma);
+    const ectCautions = [...new Set([...(configResult.cautions || []), ...conditionWarnings])];
+    const inspectionCondition = {
+      purpose: modeLabel,
+      mode: autoConfig.mode,
+      flawType: autoConfig.mode === 'material'
+        ? '材質違い'
+        : (DIRECTION_LABELS[autoConfig.direction] || autoConfig.direction),
+      flawWidth_mm: crackWidth_mm,
+      flawDepth_mm: depth_mm,
+      inspectDepth_mm: depth_mm,
+      material: mat.name,
+      frequency_kHz: fOpt_kHz,
+      frequencyLabel: fOpt.v + fOpt.u,
+      skinDepth_mm: Number(targetSkinDepth_mm.toFixed(4)),
+      recommendedMode: configResult.json.configDisplay,
+      cautions: ectCautions,
+    };
+    configResult.json.inspectionCondition = inspectionCondition;
+    Object.assign(configResult.json, {
+      app: 'ECT',
+      version: '2.1',
+      inspectionPurpose: inspectionCondition.purpose,
+      flawType: inspectionCondition.flawType,
+      flawWidth_mm: inspectionCondition.flawWidth_mm,
+      flawDepth_mm: inspectionCondition.flawDepth_mm,
+      inspectDepth_mm: inspectionCondition.inspectDepth_mm,
+      materialName: inspectionCondition.material,
+      skinDepth_mm: inspectionCondition.skinDepth_mm,
+      recommendedMode: inspectionCondition.recommendedMode,
+      recommendedFerriteBand: autoConfig.mode === 'material' ? configResult.ferrite : ferriteText,
+      recommendedDetectMethod: configResult.json.needCross ? 'クロス差動検出' : (configResult.json.needDifferential ? '差動検出' : '単独検出'),
+      recommendedExcitationMethod: configResult.json.needExcitation ? (configResult.json.configDisplay || configResult.json.config) : '検出コイル単独',
+      recommendedDifferentialDistance: configResult.json.recommendedDiffSpacing,
+      cautions: inspectionCondition.cautions,
+    });
+    configResult.json.metadata = {
+      app: 'ECT',
+      version: '2.1',
+      exportedAt: new Date().toISOString(),
+      inspectionCondition,
+    };
+    configResult.json.design = {
+      config: configResult.json.config,
+      configLabel: configResult.json.configDisplay,
+      needDifferential: configResult.json.needDifferential,
+      needExcitation: configResult.json.needExcitation,
+      needCross: configResult.json.needCross,
+      recommended: {
+        frequency_kHz: fOpt_kHz,
+        frequencyBand_kHz: configResult.json.recommendedFrequencyBand_kHz,
+        frequencyBandLabel: configResult.json.recommendedFrequencyBandLabel,
+        ferriteBand: configResult.json.recommendedFerriteBand,
+        detectMethod: configResult.json.recommendedDetectMethod,
+        excitationMethod: configResult.json.recommendedExcitationMethod,
+        differentialDistance: configResult.json.recommendedDifferentialDistance,
+        recommendedCable: configResult.json.recommendedCable,
+        initialCoilDesign: configResult.json.initialCoilDesign,
+      },
+    };
+    configResult.json.measurement = {};
+    configResult.json.correction = {};
+
     const basicDepthLabel = autoConfig.mode === 'material' ? '影響深さ' : '検査深さ';
     const summaryHtml =
       `<div class="summary-compact">

@@ -128,30 +128,96 @@ body {
   line-height:1.35;
 }
 .summary-chip strong { color:var(--text); }
+.config-summary-current {
+  border:1px solid rgba(227,179,65,.65);
+  border-radius:8px;
+  background:linear-gradient(135deg, rgba(88,166,255,.16), rgba(227,179,65,.10));
+  box-shadow:0 0 0 1px rgba(88,166,255,.10) inset;
+  padding:10px 11px;
+}
+.config-summary-label {
+  color:var(--muted);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.8px;
+  margin-bottom:5px;
+}
+.config-summary-name {
+  color:var(--gold);
+  font-family:'Rajdhani', 'Noto Sans JP', sans-serif;
+  font-size:18px;
+  font-weight:800;
+  line-height:1.25;
+}
+.section-title-meta {
+  margin-left:auto;
+  min-width:0;
+  border:1px solid rgba(139,148,158,.26);
+  border-radius:999px;
+  background:rgba(139,148,158,.08);
+  color:var(--muted);
+  padding:3px 8px;
+  font-family:'Noto Sans JP', sans-serif;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0;
+  line-height:1.35;
+  text-transform:none;
+  white-space:nowrap;
+}
 .spec-view {
   display:grid;
-  gap:10px;
+  gap:8px;
 }
+/* 完成仕様プレビュー。外寸プレビューと同じ箇条書き見た目で、一枚に収める。 */
 .spec-block {
-  border:1px solid var(--border);
-  border-radius:7px;
-  background:var(--surface-soft);
-  padding:10px 12px;
+  border:1px solid rgba(227,179,65,.45);
+  border-radius:6px;
+  background:rgba(227,179,65,.08);
+  padding:8px 9px;
 }
 .spec-block h3 {
   color:var(--accent);
-  font-size:12px;
-  margin-bottom:7px;
+  font-size:10px;
+  margin-bottom:6px;
   letter-spacing:.5px;
 }
 .spec-block ul {
   margin:0;
   padding-left:18px;
   color:var(--muted);
-  font-size:12px;
-  line-height:1.65;
+  font-size:10px;
+  line-height:1.6;
 }
 .spec-block strong { color:var(--text); }
+.spec-block.single {
+  padding:8px 9px;
+}
+.spec-block.single ul {
+  padding-left:0;
+  list-style:none;
+}
+.spec-block.single li {
+  padding:0;
+  overflow-wrap:anywhere;
+}
+.spec-block.single li + li:not(.spec-subhead-row) {
+  margin-top:2px;
+}
+.spec-block.single li.spec-subhead-row {
+  border-top:1px solid rgba(227,179,65,.34);
+  margin-top:7px;
+  padding-top:7px;
+}
+.spec-block.single li.spec-subhead-row:first-child {
+  border-top:0;
+  margin-top:0;
+  padding-top:0;
+}
+.spec-subhead {
+  color:var(--accent);
+  font-weight:800;
+}
 .section {
   background:var(--surface);
   border:1px solid var(--border);
@@ -479,6 +545,24 @@ body {
   box-shadow:0 2px 10px rgba(56,139,253,.3);
 }
 .calc-btn:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(56,139,253,.4); }
+.calc-btn:active {
+  background:linear-gradient(135deg, #f59e0b, #e3b341);
+  box-shadow:0 0 0 3px rgba(227,179,65,.20), 0 0 22px rgba(245,158,11,.55);
+  transform:translateY(1px) scale(.99);
+}
+.calc-btn.warm-press {
+  animation:warmPressGlow .46s ease-out;
+}
+@keyframes warmPressGlow {
+  0% {
+    background:linear-gradient(135deg, #f97316, #e3b341);
+    box-shadow:0 0 0 0 rgba(227,179,65,.45), 0 0 24px rgba(249,115,22,.72);
+  }
+  100% {
+    background:linear-gradient(135deg, #1f6feb, #388bfd);
+    box-shadow:0 2px 10px rgba(56,139,253,.3);
+  }
+}
 .calc-btn:disabled { transform:none; }
 #tab-cable .calc-btn:hover { transform:none; }
 .calc-btn.loading {
@@ -516,6 +600,22 @@ body {
 .result-card.warn .result-unit { color:var(--gold); }
 .result-card.bad .result-value,
 .result-card.bad .result-unit { color:var(--accent3); }
+.integration-status-grid {
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:6px;
+}
+.integration-status-item {
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:7px;
+  background:var(--surface2);
+}
+.integration-status-item b { display:block; color:var(--accent); font-size:10px; margin-bottom:2px; }
+.integration-status-item span { color:var(--text); font-size:12px; font-weight:700; }
+.integration-actions { display:grid; gap:8px; }
+.integration-actions textarea { min-height:92px; }
+.mini-status { font-size:11px; color:var(--muted); margin-top:6px; line-height:1.5; }
 .result-list {
   color:var(--muted);
   font-size:12px;
@@ -523,7 +623,28 @@ body {
   padding-left:1.1em;
 }
 .result-list strong { color:var(--text); }
-
+#resultArea:not(.hidden) {
+  display:flex;
+  flex-direction:column;
+}
+#integrationStatusSection { order:2; }
+#wcBridgeSection { order:3; }
+#designSpecSection { order:1; }
+#cableReflectSection { order:4; }
+#noticeSection { order:5; }
+details.section > summary.section-title {
+  cursor:pointer;
+  list-style:none;
+}
+details.section > summary.section-title::-webkit-details-marker { display:none; }
+details.section:not([open]) > summary.section-title { margin-bottom:0; }
+details.section > summary.section-title::after {
+  content:'▼';
+  margin-left:auto;
+  color:var(--muted);
+  font-size:10px;
+}
+details.section[open] > summary.section-title::after { content:'▲'; }
 .data-table {
   width:100%;
   border-collapse:collapse;
@@ -561,6 +682,25 @@ body {
 }
 .tuning-actions .calc-btn {
   margin:0;
+}
+.section-title-help {
+  margin-left:auto;
+  border:1px solid rgba(227,179,65,.35);
+  border-radius:999px;
+  background:rgba(227,179,65,.08);
+  color:var(--gold);
+  padding:3px 8px;
+  font-family:'Noto Sans JP', sans-serif;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:0;
+  cursor:pointer;
+}
+.section-title-help:hover,
+.section-title-help.active {
+  border-color:rgba(227,179,65,.65);
+  background:rgba(227,179,65,.16);
+  color:var(--text);
 }
 .tuning-inline-results {
   min-width:0;
@@ -759,6 +899,22 @@ body {
   display:block;
   height:8px;
 }
+.preview-group-label {
+  display:block;
+  margin:2px 0 7px;
+  color:var(--accent);
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.4px;
+}
+.spec-export-actions {
+  display:flex;
+  gap:8px;
+  margin:0 0 8px;
+}
+.spec-export-actions .calc-btn {
+  margin:0;
+}
 .live-preview.warn {
   border-color:rgba(227,179,65,.45);
   background:rgba(227,179,65,.08);
@@ -836,11 +992,23 @@ body {
   .design-subtab { padding:7px 8px; font-size:10px; border-radius:6px; }
   .compact-summary { gap:5px; }
   .summary-chip { padding:4px 7px; font-size:10px; }
+  .config-summary-current { padding:8px 9px; }
+  .config-summary-name { font-size:16px; }
   .spec-block { padding:8px 10px; }
   .spec-block ul { font-size:11px; line-height:1.55; }
+  .spec-block.single ul { font-size:10px; line-height:1.6; }
   .section { padding:8px; margin-bottom:8px; border-radius:6px; }
   .section-title { margin-bottom:7px; gap:5px; font-size:11px; letter-spacing:.5px; }
+  .section-title-meta {
+    max-width:58%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    padding:2px 6px;
+    font-size:9px;
+  }
   .section-note { font-size:10px; line-height:1.45; margin-bottom:6px; }
+  .spec-export-actions { gap:6px; }
+  .spec-export-actions .calc-btn { padding:8px 9px; font-size:10px; }
   .step-badge { width:18px; height:18px; font-size:10px; }
   .choice-grid { gap:6px; }
   .choice-btn { min-height:34px; padding:6px 5px; border-radius:6px; font-size:11px; }
@@ -884,12 +1052,78 @@ body {
   .tuner-point-item { grid-template-columns:1fr auto; }
   #targetZTunerCanvas { height:220px; }
   .result-grid { gap:6px; }
+  .integration-status-grid { grid-template-columns:1fr; }
   .result-card { padding:7px; border-radius:6px; }
   .result-label { font-size:8px; margin-bottom:2px; }
   .result-value { font-size:16px; }
   .result-value.big { font-size:24px; }
   .result-unit { font-size:9px; }
   .info-box, .warn-box { padding:7px 8px; font-size:10px; line-height:1.45; margin-bottom:8px; }
+}
+
+@media print {
+  @page {
+    size:A4 portrait;
+    margin:6mm;
+  }
+  body {
+    background:#fff !important;
+    font-size:10pt !important;
+  }
+  body * {
+    visibility:hidden !important;
+  }
+  #designSpecSection,
+  #designSpecSection * {
+    visibility:visible !important;
+  }
+  #designSpecSection {
+    position:absolute !important;
+    inset:0 auto auto 0 !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    background:#fff !important;
+    color:#000 !important;
+    box-shadow:none !important;
+    page-break-inside:avoid !important;
+  }
+  #designSpecSection .section-title,
+  #designSpecSection .spec-export-actions {
+    display:none !important;
+  }
+  #designSpecResults,
+  #designSpecResults * {
+    color:#000 !important;
+    background:#fff !important;
+    box-shadow:none !important;
+    print-color-adjust:exact;
+    -webkit-print-color-adjust:exact;
+  }
+  #designSpecResults .spec-block {
+    border:1px solid #777 !important;
+    border-radius:0 !important;
+    padding:3.5mm 4.5mm !important;
+    page-break-inside:avoid !important;
+  }
+  #designSpecResults .spec-block h3 {
+    color:#000 !important;
+    font-size:10.5pt !important;
+    margin-bottom:2.4mm !important;
+  }
+  #designSpecResults .spec-block ul {
+    font-size:7.2pt !important;
+    line-height:1.26 !important;
+  }
+  #designSpecResults .spec-block.single li.spec-subhead-row {
+    border-top:1px solid #aaa !important;
+    margin-top:1.3mm !important;
+    padding-top:1.3mm !important;
+  }
+  #designSpecResults .spec-subhead {
+    color:#000 !important;
+  }
 }
 </style>
 </head>
@@ -911,7 +1145,7 @@ body {
     <nav class="design-subtabs" aria-label="コイル設計 小タブ">
       <button class="design-subtab active" id="designSubtabBtn-config" type="button" onclick="UI.switchDesignSubTab('config')">構成</button>
       <button class="design-subtab" id="designSubtabBtn-detect" type="button" onclick="UI.switchDesignSubTab('detect')">検出</button>
-      <button class="design-subtab" id="designSubtabBtn-excitation" type="button" onclick="UI.switchDesignSubTab('excitation')">励磁条件</button>
+      <button class="design-subtab" id="designSubtabBtn-excitation" type="button" onclick="UI.switchDesignSubTab('excitation')">励磁</button>
       <button class="design-subtab" id="designSubtabBtn-result" type="button" onclick="UI.switchDesignSubTab('result')">結果</button>
     </nav>
 
@@ -953,50 +1187,83 @@ body {
 
     <div class="design-subpanel" id="designSubtab-detect">
       <section class="section">
-        <div class="section-title"><span class="step-badge">D</span>検出コイル</div>
+        <div class="section-title"><span class="step-badge">D</span>検出コイル<span class="section-title-meta" id="detectConfigMeta"></span></div>
         <div class="input-grid" id="detectRoleInputs"></div>
+      </section>
+      <section class="section hidden" id="couplingSection">
+        <div class="section-title">差動距離入力</div>
+        <div id="diffEmptyMessage" class="info-box hidden">差動距離入力は、クロスコイル以外の差動構成で使用します。</div>
+        <div class="input-grid" id="couplingInputs"></div>
       </section>
       <section class="section hidden" id="detectEstimateSection">
         <div class="section-title">検出推定Z</div>
         <div class="result-grid" id="detectEstimatedResults"></div>
       </section>
-      <section class="section" id="couplingSection">
-        <div class="section-title"><span class="step-badge">Δ</span>差動条件</div>
-        <div id="diffEmptyMessage" class="info-box hidden">差動構成ではないため、差動距離の設定は不要です。</div>
-        <div class="input-grid" id="couplingInputs"></div>
-        <div class="live-preview hidden" id="differentialDistancePreview">差動距離プレビュー：計算中...</div>
-      </section>
-      <section class="section hidden" id="diffResultsSection">
-        <div class="section-title">差動距離まとめ</div>
-        <div class="result-grid" id="diffResults"></div>
-      </section>
       <section class="section" id="tuningSection">
-        <div class="section-title">検出コイル 実測補正・学習</div>
+        <div class="section-title">検出コイル 実測補正・学習<button class="section-title-help" id="tuningHelpToggle" type="button" onclick="UI.toggleTuningHelp()">（説明）</button></div>
         <div id="tuningArea"></div>
       </section>
     </div>
 
     <div class="design-subpanel" id="designSubtab-excitation">
       <section class="section" id="excitationRoleSection">
-        <div class="section-title"><span class="step-badge">E</span>励磁条件</div>
+        <div class="section-title"><span class="step-badge">E</span>励磁コイル<span class="section-title-meta" id="excitationConfigMeta"></span></div>
         <div id="excitationEmptyMessage" class="info-box hidden">励磁構成ではないため、励磁条件の設定は不要です。</div>
         <div class="input-grid" id="excitationRoleInputs"></div>
-      </section>
-      <section class="section" id="excitationCouplingSection">
-        <div class="section-title">励磁距離・結合条件</div>
         <div class="input-grid" id="excitationCouplingInputs"></div>
-        <div class="live-preview hidden" id="excitationDistancePreview">励磁距離プレビュー：計算中...</div>
       </section>
       <section class="section hidden" id="excitationEstimateSection">
-        <div class="section-title">励磁推定Z・結合</div>
+        <div class="section-title">励磁推定Z</div>
         <div class="result-grid" id="excitationEstimatedResults"></div>
       </section>
     </div>
 
     <div class="design-subpanel" id="designSubtab-result">
       <section id="resultArea" class="hidden">
-        <div class="section">
-          <div class="section-title">設計仕様まとめ</div>
+        <div class="section" id="integrationStatusSection">
+          <div class="section-title">3アプリ連携状態</div>
+          <div id="integrationStatus"></div>
+        </div>
+
+        <details class="section" id="wcBridgeSection">
+          <summary class="section-title">WINDING CALIBRATOR連携</summary>
+          <div class="integration-actions">
+            <div class="input-grid">
+              <div class="input-group">
+                <div class="input-label">WCへ送るコイル</div>
+                <div class="input-row"><select id="wcExportRole"></select></div>
+              </div>
+              <div class="input-group">
+                <div class="input-label">WC補正を反映するコイル</div>
+                <div class="input-row">
+                  <select id="wcImportRole">
+                    <option value="detect">検出</option>
+                    <option value="excitation1">励磁1</option>
+                    <option value="excitation2">励磁2</option>
+                    <option value="excitation">励磁</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="action-row">
+              <button class="calc-btn secondary" type="button" onclick="UI.copyWcJson()">WC JSONコピー</button>
+              <button class="calc-btn secondary" type="button" onclick="UI.openWcWithJson()">WCへ送る（別タブ自動貼り付け）</button>
+            </div>
+            <textarea class="textarea-input" id="wcJsonInput" placeholder='{"app":"WC","version":"2.1","correction":{...}}'></textarea>
+            <div class="action-row">
+              <button class="calc-btn secondary" type="button" onclick="UI.applyWcJson()">WC補正を自動反映</button>
+              <button class="calc-btn secondary" type="button" onclick="UI.pasteAndApplyWcJson()">貼り付け→自動反映→即計算</button>
+            </div>
+            <div id="wcBridgeStatus" class="mini-status"></div>
+          </div>
+        </details>
+
+        <div class="section" id="designSpecSection">
+          <div class="section-title">完成仕様プレビュー</div>
+          <div class="spec-export-actions">
+            <button class="calc-btn secondary" type="button" onclick="UI.exportDesignSpecPdf()">PDF</button>
+            <button class="calc-btn secondary" type="button" onclick="UI.exportDesignSpecImage()">画像保存</button>
+          </div>
           <div id="designSpecResults"></div>
         </div>
 
@@ -1005,14 +1272,13 @@ body {
           <button class="calc-btn secondary" type="button" onclick="UI.reflectCableFromDesign()">現在のコイル設計からケーブル選定へ反映</button>
         </div>
 
-        <div class="section">
+        <div class="section" id="noticeSection">
           <div class="section-title">注意メッセージ</div>
           <div id="noticeResults"></div>
         </div>
       </section>
     </div>
 
-    <button class="calc-btn" id="designCalcBtn" onclick="UI.calculate()">構成込み結果を更新</button>
     <div id="errorArea" class="hidden"></div>
   </div>
 
@@ -1304,8 +1570,44 @@ const CONFIG = {
     turnMode: 'targetZ',
   },
 };
-CONFIG.ferriteFactors = CONFIG.ferrite.factors;
-CONFIG.ferriteMaterials = CONFIG.ferrite.materials;
+
+/* Storage layer */
+const Storage = (() => {
+  function getJson(key, fallback = null) {
+    const fallbackValue = fallback === undefined ? null : fallback;
+    try {
+      if (typeof localStorage === 'undefined') return fallbackValue;
+      const raw = localStorage.getItem(key);
+      if (raw === null || raw === undefined || raw === '') return fallbackValue;
+      const parsed = JSON.parse(raw);
+      return parsed === undefined ? fallbackValue : parsed;
+    } catch (error) {
+      return fallbackValue;
+    }
+  }
+
+  function setJson(key, value) {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function remove(key) {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      localStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  return ({ getJson, setJson, remove });
+})();
 
 /* State layer */
 const AppState = (() => {
@@ -1331,20 +1633,14 @@ const AppState = (() => {
 
   function readStoredTuningCorrection() {
     const fallback = { values: defaultTuningCorrection(), updatedAt: '' };
-    try {
-      if (typeof localStorage === 'undefined') return fallback;
-      const raw = localStorage.getItem(TUNING_STORAGE_KEY);
-      if (!raw) return fallback;
-      const saved = JSON.parse(raw);
-      const values = defaultTuningCorrection();
-      Object.keys(values).forEach(role => {
-        const value = Number(saved[role]);
-        values[role] = isValidTuningFactor(value) ? value : 1;
-      });
-      return { values, updatedAt: saved.updatedAt || '' };
-    } catch (error) {
-      return fallback;
-    }
+    const saved = Storage.getJson(TUNING_STORAGE_KEY, null);
+    if (!saved) return fallback;
+    const values = defaultTuningCorrection();
+    Object.keys(values).forEach(role => {
+      const value = Number(saved[role]);
+      values[role] = isValidTuningFactor(value) ? value : 1;
+    });
+    return { values, updatedAt: saved.updatedAt || '' };
   }
 
   const storedTuning = readStoredTuningCorrection();
@@ -1368,6 +1664,8 @@ const AppState = (() => {
     tuningEnabled: false,
     tuningUpdatedAt: storedTuning.updatedAt,
     ectImport: null,
+    ectInfo: null,
+    wcImport: null,
     inputs: {},
   };
 
@@ -1380,8 +1678,8 @@ const AppState = (() => {
   const isCross = () => isDifferential() && ['cross', 'crossFerrite'].includes(state.roles.detect.type);
   const hasCrossFerrite = () => isDifferential() && state.roles.detect.type === 'crossFerrite';
   const usesDistanceConditions = () => !['insert', 'through'].includes(state.probeStyle);
-  const usesDifferentialDistanceConditions = () => isDifferential() && !isCross() && usesDistanceConditions();
-  const usesExcitationDistanceConditions = () => hasExcitation() && usesDistanceConditions();
+  const usesDifferentialDistanceConditions = () => isDifferential() && !isCross();
+  const usesExcitationDistanceConditions = () => hasExcitation();
   const showsDifferentialDistancePreview = () => isDifferential() && !isCross();
   const showsExcitationDistancePreview = () => hasExcitation();
 
@@ -1405,6 +1703,7 @@ const AppState = (() => {
   }
 
   function setRoleValue(role, key, value) {
+    if (key === 'turnMode') value = value === 'turns' ? 'turns' : 'targetZ';
     if (key === 'type') {
       const crossType = ['cross', 'crossFerrite'].includes(value);
       if (role !== 'detect' && crossType) value = 'air';
@@ -1416,6 +1715,14 @@ const AppState = (() => {
 
   function setInputValue(id, value) {
     state.inputs[id] = value;
+  }
+
+  function setEctInfo(info) {
+    state.ectInfo = info && Object.keys(info).length ? info : null;
+  }
+
+  function setWcImport(info) {
+    state.wcImport = info && Object.keys(info).length ? info : null;
   }
 
   function syncDualExcitationCommon() {
@@ -1448,22 +1755,13 @@ const AppState = (() => {
     const updatedAt = new Date().toISOString();
     state.tuningCorrection = values;
     state.tuningUpdatedAt = updatedAt;
-    try {
-      if (typeof localStorage !== 'undefined') {
-        localStorage.setItem(TUNING_STORAGE_KEY, JSON.stringify({ ...values, updatedAt }));
-      }
-    } catch (error) {
-      return false;
-    }
-    return true;
+    return Storage.setJson(TUNING_STORAGE_KEY, { ...values, updatedAt });
   }
 
   function resetTuningCorrection() {
     state.tuningCorrection = defaultTuningCorrection();
     state.tuningUpdatedAt = '';
-    try {
-      if (typeof localStorage !== 'undefined') localStorage.removeItem(TUNING_STORAGE_KEY);
-    } catch (error) {}
+    Storage.remove(TUNING_STORAGE_KEY);
   }
 
   return ({
@@ -1486,6 +1784,8 @@ const AppState = (() => {
     setValue,
     setRoleValue,
     setInputValue,
+    setEctInfo,
+    setWcImport,
     setTuningEnabled,
     setTuningCorrection,
     saveTuningCorrection,
@@ -1532,6 +1832,16 @@ const Coil = (() => {
     return 2 * Math.PI * f_Hz * L_H;
   }
 
+  function wireResistance_ohm(length_m, wireDia_mm) {
+    if (length_m <= 0 || wireDia_mm <= 0) return 0;
+    const area_m2 = Math.PI * (wireDia_mm / 1000 / 2) ** 2;
+    return length_m / (CONFIG.physics.copperConductivity * area_m2);
+  }
+
+  function impedanceMagnitude_ohm(XL_ohm, R_ohm) {
+    return Math.sqrt(XL_ohm ** 2 + R_ohm ** 2);
+  }
+
   function buildLayerTurns(baseTurns, maxLayers, windingMode) {
     if (!Number.isFinite(baseTurns) || !Number.isFinite(maxLayers) || baseTurns <= 0 || maxLayers <= 0) return [];
     const layers = [];
@@ -1575,14 +1885,17 @@ const Coil = (() => {
     const avgRadius_m = ((innerDia_mm / 2 + coilOD_mm / 2) / 2) / 1000;
     const length_m = length_mm / 1000;
     const L_H = inductanceCyl_H(turns, avgRadius_m, length_m);
-    const Z = impedance_ohm(freq_Hz, L_H);
+    const XL_ohm = impedance_ohm(freq_Hz, L_H);
+    const wireLength_m = 2 * Math.PI * avgRadius_m * turns;
+    const R_ohm = wireResistance_ohm(wireLength_m, wireDia_mm);
+    const Z = impedanceMagnitude_ohm(XL_ohm, R_ohm);
     const skinD_mm = Physics.skinDepth_mm(freq_Hz, 1, CONFIG.physics.copperConductivity);
     const gap_mm = (outerDia_mm - coilOD_mm) / 2;
     const fill_pct = windingHeight > 0 ? (requiredLayers * layerHeight_mm / windingHeight) * 100 : 0;
     return {
       windingHeight, maxLayers, baseTurns, turnsPerLayer, layerTurns, maxTurns,
       usedLayers: requiredLayers, calcLayers, coilOD_mm, avgRadius_m, length_m,
-      L_H, L_uH: L_H * 1e6, Z, skinD_mm, gap_mm, fill_pct,
+      L_H, L_uH: L_H * 1e6, XL_ohm, R_ohm, wireLength_m, Z, skinD_mm, gap_mm, fill_pct,
       overCapacity,
     };
   }
@@ -1598,8 +1911,9 @@ const Coil = (() => {
     const avgR0 = ((innerDia_mm / 2 + coilOD0 / 2) / 2) / 1000;
     const K0 = nagaokaK(avgR0, length_m);
     const area1 = Math.PI * avgR0 ** 2;
-    const Nt = Math.round(Math.sqrt(targetZ_ohm * length_m / (2 * Math.PI * freq_Hz * Physics.MU0 * area1 * K0)));
-    if (!isFinite(Nt) || Nt <= 0) return null;
+    const NtRaw = Math.round(Math.sqrt(targetZ_ohm * length_m / (2 * Math.PI * freq_Hz * Physics.MU0 * area1 * K0)));
+    if (!isFinite(NtRaw)) return null;
+    const Nt = Math.max(1, NtRaw);
     const requiredLayers = Nt > maxTurns ? maxLayers + 1 : countRequiredLayers(turnsPerLayer, Nt, windingMode, maxLayers);
     const calcLayers = Math.min(maxLayers, requiredLayers);
     const coilOD_mm = innerDia_mm + 2 * calcLayers * layerHeight_mm;
@@ -1627,14 +1941,17 @@ const Coil = (() => {
     const avgW_m = ((iw + coilW) / 2) / 1000;
     const len_m = len / 1000;
     const L_H = inductanceRect_H(N, avgH_m, avgW_m, len_m);
-    const Z = impedance_ohm(freq_Hz, L_H);
+    const XL_ohm = impedance_ohm(freq_Hz, L_H);
+    const wireLength_m = 2 * (avgH_m + avgW_m) * N;
+    const R_ohm = wireResistance_ohm(wireLength_m, wd);
+    const Z = impedanceMagnitude_ohm(XL_ohm, R_ohm);
     const skinD_mm = Physics.skinDepth_mm(freq_Hz, 1, CONFIG.physics.copperConductivity);
     const gap_mm = Math.min((oh - coilH) / 2, (ow - coilW) / 2);
     const fill_pct = eff > 0 ? (requiredLayers * layerHeight_mm / eff) * 100 : 0;
     return {
       eff, maxLayers, baseTurns, turnsPerLayer, layerTurns, maxTurns,
       usedLayers: requiredLayers, calcLayers, coilH, coilW, avgH_m, avgW_m, len_m,
-      L_H, L_uH: L_H * 1e6, Z, skinD_mm, gap_mm, fill_pct,
+      L_H, L_uH: L_H * 1e6, XL_ohm, R_ohm, wireLength_m, Z, skinD_mm, gap_mm, fill_pct,
       overCapacity,
     };
   }
@@ -1646,8 +1963,9 @@ const Coil = (() => {
     const equivR = Math.sqrt(area / Math.PI);
     const K = nagaokaK(equivR, len_m);
     const denom = 2 * Math.PI * freq_Hz * Physics.MU0 * area * K;
-    const Nt = Math.round(Math.sqrt(targetZ_ohm * len_m / denom));
-    if (!isFinite(Nt) || Nt <= 0) return null;
+    const NtRaw = Math.round(Math.sqrt(targetZ_ohm * len_m / denom));
+    if (!isFinite(NtRaw)) return null;
+    const Nt = Math.max(1, NtRaw);
     const requiredLayers = Nt > maxTurns ? maxLayers + 1 : countRequiredLayers(turnsPerLayer, Nt, windingMode, maxLayers);
     const calcLayers = Math.min(maxLayers, requiredLayers);
     const coilH = ih + 2 * calcLayers * layerHeight_mm;
@@ -1691,14 +2009,14 @@ const Calculation = (() => {
 
   function readNumber(id, fallback = null) {
     const element = document.getElementById(id);
-    const raw = element ? element.value : state.inputs[id];
+    const raw = state.inputs[id] !== undefined ? state.inputs[id] : (element ? element.value : undefined);
     const value = parseFloat(raw);
     return Number.isFinite(value) ? value : fallback;
   }
 
   function readValue(id, fallback = '') {
     const element = document.getElementById(id);
-    return element && element.value !== undefined ? element.value : (state.inputs[id] ?? fallback);
+    return state.inputs[id] !== undefined ? state.inputs[id] : (element && element.value !== undefined ? element.value : fallback);
   }
 
   function roleLabel(role) {
@@ -1709,7 +2027,8 @@ const Calculation = (() => {
     if (!Number.isFinite(value) || value <= 0) throw Error(message);
   }
 
-  function directInverseResult(turns, fwd) {
+  function directInverseResult(turns, fwd, targetZ_ohm = null) {
+    const targetReachable = !Number.isFinite(targetZ_ohm) || turns < fwd.maxTurns || fwd.Z >= targetZ_ohm * 0.995;
     return {
       Nt: turns,
       usedLayers: fwd.usedLayers,
@@ -1718,17 +2037,27 @@ const Calculation = (() => {
       coilW: fwd.coilW,
       gap_mm: fwd.gap_mm,
       fill_pct: fwd.fill_pct,
-      fits: turns <= fwd.maxTurns,
+      targetReachable,
+      targetErrorPct: Number.isFinite(targetZ_ohm) && targetZ_ohm > 0 ? Math.abs(fwd.Z - targetZ_ohm) / targetZ_ohm * 100 : 0,
+      fits: turns <= fwd.maxTurns && targetReachable,
     };
   }
 
   function refineInverseTurns(Nt, targetZ_ohm, makeForward, maxTurns = Infinity) {
     const safeNt = Math.min(Math.max(1, Nt), maxTurns);
     let best = null;
-    const center = Math.round(safeNt);
-    for (let i = -5; i <= 5; i++) {
-      const turns = center + i;
-      if (turns < 1 || turns > maxTurns) continue;
+    const finiteMax = Number.isFinite(maxTurns) ? Math.max(1, Math.floor(maxTurns)) : Math.max(1, Math.ceil(safeNt * 4));
+    let lo = 1;
+    let hi = finiteMax;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      const fwd = makeForward(mid);
+      if (fwd.Z < targetZ_ohm) lo = mid + 1;
+      else hi = mid;
+    }
+    const center = Math.round(lo);
+    const span = Math.max(8, Math.ceil(center * 0.08));
+    for (let turns = Math.max(1, center - span); turns <= Math.min(finiteMax, center + span); turns++) {
       const fwd = makeForward(turns);
       const error = Math.abs(fwd.Z - targetZ_ohm);
       if (!best || error < best.error) best = { turns, fwd, error };
@@ -1758,12 +2087,8 @@ const Calculation = (() => {
       innerDia_mm, outerDia_mm, length_mm, wireDia_mm, targetZ_ohm, freq_Hz,
       maxLayers: base.maxLayers, turnsPerLayer: base.turnsPerLayer, maxTurns: base.maxTurns, windingMode, layerHeightFactor,
     });
-    if (inv && inv.Nt > base.maxTurns) {
-      const fwd = Coil.calcCylForward({ innerDia_mm, outerDia_mm, length_mm, wireDia_mm, turns: inv.Nt, freq_Hz, windingMode, layerHeightFactor });
-      return { base, inv: directInverseResult(inv.Nt, fwd), fwd };
-    }
     const refined = inv ? refineInverseTurns(inv.Nt, targetZ_ohm, turns => Coil.calcCylForward({ innerDia_mm, outerDia_mm, length_mm, wireDia_mm, turns, freq_Hz, windingMode, layerHeightFactor }), base.maxTurns) : null;
-    return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd), fwd: refined.fwd } : { base, inv, fwd: null };
+    return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd, targetZ_ohm), fwd: refined.fwd } : { base, inv, fwd: null };
   }
 
   function calculateRectangularRole(role, wireDia_mm, targetZ_ohm, freq_Hz, windingMode, requestedTurns, turnMode, layerHeightFactor) {
@@ -1789,12 +2114,8 @@ const Calculation = (() => {
       maxLayers: base.maxLayers, turnsPerLayer: base.turnsPerLayer, maxTurns: base.maxTurns,
       avgH_m: base.avgH_m, avgW_m: base.avgW_m, len_m: base.len_m, windingMode, layerHeightFactor,
     });
-    if (inv && inv.Nt > base.maxTurns) {
-      const fwd = Coil.calcRectForward({ ih, iw, oh, ow, len, wd: wireDia_mm, N: inv.Nt, freq_Hz, windingMode, layerHeightFactor });
-      return { base, inv: directInverseResult(inv.Nt, fwd), fwd };
-    }
     const refined = inv ? refineInverseTurns(inv.Nt, targetZ_ohm, turns => Coil.calcRectForward({ ih, iw, oh, ow, len, wd: wireDia_mm, N: turns, freq_Hz, windingMode, layerHeightFactor }), base.maxTurns) : null;
-    return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd), fwd: refined.fwd } : { base, inv, fwd: null };
+    return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd, targetZ_ohm), fwd: refined.fwd } : { base, inv, fwd: null };
   }
 
   function calculateFerriteRole(role, wireDia_mm, targetZ_ohm, freq_Hz, windingMode, requestedTurns, turnMode) {
@@ -1817,12 +2138,8 @@ const Calculation = (() => {
         innerDia_mm: coreD, outerDia_mm, length_mm, wireDia_mm, targetZ_ohm, freq_Hz,
         maxLayers: base.maxLayers, turnsPerLayer: base.turnsPerLayer, maxTurns: base.maxTurns, windingMode,
       });
-      if (inv && inv.Nt > base.maxTurns) {
-        const fwd = Coil.calcCylForward({ innerDia_mm: coreD, outerDia_mm, length_mm, wireDia_mm, turns: inv.Nt, freq_Hz, windingMode });
-        return { base, inv: directInverseResult(inv.Nt, fwd), fwd };
-      }
       const refined = inv ? refineInverseTurns(inv.Nt, targetZ_ohm, turns => Coil.calcCylForward({ innerDia_mm: coreD, outerDia_mm, length_mm, wireDia_mm, turns, freq_Hz, windingMode }), base.maxTurns) : null;
-      return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd), fwd: refined.fwd } : { base, inv, fwd: null };
+      return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd, targetZ_ohm), fwd: refined.fwd } : { base, inv, fwd: null };
     }
 
     const ih = readNumber(prefix + 'ferriteH', 3);
@@ -1841,12 +2158,8 @@ const Calculation = (() => {
       maxLayers: base.maxLayers, turnsPerLayer: base.turnsPerLayer, maxTurns: base.maxTurns,
       avgH_m: base.avgH_m, avgW_m: base.avgW_m, len_m: base.len_m, windingMode,
     });
-    if (inv && inv.Nt > base.maxTurns) {
-      const fwd = Coil.calcRectForward({ ih, iw, oh, ow, len: length_mm, wd: wireDia_mm, N: inv.Nt, freq_Hz, windingMode });
-      return { base, inv: directInverseResult(inv.Nt, fwd), fwd };
-    }
     const refined = inv ? refineInverseTurns(inv.Nt, targetZ_ohm, turns => Coil.calcRectForward({ ih, iw, oh, ow, len: length_mm, wd: wireDia_mm, N: turns, freq_Hz, windingMode }), base.maxTurns) : null;
-    return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd), fwd: refined.fwd } : { base, inv, fwd: null };
+    return refined ? { base, inv: directInverseResult(refined.turns, refined.fwd, targetZ_ohm), fwd: refined.fwd } : { base, inv, fwd: null };
   }
 
   function calculateRole(role) {
@@ -2008,7 +2321,9 @@ const Calculation = (() => {
       warnings: [],
     };
     result.detectCorrectionLabel = correctionLabel(result.detectTypeFactor);
-    result.detectEstimated = singles.detect.fwd.Z * result.detectTypeFactor * result.loadFactor;
+    result.detectTurns = singles.detect.inv.Nt;
+    result.detectCoilEstimated = singles.detect.fwd.Z * result.detectTypeFactor * result.loadFactor;
+    result.detectEstimated = result.detectCoilEstimated;
 
     const usesExcitationDistance = AppState.usesExcitationDistanceConditions();
 
@@ -2022,8 +2337,14 @@ const Calculation = (() => {
       result.excitation2TypeFactor = typeFactor('excitation2');
       result.excitation1CorrectionLabel = correctionLabel(result.excitation1TypeFactor);
       result.excitation2CorrectionLabel = correctionLabel(result.excitation2TypeFactor);
-      result.excitation1Estimated = singles.excitation1.fwd.Z * result.excitation1TypeFactor * result.couplingFactor1;
-      result.excitation2Estimated = singles.excitation2.fwd.Z * result.excitation2TypeFactor * result.couplingFactor2;
+      result.excitation1Turns = singles.excitation1.inv.Nt;
+      result.excitation2Turns = singles.excitation2.inv.Nt;
+      result.excitation1CoilEstimated = singles.excitation1.fwd.Z * result.excitation1TypeFactor;
+      result.excitation2CoilEstimated = singles.excitation2.fwd.Z * result.excitation2TypeFactor;
+      result.excitation1ConfiguredEstimated = result.excitation1CoilEstimated * result.couplingFactor1;
+      result.excitation2ConfiguredEstimated = result.excitation2CoilEstimated * result.couplingFactor2;
+      result.excitation1Estimated = result.excitation1CoilEstimated;
+      result.excitation2Estimated = result.excitation2CoilEstimated;
       result.balanceDelta = usesExcitationDistance ? Math.abs(d1 - d2) : 0;
       result.excitationGap = gap;
       if (usesExcitationDistance && result.balanceDelta > 0.5) result.warnings.push('励磁1と励磁2の距離差が大きいため、磁気バランスが崩れる可能性があります。');
@@ -2033,10 +2354,13 @@ const Calculation = (() => {
       const distance = readNumber('exciteDetectDistance', 1);
       result.positionFactor = AppState.isSimpleExcitationDetect() && usesExcitationDistance ? excitationPositionFactor() : 1;
       result.couplingFactor = (usesExcitationDistance ? couplingByDistance(distance) : 1) * result.positionFactor;
-      if (AppState.isSimpleExcitationDetect()) result.detectEstimated *= result.positionFactor;
+      result.detectConfiguredEstimated = result.detectCoilEstimated * result.positionFactor;
       result.excitationTypeFactor = typeFactor('excitation');
       result.excitationCorrectionLabel = correctionLabel(result.excitationTypeFactor);
-      result.excitationEstimated = singles.excitation.fwd.Z * result.excitationTypeFactor * result.couplingFactor;
+      result.excitationTurns = singles.excitation.inv.Nt;
+      result.excitationCoilEstimated = singles.excitation.fwd.Z * result.excitationTypeFactor;
+      result.excitationConfiguredEstimated = result.excitationCoilEstimated * result.couplingFactor;
+      result.excitationEstimated = result.excitationCoilEstimated;
       if (usesExcitationDistance && distance < 0.2) result.warnings.push('結合が強すぎる可能性があります。共振・飽和・信号漏れに注意してください。');
     }
     return result;
@@ -2112,6 +2436,11 @@ const Calculation = (() => {
     if (AppState.isCross()) return null;
     const probeStyle = AppState.state.probeStyle || 'surface';
     const probeLabel = AppState.PROBE_STYLES[probeStyle] || AppState.PROBE_STYLES.surface;
+    const distanceLabel = probeStyle === 'insert'
+      ? 'A/B軸方向間隔'
+      : probeStyle === 'through'
+        ? 'A/B配置距離'
+        : '端面ギャップ';
     const coilLength = Math.max(0.001, readNumber('detect_length', 2));
     const ratioRanges = ({
       surface: { sensitivity: [0.2, 0.5], balance: [0.5, 1.0], deep: [1.0, 1.5] },
@@ -2169,7 +2498,7 @@ const Calculation = (() => {
       reasons: [
         'プローブ形式: ' + probeLabel,
         'コイル長 ' + Render.format(coilLength, 2) + ' mm を基準',
-        '端面ギャップをプローブ形式別の倍率で評価',
+        distanceLabel + 'をプローブ形式別の倍率で評価',
       ],
       warnings: [],
     };
@@ -2185,14 +2514,24 @@ const Calculation = (() => {
     const flawWidth = Math.max(0.001, readNumber('flawWidth', 0.5));
     const depth = Math.max(0, readNumber('inspectDepth', 0.05));
     const freq_kHz = readNumber('freq', CONFIG.defaults.frequencyKHz);
+    const isInsert = probeStyle === 'insert';
+    const isThrough = probeStyle === 'through';
+    const isSurface = !isInsert && !isThrough;
     const scale = ([lo, hi]) => ({ lo: lo * flawWidth, hi: hi * flawWidth });
-    const sensitivity = scale([0.8, 1.0]);
-    const standard = scale([1.0, 1.5]);
     let stableHiFactor = 2.0;
-    if (freq_kHz >= CONFIG.thresholds.differential.highFrequencyKHz) stableHiFactor *= 0.8;
-    if (freq_kHz < CONFIG.thresholds.differential.lowFrequencyKHz) stableHiFactor *= 1.15;
-    if (depth >= CONFIG.thresholds.differential.shallowDepthMm) stableHiFactor *= 1.2;
-    const deep = scale([1.5, stableHiFactor]);
+    if (isSurface) {
+      if (freq_kHz >= CONFIG.thresholds.differential.highFrequencyKHz) stableHiFactor *= 0.8;
+      if (freq_kHz < CONFIG.thresholds.differential.lowFrequencyKHz) stableHiFactor *= 1.15;
+      if (depth >= CONFIG.thresholds.differential.shallowDepthMm) stableHiFactor *= 1.2;
+    }
+    const minBase = isInsert ? (flawWidth <= 0.5 ? 0.8 : 1.0) : isThrough ? 1.0 : 0;
+    const applyMin = range => ({
+      lo: Math.max(range.lo, minBase),
+      hi: Math.max(range.hi, minBase + (isInsert ? 0.2 : isThrough ? 0.5 : 0)),
+    });
+    const sensitivity = applyMin(scale(isSurface ? [0.8, 1.0] : [1.0, 1.2]));
+    const standard = applyMin(scale(isSurface ? [1.0, 1.5] : [1.2, 1.8]));
+    const deep = applyMin(scale(isSurface ? [1.5, stableHiFactor] : [1.8, 2.6]));
     const mode = 'check';
 
     const currentPosition = gap => {
@@ -2214,13 +2553,15 @@ const Calculation = (() => {
 
     const edgeGap = readNumber('diffDistance', standard.lo);
     const coilLength = Math.max(0.001, readNumber('detect_length', 2));
-    const centerDistance = coilLength / 2 + edgeGap + coilLength / 2;
+    const centerDistance = isSurface ? coilLength / 2 + edgeGap + coilLength / 2 : edgeGap;
     const position = currentPosition(edgeGap);
     const notes = [];
-    if (freq_kHz >= CONFIG.thresholds.differential.highFrequencyKHz) notes.push('高周波のため広め側を抑えています');
-    if (freq_kHz < CONFIG.thresholds.differential.lowFrequencyKHz) notes.push('低周波のため広め側を許容しています');
-    if (depth >= CONFIG.thresholds.differential.shallowDepthMm) notes.push('深い欠陥のため広め側を許容しています');
-    if (depth < CONFIG.thresholds.differential.surfaceDepthMm || flawWidth <= 0.3) notes.push('表面欠陥・細い欠陥では狭め候補を優先してください');
+    if (isSurface && freq_kHz >= CONFIG.thresholds.differential.highFrequencyKHz) notes.push('高周波のため広め側を抑えています');
+    if (isSurface && freq_kHz < CONFIG.thresholds.differential.lowFrequencyKHz) notes.push('低周波のため広め側を許容しています');
+    if (isSurface && depth >= CONFIG.thresholds.differential.shallowDepthMm) notes.push('深い欠陥のため広め側を許容しています');
+    if (isSurface && (depth < CONFIG.thresholds.differential.surfaceDepthMm || flawWidth <= 0.3)) notes.push('表面欠陥・細い欠陥では狭め候補を優先してください');
+    if (isInsert) notes.push('内挿型のためA/B軸方向間隔として評価しています');
+    if (isThrough) notes.push('貫通型のため軸方向間隔または円周方向配置距離として評価しています');
 
     return {
       version: 2,
@@ -2232,6 +2573,7 @@ const Calculation = (() => {
       inspectDepth: depth,
       centerDistance,
       edgeGap,
+      distanceLabel: isInsert ? 'A/B軸方向間隔' : isThrough ? 'A/B配置距離' : '端面ギャップ',
       position,
       judgment: judgment(position),
       sensitivityLo: sensitivity.lo,
@@ -2249,20 +2591,59 @@ const Calculation = (() => {
       reasons: [
         'プローブ形式: ' + probeLabel,
         '欠陥幅 ' + Render.format(flawWidth, 2) + ' mm を基準',
-        '高感度・標準・安定の3候補で評価',
+        (isInsert ? 'A/B軸方向間隔' : isThrough ? 'A/B配置距離' : '端面ギャップ') + 'を高感度・標準・安定の3候補で評価',
       ].concat(notes),
       warnings: [],
     };
   }
 
   function calculateDesign() {
+    return calculateDesignState();
+  }
+
+  function calculateDesignState() {
     AppState.syncDualExcitationCommon();
-    const singles = Object.fromEntries(AppState.activeRoles().map(role => [role, calculateRole(role)]));
+    const activeRoles = AppState.activeRoles();
+    const singles = Object.fromEntries(activeRoles.map(role => [role, calculateRole(role)]));
     return {
+      activeRoles,
+      config: AppState.state.config,
+      calculatedAt: Date.now(),
       singles,
       estimated: estimateConfiguredZ(singles),
       differential: optimizeDifferentialByProbeStyleV2(),
     };
+  }
+
+  function runRegressionTests() {
+    const failures = [];
+    const assert = (condition, message) => { if (!condition) failures.push(message); };
+    const savedConfig = state.config;
+    const savedInputs = { ...state.inputs };
+    const savedRoles = JSON.parse(JSON.stringify(state.roles));
+    try {
+      ['single', 'differential', 'excitationDetect', 'excitationDifferential', 'dualExcitationDetect', 'dualExcitationDifferential'].forEach(config => {
+        AppState.setValue('config', config);
+        state.inputs.diffDistance = '0.8';
+        state.inputs.exciteDetectDistance = '1.2';
+        state.inputs.ex1Distance = '1.2';
+        state.inputs.ex2Distance = '1.2';
+        state.inputs.excitationGap = '2.0';
+        const result = calculateDesignState();
+        assert(result.activeRoles.includes('detect'), config + ': detect role missing');
+        result.activeRoles.forEach(role => {
+          const single = result.singles[role];
+          assert(single?.inv?.Nt > 0, config + ': ' + role + ' has invalid turns');
+          assert(Number.isFinite(single?.fwd?.Z), config + ': ' + role + ' has invalid Z');
+        });
+      });
+    } finally {
+      state.config = savedConfig;
+      state.inputs = savedInputs;
+      state.roles = savedRoles;
+    }
+    if (failures.length) throw Error('CD regression failed:\n- ' + failures.join('\n- '));
+    return { ok: true };
   }
 
   return ({
@@ -2273,10 +2654,14 @@ const Calculation = (() => {
     getTypeFactor,
     calculateRole,
     calculateDesign,
+    calculateDesignState,
+    runRegressionTests,
   });
 })();
 
 const ECTBridge = (() => {
+  const getNested = (obj, path) => path.split('.').reduce((cur, key) => cur && cur[key], obj);
+
   function toHzFromKHz(kHz) {
     const v = Number(kHz);
     return Number.isFinite(v) ? v * 1000 : null;
@@ -2300,7 +2685,11 @@ const ECTBridge = (() => {
       recordOrJson.frequencyKHz,
       recordOrJson.fOpt_kHz,
       recordOrJson.recommendedFrequency_kHz,
-      recordOrJson.frequency
+      recordOrJson.frequency,
+      getNested(recordOrJson, 'metadata.frequency_kHz'),
+      getNested(recordOrJson, 'design.frequency_kHz'),
+      getNested(recordOrJson, 'design.recommended.frequency_kHz'),
+      getNested(recordOrJson, 'design.recommendations.frequency_kHz')
     ];
     for (const c of candidates) {
       const v = toKHzFromText(c);
@@ -2314,9 +2703,11 @@ const ECTBridge = (() => {
   }
 
   function configFromJson(data) {
-    const differential = data.needDifferential === true;
-    const excitation = data.needExcitation === true;
-    const dual = hasDualConfig(data.config);
+    const design = data.design || {};
+    const rec = design.recommended || design.recommendations || {};
+    const differential = data.needDifferential === true || design.needDifferential === true || rec.needDifferential === true;
+    const excitation = data.needExcitation === true || design.needExcitation === true || rec.needExcitation === true;
+    const dual = hasDualConfig(data.config) || hasDualConfig(design.config) || hasDualConfig(rec.config);
     if (dual && differential) return 'dualExcitationDifferential';
     if (dual) return 'dualExcitationDetect';
     if (differential && excitation) return 'excitationDifferential';
@@ -2340,8 +2731,46 @@ const ECTBridge = (() => {
   function parseFrequencyKHz(data) {
     return normalizeFrequencyKHz(data)
       ?? normalizeFrequencyKHz(data.initialCoilDesign || {})
+      ?? normalizeFrequencyKHz(data.design || {})
       ?? toKHzFromText(data.optimalFrequency_kHz)
       ?? toKHzFromText(data.recommendedFrequency);
+  }
+
+  function firstPresent(sources, keys) {
+    for (const source of sources) {
+      if (!source || typeof source !== 'object') continue;
+      for (const key of keys) {
+        if (source[key] !== undefined && source[key] !== null && source[key] !== '') return source[key];
+      }
+    }
+    return null;
+  }
+
+  function normalizeEctInfo(data) {
+    const design = data.design || {};
+    const rec = design.recommended || design.recommendations || {};
+    const condition = data.inspectionCondition || data.ectInfo || data.condition || data.metadata?.inspectionCondition || {};
+    const sources = [condition, rec, design, data.metadata, data];
+    const frequency = parseFrequencyKHz(data)
+      ?? toKHzFromText(firstPresent(sources, ['frequency', 'frequencyLabel', 'recommendedFrequency']));
+    const cautions = firstPresent(sources, ['cautions', 'cautionComments', 'warnings', 'comments']);
+    return {
+      purpose: firstPresent(sources, ['purpose', 'inspectionPurpose', 'modeLabel', 'useMode']),
+      mode: firstPresent(sources, ['mode']),
+      flawType: firstPresent(sources, ['flawType', 'defectType', 'crackType', 'directionLabel']),
+      flawWidth: firstPresent(sources, ['flawWidth', 'flawWidth_mm', 'crackWidth', 'crackWidth_mm']),
+      flawDepth: firstPresent(sources, ['flawDepth', 'flawDepth_mm', 'defectDepth', 'defectDepth_mm']),
+      inspectDepth: firstPresent(sources, ['inspectDepth', 'inspectDepth_mm', 'inspectionDepth', 'inspectionDepth_mm', 'depth_mm']),
+      material: firstPresent(sources, ['material', 'materialName', 'targetMaterial']),
+      frequency,
+      skinDepth: firstPresent(sources, ['skinDepth', 'skinDepth_mm']),
+      recommendedMode: firstPresent(sources, ['recommendedMode', 'configDisplay', 'recommendedProbeMode']),
+      ferriteBand: firstPresent(sources, ['recommendedFerriteBand', 'recommendedFerriteBandLabel', 'ferriteBand']),
+      detectMethod: firstPresent(sources, ['recommendedDetectMethod', 'recommendedDetectionMethod', 'detectMethod']),
+      excitationMethod: firstPresent(sources, ['recommendedExcitationMethod', 'excitationMethod']),
+      diffDistance: firstPresent(sources, ['recommendedDiffSpacing', 'recommendedDifferentialDistance', 'differentialDistance', 'diffDistance']),
+      cautions: Array.isArray(cautions) ? cautions : (cautions ? [cautions] : []),
+    };
   }
 
   function apply(jsonText) {
@@ -2356,6 +2785,7 @@ const ECTBridge = (() => {
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
       return { ok: false, message: 'JSONの中身がオブジェクトではありません。', applied, skipped };
     }
+    AppState.setEctInfo(normalizeEctInfo(data));
     if (data.probeStyle && AppState.PROBE_STYLES[data.probeStyle]) {
       AppState.setValue('probeStyle', data.probeStyle);
       applied.push('プローブ形式: ' + AppState.PROBE_STYLES[data.probeStyle]);
@@ -2365,19 +2795,23 @@ const ECTBridge = (() => {
     AppState.setValue('config', nextConfig);
     applied.push('コイル構成: ' + (CONFIG.coilConfigs.find(item => item.value === nextConfig)?.label || nextConfig));
 
-    const ferriteRecommended = String(data.ferrite || '').includes('推奨');
-    if (data.needCross === true && AppState.isDifferential()) {
+    const design = data.design || {};
+    const rec = design.recommended || design.recommendations || {};
+    const ferriteText = firstPresent([rec, design, data], ['ferrite', 'recommendedFerriteBand', 'recommendedFerriteBandLabel', 'ferriteBand']);
+    const ferriteRecommended = String(ferriteText || '').includes('推奨') || !!ferriteText;
+    const needCross = data.needCross === true || design.needCross === true || rec.needCross === true;
+    if (needCross && AppState.isDifferential()) {
       AppState.setRoleValue('detect', 'type', ferriteRecommended ? 'crossFerrite' : 'cross');
       applied.push('検出コイルタイプ: ' + (ferriteRecommended ? 'クロス差動＋フェライト' : 'クロス差動'));
-    } else if (data.needCross === true) {
+    } else if (needCross) {
       skipped.push('needCross: 差動構成ではないため未反映');
     }
 
-    const distance = parseDistanceMm(data.recommendedDiffSpacing);
+    const distance = parseDistanceMm(firstPresent([rec, design, data], ['recommendedDiffSpacing', 'recommendedDifferentialDistance', 'differentialDistance', 'diffDistance']));
     if (distance !== null && AppState.isDifferential()) {
       AppState.setInputValue('diffDistance', String(Number(distance.toFixed(3))));
       applied.push('端面ギャップ: ' + Number(distance.toFixed(3)) + ' mm');
-    } else if (data.recommendedDiffSpacing) {
+    } else if (firstPresent([rec, design, data], ['recommendedDiffSpacing', 'recommendedDifferentialDistance', 'differentialDistance', 'diffDistance'])) {
       skipped.push('recommendedDiffSpacing: 差動構成ではないため未反映');
     } else {
       skipped.push('recommendedDiffSpacing: JSON内に数値がありません');
@@ -2391,7 +2825,7 @@ const ECTBridge = (() => {
       skipped.push('周波数: JSON内に読み取れる周波数キーがありません');
     }
 
-    const initial = data.initialCoilDesign || {};
+    const initial = data.initialCoilDesign || rec.initialCoilDesign || design.initialCoilDesign || {};
     const wireDia = parseAverageNumber(initial.wireHint);
     const detectTargetZ = parseAverageNumber(initial.detectTargetZ);
     const excitationTargetZ = parseAverageNumber(initial.excitationTargetZ);
@@ -2413,17 +2847,18 @@ const ECTBridge = (() => {
       }
     }
 
-    if (data.recommendedCable) {
-      AppState.state.ectImport = { ...(AppState.state.ectImport || {}), recommendedCable: String(data.recommendedCable), raw: data };
-      applied.push('ケーブル初期推奨: ' + data.recommendedCable);
+    const recommendedCable = firstPresent([rec, design, data], ['recommendedCable', 'cable']);
+    if (recommendedCable) {
+      AppState.state.ectImport = { ...(AppState.state.ectImport || {}), recommendedCable: String(recommendedCable), raw: data };
+      applied.push('ケーブル初期推奨: ' + recommendedCable);
     } else {
       AppState.state.ectImport = { ...(AppState.state.ectImport || {}), raw: data };
       skipped.push('recommendedCable: JSON内にありません');
     }
 
-    if (data.ferrite) {
-      AppState.setInputValue('ectFerriteMemo', String(data.ferrite));
-      applied.push('フェライトメモ: ' + data.ferrite);
+    if (ferriteText) {
+      AppState.setInputValue('ectFerriteMemo', String(ferriteText));
+      applied.push('フェライトメモ: ' + ferriteText);
       if (ferriteRecommended && !['cross', 'crossFerrite'].includes(AppState.state.roles.detect.type)) {
         AppState.setRoleValue('detect', 'type', 'insert');
         applied.push('検出コイルタイプ: 空芯＋中心フェライト');
@@ -2610,6 +3045,11 @@ const Render = (() => {
   let roleInputsScheduled = false;
   let couplingScheduled = false;
   let cableScheduled = false;
+  let probeStyleScheduled = false;
+  let tuningHelpOpen = false;
+  let resultRenderDirty = true;
+  let detectResultDirty = true;
+  let excitationResultDirty = true;
   const scheduledRoles = new Set();
   let lastDesignResult = null;
   const $ = id => document.getElementById(id);
@@ -2622,12 +3062,37 @@ const Render = (() => {
     else setTimeout(callback, 16);
   };
 
+  function safeNumber(value, fallback = null) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function safePositive(value, fallback = null) {
+    const number = safeNumber(value, null);
+    return number !== null && number > 0 ? number : fallback;
+  }
+
+  function formatValue(value, digits = 2, fallback = '-') {
+    const number = safeNumber(value, null);
+    return number === null ? fallback : number.toFixed(digits);
+  }
+
+  function formatOhm(value, digits = 1) {
+    const number = safePositive(value, null);
+    return number === null ? '-' : number.toFixed(digits);
+  }
+
+  function formatTurns(value) {
+    const number = safePositive(value, null);
+    return number === null ? '-' : Math.max(1, Math.round(number)).toLocaleString();
+  }
+
   function format(value, digits = 2) {
-    return Number.isFinite(value) ? value.toFixed(digits) : '-';
+    return formatValue(value, digits);
   }
 
   function formatInt(value) {
-    return Number.isFinite(value) ? Math.round(value).toLocaleString() : '-';
+    return formatTurns(value);
   }
 
   function showError(message, targetId = 'errorArea') {
@@ -2667,7 +3132,10 @@ const Render = (() => {
   }
 
   function inputGroupClass(full, extraClass) {
-    return ['input-group', full ? 'full' : '', extraClass || ''].filter(Boolean).join(' ');
+    const classes = ['input-group'];
+    if (full) classes.push('full');
+    if (extraClass && String(extraClass).trim()) classes.push(String(extraClass).trim());
+    return classes.join(' ');
   }
 
   function createNumericField(options = {}) {
@@ -2805,7 +3273,7 @@ const Render = (() => {
 
   function readRenderNumber(id, fallback = null) {
     const elementValue = $(id)?.value;
-    const raw = elementValue !== undefined ? elementValue : getInputValue(id, fallback);
+    const raw = state.inputs[id] !== undefined ? state.inputs[id] : (elementValue !== undefined ? elementValue : getInputValue(id, fallback));
     const value = parseFloat(raw);
     return Number.isFinite(value) ? value : fallback;
   }
@@ -2966,8 +3434,14 @@ const Render = (() => {
     ).join(''));
   }
 
+  function currentConfigLabel() {
+    const cfg = CONFIG.coilConfigs.find(item => item.value === state.config) || CONFIG.coilConfigs[0];
+    return (AppState.PROBE_STYLES[state.probeStyle] || '-') + ' / ' + cfg.label;
+  }
+
   function renderConfigSummary() {
     const cfg = CONFIG.coilConfigs.find(item => item.value === state.config) || CONFIG.coilConfigs[0];
+    const currentLabel = currentConfigLabel();
     const chips = [
       '<span class="summary-chip"><strong>プローブ</strong> ' + (AppState.PROBE_STYLES[state.probeStyle] || '-') + '</span>',
       '<span class="summary-chip"><strong>構成</strong> ' + cfg.label + '</span>',
@@ -2982,7 +3456,15 @@ const Render = (() => {
     } else {
       chips.push('<span class="summary-chip"><strong>励磁</strong> なし</span>');
     }
-    setHtml('configSummary', '<div class="section-note">選択中：</div><div class="compact-summary">' + chips.join('') + '</div>');
+    setHtml('configSummary',
+      '<div class="config-summary-current">' +
+      '<div class="config-summary-label">現在選択中</div>' +
+      '<div class="config-summary-name">' + currentLabel + '</div>' +
+      '</div>' +
+      '<div class="compact-summary">' + chips.join('') + '</div>'
+    );
+    setHtml('detectConfigMeta', currentLabel);
+    setHtml('excitationConfigMeta', currentLabel);
   }
 
   function renderTypeChoices() {
@@ -3095,7 +3577,7 @@ const Render = (() => {
     setHtml('detectRoleInputs', detectRows.join(''));
     const excitationHtml = excitationRoles.map(renderRoleDimensions).join('');
     setHtml('excitationRoleInputs', AppState.hasDualExcitation()
-      ? '<div class="info-box"><strong>励磁コイル：共通設計 ×2</strong><br>巻数・線径・形状・フェライト条件は左右対称の共通設計として扱います。</div>' + excitationHtml.replace(/励磁1/g, '励磁共通')
+      ? excitationHtml.replace(/励磁1/g, '励磁共通')
       : excitationHtml);
     setHtml('roleInputs', detectRows.concat(excitationRoles.map(renderRoleDimensions)).join(''));
     const hasExcitation = excitationRoles.length > 0;
@@ -3107,13 +3589,11 @@ const Render = (() => {
     const excitationRows = [];
     const showDifferentialDistance = AppState.usesDifferentialDistanceConditions();
     const showExcitationDistance = AppState.usesExcitationDistanceConditions();
-    const showDifferentialPreview = AppState.showsDifferentialDistancePreview();
-    const showExcitationPreview = AppState.showsExcitationDistancePreview();
     if (showDifferentialDistance) {
       diffRows.push(
         numberInput('flawWidth', 'きず幅', '0.5', 'mm'),
         numberInput('inspectDepth', '検査深さ', '0.05', 'mm', '0.01', '0'),
-        numberInput('diffDistance', '端面ギャップ', '0.5', 'mm')
+        numberInput('diffDistance', differentialDistanceInputLabel(), '0.5', 'mm')
       );
     }
     if (showExcitationDistance && AppState.isSimpleExcitationDetect()) {
@@ -3128,28 +3608,81 @@ const Render = (() => {
       );
       else excitationRows.push(numberInput('exciteDetectDistance', '励磁コイル-検出コイル距離', '1.0', 'mm'));
     }
-    $('couplingSection').classList.toggle('hidden', !showDifferentialDistance);
-    $('excitationCouplingSection')?.classList.toggle('hidden', !showExcitationDistance);
-    $('diffEmptyMessage')?.classList.toggle('hidden', AppState.isDifferential());
+    $('couplingSection')?.classList.toggle('hidden', !showDifferentialDistance);
+    $('diffEmptyMessage')?.classList.toggle('hidden', showDifferentialDistance);
     setHtml('couplingInputs', diffRows.join(''));
     setHtml('excitationCouplingInputs', excitationRows.join(''));
-    updateDifferentialDistancePreview();
-    updateExcitationDistancePreview();
   }
 
-  function updateDifferentialDistancePreview() {
-    const target = $('differentialDistancePreview');
-    if (!target) return;
-    target.classList.add('hidden');
-    target.innerHTML = '';
+  function distanceBandLabel(value, rec) {
+    if (!rec || !Number.isFinite(value)) return '-';
+    if (value < rec.near.lo) return '強結合より近い';
+    if (value <= rec.near.hi) return '強結合';
+    if (value <= rec.standard.hi) return '標準';
+    if (value <= rec.stable.hi) return '離し気味';
+    return '離しすぎ';
   }
 
-  function updateExcitationDistancePreview() {
-    const target = $('excitationDistancePreview');
-    if (!target) return;
-    target.classList.add('hidden');
-    target.innerHTML = '';
+  function differentialDistanceInputLabel() {
+    const probeStyle = state.probeStyle || 'surface';
+    if (probeStyle === 'insert') return 'A/B軸方向間隔';
+    if (probeStyle === 'through') return 'A/B配置距離';
+    return '端面ギャップ';
   }
+
+  function differentialBandLabel(value, rec) {
+    if (!rec || !Number.isFinite(value)) return '-';
+    if (value < rec.sensitivity.lo) return '強結合より近い';
+    if (value <= rec.sensitivity.hi) return '強結合';
+    if (value <= rec.standard.hi) return '標準';
+    if (value <= rec.deep.hi) return '離し気味';
+    return '離しすぎ';
+  }
+
+  function differentialRecommendationPreviewLines(rec) {
+    if (!rec) return [];
+    const cautions = [
+      '\u8fd1\u3059\u304e\u308b\u5074\u306f\u611f\u5ea6\u512a\u5148\u3001\u96e2\u3059\u5074\u306f\u5b89\u5b9a\u512a\u5148\u3067\u3059\u3002',
+      '\u6700\u7d42\u4ed5\u69d8\u306f\u8ddd\u96e2\u5165\u529b\u30ab\u30fc\u30c9\u306e\u63a1\u7528\u5024\u3092\u4f7f\u7528\u3057\u3066\u304f\u3060\u3055\u3044\u3002',
+    ].concat(rec.notes || []);
+    const distLabel = rec.itemLabel || '';
+    const lines = [
+      previewSeparator(),
+      previewGroupLabel(rec.title),
+      previewLine('\u9ad8\u611f\u5ea6', distLabel + rangeText(rec.sensitivity) + ' mm', 'text-warn'),
+      textSpan('text-muted', rec.comments.sensitivity.join(' / ')),
+      previewLine('\u6a19\u6e96', distLabel + rangeText(rec.standard) + ' mm', 'text-good'),
+      textSpan('text-muted', rec.comments.standard.join(' / ')),
+      previewLine('\u5b89\u5b9a', distLabel + rangeText(rec.deep) + ' mm', 'text-info'),
+      textSpan('text-muted', rec.comments.deep.join(' / ')),
+      previewSeparator(),
+      previewLine('\u6ce8\u610f', cautions.join(' / '), 'text-muted'),
+    ];
+    return lines;
+  }
+
+  function excitationRecommendationPreviewLines(rec) {
+    if (!rec) return [];
+    const cautions = [
+      '\u8fd1\u3059\u304e\u308b\u5074\u306f\u76f4\u63a5\u7d50\u5408\u3001\u6f0f\u308c\u3001\u98fd\u548c\u3001\u5171\u632f\u306b\u6ce8\u610f\u3057\u3066\u304f\u3060\u3055\u3044\u3002',
+      '\u6700\u7d42\u4ed5\u69d8\u306f\u8ddd\u96e2\u5165\u529b\u30ab\u30fc\u30c9\u306e\u63a1\u7528\u5024\u3092\u4f7f\u7528\u3057\u3066\u304f\u3060\u3055\u3044\u3002',
+    ];
+    const distLabel = rec.itemLabel || '';
+    const lines = [
+      previewSeparator(),
+      previewGroupLabel(rec.title),
+      previewLine('\u5f37\u7d50\u5408', distLabel + rangeText(rec.near) + ' mm', 'text-warn'),
+      textSpan('text-muted', rec.comments.near.join(' / ')),
+      previewLine('\u6a19\u6e96', distLabel + rangeText(rec.standard) + ' mm', 'text-good'),
+      textSpan('text-muted', rec.comments.standard.join(' / ')),
+      previewLine('\u5b89\u5b9a', distLabel + rangeText(rec.stable) + ' mm', 'text-info'),
+      textSpan('text-muted', rec.comments.stable.join(' / ')),
+      previewSeparator(),
+      previewLine('\u6ce8\u610f', cautions.join(' / '), 'text-muted'),
+    ];
+    return lines;
+  }
+
   function bindDetailsState() {
     Object.keys(state.detailsOpen || {}).forEach(role => { state.detailsOpen[role] = true; });
   }
@@ -3181,8 +3714,12 @@ const Render = (() => {
     return role + 'Estimated';
   }
 
+  function turnsKey(role) {
+    return role + 'Turns';
+  }
+
   function roleEstimatedZ(estimated, role) {
-    return estimated[estimatedKey(role)];
+    return safeNumber(estimated?.[estimatedKey(role)], null);
   }
 
   function validTuningFactor(role) {
@@ -3192,69 +3729,97 @@ const Render = (() => {
 
   function tunedEstimatedZ(estimated, role) {
     const base = roleEstimatedZ(estimated, role);
-    return state.tuningEnabled && role === 'detect' ? base * validTuningFactor(role) : base;
+    return base === null ? null : state.tuningEnabled ? base * validTuningFactor(role) : base;
+  }
+
+  function resultRoleLabel(role) {
+    if (AppState.hasDualExcitation() && role === 'excitation1') return '励磁';
+    return roleShortLabel(role);
   }
 
   function tuningDetail(estimated, role) {
-    if (!state.tuningEnabled || role !== 'detect') return '';
+    if (!state.tuningEnabled) return '';
     return '<span class="text-muted">通常推定：' + format(roleEstimatedZ(estimated, role), 1) + 'Ω / 補正係数：' + format(validTuningFactor(role), 2) + '</span>';
   }
 
-  function estimatedZCard(estimated, role) {
-    const isTargetMode = (state.roles[role]?.turnMode || 'targetZ') === 'targetZ';
+  function estimatedZCard(estimated, role, className = 'highlight') {
     const details = [tuningDetail(estimated, role)];
-    if (isTargetMode) details.push('<span class="text-muted">目標Zモードのため、寸法変更は主に巻数へ反映</span>');
-    return card(roleShortLabel(role) + '推定Z', format(tunedEstimatedZ(estimated, role), 1), 'Ω', 'highlight', details.filter(Boolean).join('<br>'));
+    return card(resultRoleLabel(role) + '推定Z', format(tunedEstimatedZ(estimated, role), 1), 'Ω', className, details.filter(Boolean).join('<br>'));
   }
 
   function renderDetectEstimatedCards(estimated) {
+    const isTargetMode = (state.roles.detect?.turnMode || 'targetZ') === 'targetZ';
     return [
-      estimatedZCard(estimated, 'detect'),
-      card('検出補正', estimated.detectCorrectionLabel),
+      estimatedZCard(estimated, 'detect', isTargetMode ? '' : 'highlight'),
+      card(isTargetMode ? '必要巻数' : '指定巻数', formatInt(estimated.detectTurns), 'T', isTargetMode ? 'highlight' : ''),
     ].join('');
   }
 
   function renderExcitationEstimatedCards(estimated) {
     const cards = [];
     const showExcitationDistance = AppState.usesExcitationDistanceConditions();
-    if (AppState.hasExcitation() && !AppState.hasDualExcitation()) cards.push(
-      estimatedZCard(estimated, 'excitation'),
-      card('励磁補正', estimated.excitationCorrectionLabel)
-    );
+    if (AppState.hasExcitation() && !AppState.hasDualExcitation()) {
+      const isTargetMode = (state.roles.excitation?.turnMode || 'targetZ') === 'targetZ';
+      cards.push(
+        estimatedZCard(estimated, 'excitation', isTargetMode ? '' : 'highlight'),
+        card(isTargetMode ? '必要巻数' : '指定巻数', formatInt(estimated.excitationTurns), 'T', isTargetMode ? 'highlight' : '')
+      );
+    }
     if (showExcitationDistance && AppState.isSimpleExcitationDetect()) cards.push(card('励磁位置補正', format(estimated.positionFactor, 2), 'x'));
     if (AppState.hasDualExcitation()) {
+      const isTargetMode = (state.roles.excitation1?.turnMode || 'targetZ') === 'targetZ';
       cards.push(
-        estimatedZCard(estimated, 'excitation1'),
-        estimatedZCard(estimated, 'excitation2'),
-        card('励磁1補正', estimated.excitation1CorrectionLabel),
-        card('励磁2補正', estimated.excitation2CorrectionLabel)
+        estimatedZCard(estimated, 'excitation1', isTargetMode ? '' : 'highlight'),
+        card(isTargetMode ? '必要巻数（共通）' : '指定巻数（共通）', formatInt(estimated.excitation1Turns), 'T', isTargetMode ? 'highlight' : '')
       );
-      if (showExcitationDistance) cards.push(card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm'));
     }
     return cards.join('');
   }
 
   function renderEstimatedCards(estimated) {
+    const detectTargetMode = (state.roles.detect?.turnMode || 'targetZ') === 'targetZ';
     const cards = [
-      estimatedZCard(estimated, 'detect'),
-      card('検出補正', estimated.detectCorrectionLabel),
+      estimatedZCard(estimated, 'detect', detectTargetMode ? '' : 'highlight'),
+      card(detectTargetMode ? '必要巻数' : '指定巻数', formatInt(estimated.detectTurns), 'T', detectTargetMode ? 'highlight' : ''),
     ];
     const showExcitationDistance = AppState.usesExcitationDistanceConditions();
-    if (AppState.hasExcitation() && !AppState.hasDualExcitation()) cards.push(
-      estimatedZCard(estimated, 'excitation'),
-      card('励磁補正', estimated.excitationCorrectionLabel)
-    );
+    if (AppState.hasExcitation() && !AppState.hasDualExcitation()) {
+      const excitationTargetMode = (state.roles.excitation?.turnMode || 'targetZ') === 'targetZ';
+      cards.push(
+        estimatedZCard(estimated, 'excitation', excitationTargetMode ? '' : 'highlight'),
+        card(excitationTargetMode ? '必要巻数' : '指定巻数', formatInt(estimated.excitationTurns), 'T', excitationTargetMode ? 'highlight' : '')
+      );
+    }
     if (showExcitationDistance && AppState.isSimpleExcitationDetect()) cards.push(card('コイル配置補正', format(estimated.positionFactor, 2), 'x'));
     if (AppState.hasDualExcitation()) {
+      const excitationTargetMode = (state.roles.excitation1?.turnMode || 'targetZ') === 'targetZ';
       cards.push(
-        estimatedZCard(estimated, 'excitation1'),
-        estimatedZCard(estimated, 'excitation2'),
-        card('励磁1補正', estimated.excitation1CorrectionLabel),
-        card('励磁2補正', estimated.excitation2CorrectionLabel)
+        estimatedZCard(estimated, 'excitation1', excitationTargetMode ? '' : 'highlight'),
+        card(excitationTargetMode ? '必要巻数（共通）' : '指定巻数（共通）', formatInt(estimated.excitation1Turns), 'T', excitationTargetMode ? 'highlight' : '')
       );
-      if (showExcitationDistance) cards.push(card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm'));
     }
     return cards.join('');
+  }
+
+  // UTF-8の日本語ラベルを直接保持するため、文字化けしたリテラルが混入していないか全検索で確認すること。
+  function roleResultCards(estimated, role) {
+    if (!estimated || !state.roles[role]) return '';
+    const isTargetMode = (state.roles[role]?.turnMode || 'targetZ') === 'targetZ';
+    const turnsLabel = isTargetMode ? '必要巻数' : '指定巻数';
+    return [
+      estimatedZCard(estimated, role, isTargetMode ? '' : 'highlight'),
+      card(turnsLabel, formatTurns(estimated[turnsKey(role)]), 'T', isTargetMode ? 'highlight' : ''),
+    ].join('');
+  }
+
+  function renderRoleResult(role, resultOrEstimated) {
+    const estimated = resultOrEstimated?.estimated || resultOrEstimated;
+    return roleResultCards(estimated, role);
+  }
+
+  function excitationResultRoles() {
+    if (!AppState.hasExcitation()) return [];
+    return AppState.hasDualExcitation() ? ['excitation1'] : ['excitation'];
   }
 
   function tuningInput(role) {
@@ -3339,6 +3904,9 @@ const Render = (() => {
   }
 
   function tuningIntroHtml() {
+    const toggle = $('tuningHelpToggle');
+    if (toggle) toggle.classList.toggle('active', tuningHelpOpen);
+    if (!tuningHelpOpen) return '';
     return '<div class="info-box"><strong>検出コイルの計算値と実測値のズレから補正係数を作ります。</strong><br>' +
       '保存すると、次回以降の検出コイル推定Zへ反映できます。<br><br>' +
       '例：<br>' +
@@ -3347,6 +3915,12 @@ const Render = (() => {
       '→ 次回から同じような条件の検出コイル推定Zを実測寄りに補正<br><br>' +
       'フェライト・巻き方・線径・周波数によるクセを少しずつ学習して、<br>' +
       '検出コイルの設計精度を上げるための機能です。</div>';
+  }
+
+  function toggleTuningHelp() {
+    tuningHelpOpen = !tuningHelpOpen;
+    if (lastDesignResult) renderTuningSection(lastDesignResult.estimated);
+    else renderTuningPlaceholder();
   }
 
   function renderTuningPlaceholder() {
@@ -3380,95 +3954,12 @@ const Render = (() => {
     disableNumberWheel();
   }
 
-  function renderDifferentialResults(differential) {
-    $('diffResultsSection').classList.toggle('hidden', !differential);
-    if (!differential) return;
-    if (differential.version === 2) {
-      const cards = [
-        card('高感度・狭め', format(differential.sensitivityLo, 2) + '-' + format(differential.sensitivityHi, 2), 'mm'),
-        card('標準', format(differential.standardLo, 2) + '-' + format(differential.standardHi, 2), 'mm', 'highlight'),
-        card('安定・広め', format(differential.deepLo, 2) + '-' + format(differential.deepHi, 2), 'mm'),
-        card('端面ギャップ（実ギャップ）', format(differential.edgeGap, 2), 'mm'),
-        card('中心間距離', format(differential.centerDistance, 2), 'mm'),
-        card('現在位置', differential.position, '', 'highlight'),
-        card('判定', differential.judgment, ''),
-        list(differential.reasons)
-      ];
-      const html = cards.join('');
-      setHtml('diffResults', html);
-      return;
-    }
-    if (differential.probeStyle) {
-      const cards = [
-        card('感度重視ギャップ', format(differential.sensitivityLo, 2) + '-' + format(differential.sensitivityHi, 2), 'mm'),
-        card('バランスギャップ', format(differential.balanceLo, 2) + '-' + format(differential.balanceHi, 2), 'mm', 'highlight'),
-        card('深部探傷ギャップ', format(differential.deepLo, 2) + '-' + format(differential.deepHi, 2), 'mm'),
-      ];
-      if (differential.mode === 'check') {
-        cards.push(
-          card('中心間距離', format(differential.centerDistance, 2), 'mm'),
-          card('実ギャップ', format(differential.edgeGap, 2), 'mm'),
-          card('現在位置', differential.status, '', 'highlight'),
-          list(differential.reasons)
-        );
-      } else {
-        cards.push(
-          list(['<strong>プローブ形式</strong> ' + differential.probeLabel].concat(differential.reasons)),
-          list(['端面ギャップと中心間距離を分けて確認してください。'])
-        );
-      }
-      const html = cards.join('');
-      setHtml('diffResults', html);
-      return;
-    }
-    const cards = [
-      card('推奨差動距離', format(differential.recLo, 2) + '-' + format(differential.recHi, 2), 'mm', 'highlight'),
-      card('許容範囲', format(differential.allowLo, 2) + '-' + format(differential.allowHi, 2), 'mm'),
-    ];
-
-    if (differential.mode === 'recommend') {
-      cards.push(
-        list(['<strong>分類</strong> ' + differential.className].concat(differential.reasons)),
-        list(['ECT DESIGNERから値を持ってきた場合は、端面ギャップとして確認してください。'])
-      );
-    } else {
-      const statusClass = differential.status === 'OK' ? '' : 'warn';
-      cards.push(
-        card('入力差動距離', format(differential.used, 2), 'mm'),
-        card('判定', differential.status, '', statusClass),
-        list(differential.warnings.length ? differential.warnings.map(warning => '<span class="text-bad">' + warning + '</span>') : ['<span class="text-good">OK</span>'])
-      );
-    }
-
-    const html = cards.join('');
-    setHtml('diffResults', html);
-  }
-
   function renderExcitationSummary(estimated) {
     const hasExcitation = AppState.hasExcitation();
-    const showExcitationDistance = AppState.usesExcitationDistanceConditions();
     $('excitationEstimateSection')?.classList.toggle('hidden', !hasExcitation);
     if (!hasExcitation) {
       setHtml('excitationEstimatedResults', '');
       return;
-    }
-    const cards = [];
-    if (AppState.hasDualExcitation()) {
-      const d1 = readRenderNumber('ex1Distance', 1);
-      const d2 = readRenderNumber('ex2Distance', 1);
-      const gap = readRenderNumber('excitationGap', 2);
-      if (showExcitationDistance) {
-        cards.push(
-          card('励磁1-検出距離', format(d1, 2), 'mm'),
-          card('励磁2-検出距離', format(d2, 2), 'mm'),
-          card('励磁1-励磁2距離', format(gap, 2), 'mm'),
-          card('2励磁バランス', format(estimated.balanceDelta, 2), 'mm')
-        );
-      }
-    } else {
-      const distance = readRenderNumber('exciteDetectDistance', 1);
-      if (showExcitationDistance) cards.push(card('励磁-検出距離', format(distance, 2), 'mm'));
-      if (showExcitationDistance && AppState.isSimpleExcitationDetect()) cards.push(card('励磁位置補正', format(estimated.positionFactor, 2), 'x'));
     }
     setHtml('excitationEstimatedResults', renderExcitationEstimatedCards(estimated));
   }
@@ -3477,26 +3968,34 @@ const Render = (() => {
     return (CONFIG.excitationPolarities.find(item => item.value === value) || CONFIG.excitationPolarities[0]).label;
   }
 
-  function specBlock(title, items) {
-    return '<div class="spec-block"><h3>【' + title + '】</h3><ul>' +
-      items.filter(Boolean).map(item => '<li>' + item + '</li>').join('') +
+  function specBlock(title, items, options = {}) {
+    const classes = 'spec-block' + (options.single ? ' single' : '');
+    return '<div class="' + classes + '"><h3>【' + title + '】</h3><ul>' +
+      items.filter(Boolean).map(item => {
+        const itemClass = String(item).includes('spec-subhead') ? ' class="spec-subhead-row"' : '';
+        return '<li' + itemClass + '>' + item + '</li>';
+      }).join('') +
       '</ul></div>';
+  }
+
+  function specSubhead(title) {
+    return '<span class="spec-subhead">【' + title + '】</span>';
   }
 
   function roleSpecItems(role, single, estimatedZ) {
     const roleState = state.roles[role];
-    const targetZ = readRenderNumber(role + '_targetZ', CONFIG.roles[role].defaultTargetZ);
     const wireDia = readRenderNumber(role + '_wireDia', 0.05);
+    const inductance = single?.fwd?.L_uH;
     const items = [
       'タイプ：<strong>' + getCoilTypeLabel(roleState.type) + '</strong>',
       '巻数：<strong>' + formatInt(single?.inv?.Nt) + 'T</strong>',
-      '線径：<strong>' + format(wireDia, 2) + 'mm</strong>',
+      '線径：<strong>' + format(wireDia, 3) + 'mm</strong>',
     ];
     if (['insert', 'ferrite'].includes(roleState.type)) {
       items.push('フェライト：<strong>' + getInputValue('globalFerriteMaterial', '2G4') + '</strong>');
     }
-    items.push('推定Z：<strong>' + format(estimatedZ, 1) + 'Ω</strong>');
-    items.push('目標Z：<strong>' + format(targetZ, 1) + 'Ω</strong>');
+    items.push('推定Z：<strong>' + format(estimatedZ, 2) + 'Ω</strong>');
+    if (Number.isFinite(inductance)) items.push('推定L：<strong>' + format(inductance, 3) + 'uH</strong>');
     return items;
   }
 
@@ -3534,62 +4033,373 @@ const Render = (() => {
     }
   }
 
+  function hasSpecValue(value) {
+    return value !== undefined && value !== null && value !== '' &&
+      !(Array.isArray(value) && value.length === 0);
+  }
+
+  function specValue(label, value, unit = '') {
+    if (!hasSpecValue(value)) return '';
+    const display = Array.isArray(value)
+      ? value.filter(hasSpecValue).map(escapeHtml).join('<br>')
+      : escapeHtml(value);
+    if (!display) return '';
+    return label + ': <strong>' + display + unit + '</strong>';
+  }
+
+  function numberSpecValue(label, value, unit = '', digits = 3) {
+    if (!hasSpecValue(value)) return '';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return specValue(label, value, unit);
+    return label + ': <strong>' + format(n, digits) + unit + '</strong>';
+  }
+
+  function ectModeLabel(mode) {
+    if (mode === 'flaw') return '傷検出';
+    if (mode === 'material') return '異材判別';
+    return mode;
+  }
+
+  function ectInspectionSpecItems() {
+    const info = state.ectInfo;
+    if (!info) return [];
+    return [
+      specValue('検査目的', info.purpose || ectModeLabel(info.mode)),
+      specValue('キズ種類', info.flawType),
+      numberSpecValue('キズ幅', info.flawWidth, 'mm', 3),
+      numberSpecValue('キズ深さ', info.flawDepth, 'mm', 3),
+      numberSpecValue('想定検査深さ', info.inspectDepth, 'mm', 3),
+      specValue('対象材質', info.material),
+      numberSpecValue('使用周波数', info.frequency, 'kHz', 3),
+      numberSpecValue('表皮深さ', info.skinDepth, 'mm', 3),
+      specValue('推奨探傷モード', info.recommendedMode),
+      specValue('ECT-D側の注意コメント', info.cautions),
+    ].filter(Boolean);
+  }
+
+  function specLine(label, value, options = {}) {
+    const display = hasSpecValue(value) ? String(value) : '-';
+    const className = options.tone === 'bad'
+      ? 'text-bad'
+      : options.tone === 'warn'
+        ? 'text-warn'
+        : options.tone === 'good'
+          ? 'text-good'
+          : '';
+    return escapeHtml(label) + '：<strong' + (className ? ' class="' + className + '"' : '') + '>' +
+      (options.rawHtml ? display : escapeHtml(display)) + '</strong>';
+  }
+
+  function specListLine(label, values, options = {}) {
+    const listValues = (Array.isArray(values) ? values : [values]).filter(hasSpecValue);
+    return specLine(label, listValues.length ? listValues.join(' / ') : '-', options);
+  }
+
+  function yesNo(value) {
+    return value ? 'あり' : 'なし';
+  }
+
+  function coilTypeText(type) {
+    const map = {
+      air: '空芯',
+      insert: '空芯 + 中心フェライト',
+      ferrite: 'フェライト直巻き',
+      cross: 'クロス差動',
+      crossFerrite: 'クロス差動 + フェライト',
+    };
+    return map[type] || type || '-';
+  }
+
+  function probeStyleText(value) {
+    const map = {
+      surface: '表面プローブ',
+      insert: '内挿プローブ',
+      through: '貫通プローブ',
+    };
+    return map[value] || value || '-';
+  }
+
+  function configText(value) {
+    const map = {
+      single: '単独検出',
+      differential: '差動検出',
+      excitationDetect: '励磁 + 検出',
+      excitationDifferential: '励磁 + 差動検出',
+      dualExcitationDetect: '2励磁 + 検出',
+      dualExcitationDifferential: '2励磁 + 差動検出',
+    };
+    return map[value] || value || '-';
+  }
+
+  function polarityText(value) {
+    if (value === 'reverse') return '逆相';
+    return '同相';
+  }
+
+  function excitationPositionText(value) {
+    if (value === 'inner') return '励磁内側 / 検出外側';
+    if (value === 'separate') return '励磁と検出を分離配置';
+    return '励磁外側 / 検出内側';
+  }
+
+  function shapeText(shape) {
+    return shape === 'rect' ? '角形' : '円筒';
+  }
+
+  function frequencyText() {
+    const freq = readRenderNumber('freq', CONFIG.defaults.frequencyKHz);
+    if (!Number.isFinite(freq)) return '-';
+    const rounded = Math.round(freq * 1000) / 1000;
+    const text = Number.isInteger(rounded)
+      ? String(rounded)
+      : String(rounded).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+    return text + ' kHz';
+  }
+
+  function roleFrequencyText() {
+    return frequencyText();
+  }
+
+  function roleDimensionText(role, single) {
+    const roleState = state.roles[role];
+    const prefix = role + '_';
+    const fwd = single?.fwd || {};
+    const length = readRenderNumber(prefix + 'length', roleState.type === 'ferrite' ? 5.0 : 2.0);
+    if (roleState.type === 'ferrite') {
+      if (roleState.ferriteShape === 'bar') {
+        return '角フェライト ' + format(readRenderNumber(prefix + 'ferriteH', 3), 2) + ' x ' +
+          format(readRenderNumber(prefix + 'ferriteW', 5), 2) + ' mm / 巻線長 ' + format(length, 2) + ' mm';
+      }
+      return '丸フェライト径 ' + format(readRenderNumber(prefix + 'ferriteDia', 1), 2) +
+        ' mm / 仕上外径 ' + format(fwd.coilOD_mm, 2) + ' mm / 巻線長 ' + format(length, 2) + ' mm';
+    }
+    if (roleState.shape === 'rect') {
+      return '内寸 ' + format(readRenderNumber(prefix + 'innerH', 4), 2) + ' x ' +
+        format(readRenderNumber(prefix + 'innerW', 8), 2) + ' mm / 外寸 ' +
+        format(readRenderNumber(prefix + 'outerH', 6), 2) + ' x ' +
+        format(readRenderNumber(prefix + 'outerW', 10), 2) + ' mm / 仕上 ' +
+        format(fwd.coilH, 2) + ' x ' + format(fwd.coilW, 2) + ' mm / 巻線長 ' + format(length, 2) + ' mm';
+    }
+    return '内径 ' + format(readRenderNumber(prefix + 'innerDia', 1), 2) + ' mm / 外径入力 ' +
+      format(readRenderNumber(prefix + 'outerDia', 3), 2) + ' mm / 仕上外径 ' +
+      format(fwd.coilOD_mm, 2) + ' mm / 巻線長 ' + format(length, 2) + ' mm';
+  }
+
+  function ferriteSpecText(role) {
+    const roleState = state.roles[role];
+    if (!['insert', 'ferrite', 'crossFerrite'].includes(roleState.type)) return 'なし';
+    const prefix = role + '_';
+    const material = getInputValue('globalFerriteMaterial', '2G4');
+    const kind = roleState.type === 'ferrite' ? 'ferrite' : 'insert';
+    const model = Calculation.ferriteFactorModel(role, kind);
+    const parts = ['材質 ' + material, '補正 ' + format(model.effective, 2) + 'x'];
+    if (roleState.type === 'insert') {
+      parts.push(roleState.insertShape === 'round'
+        ? '中心丸径 ' + format(readRenderNumber(prefix + 'insertDia', 1), 2) + ' mm'
+        : '中心角 ' + format(readRenderNumber(prefix + 'insertH', 2), 2) + ' x ' + format(readRenderNumber(prefix + 'insertW', 2), 2) + ' mm');
+      parts.push('長さ ' + format(readRenderNumber(prefix + 'insertLength', 8), 2) + ' mm');
+    } else {
+      parts.push(roleState.ferriteShape === 'round'
+        ? '丸径 ' + format(readRenderNumber(prefix + 'ferriteDia', 1), 2) + ' mm'
+        : '角 ' + format(readRenderNumber(prefix + 'ferriteH', 3), 2) + ' x ' + format(readRenderNumber(prefix + 'ferriteW', 5), 2) + ' mm');
+      parts.push('長さ ' + format(readRenderNumber(prefix + 'ferriteLength', 8), 2) + ' mm');
+    }
+    return parts.join(' / ');
+  }
+
+  function tuningStateText() {
+    if (!state.tuningUpdatedAt) return '未学習';
+    const roles = AppState.activeRoles()
+      .filter(role => Math.abs(validTuningFactor(role) - 1) > 0.0001)
+      .map(role => roleShortLabel(role) + ' ' + format(validTuningFactor(role), 2) + 'x')
+      .join(' / ') || '補正 1.00x';
+    return (state.tuningEnabled ? '反映中' : '保存済み・未反映') +
+      ' / ' + roles + ' / ' + formatSavedAt(state.tuningUpdatedAt);
+  }
+
+  function turnModeText(role) {
+    return (state.roles[role]?.turnMode || 'targetZ') === 'turns' ? '巻数指定' : '目標Z';
+  }
+
+  function correctionFactorText(role) {
+    const roleState = state.roles[role];
+    const factors = [];
+    if (['insert', 'ferrite', 'crossFerrite'].includes(roleState.type)) factors.push('構造 ' + format(Calculation.getTypeFactor(role), 2) + 'x');
+    if (state.tuningEnabled) factors.push('実測 ' + format(validTuningFactor(role), 2) + 'x');
+    return factors.length ? factors.join(' / ') : '1.00x';
+  }
+
+  function roleSpecTitle(role) {
+    if (role === 'detect') return '検出仕様';
+    if (role === 'excitation1') return AppState.hasDualExcitation() ? '励磁仕様（共通×2）' : '励磁仕様';
+    if (role === 'excitation2') return '励磁2仕様';
+    return '励磁仕様';
+  }
+
+  function cableRecommendationSummary() {
+    try {
+      const cable = CableSelection.calculate({
+        config: state.config,
+        freq_kHz: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
+        length_m: Number(getInputValue('cable-length', CONFIG.cable.defaultLengthM)),
+        env: getInputValue('cable-env', 'normal'),
+        load: getInputValue('cable-load', 'standard'),
+      });
+      return cable.structure + ' / ' + cable.cores + ' / ' + cable.awg;
+    } catch (error) {
+      return 'ケーブル選定タブで確認';
+    }
+  }
+
+  function cableFinalItems() {
+    try {
+      const cable = CableSelection.calculate({
+        config: state.config,
+        freq_kHz: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
+        length_m: Number(getInputValue('cable-length', CONFIG.cable.defaultLengthM)),
+        env: getInputValue('cable-env', 'normal'),
+        load: getInputValue('cable-load', 'standard'),
+      });
+      return [
+        specLine('推奨ケーブル構成', cable.structure),
+        specLine('必要芯数', cable.cores),
+        specLine('推奨AWG', cable.awg),
+        specLine('最大推奨長', format(cable.maxLength, 1) + ' m'),
+        specLine('ケーブル候補', cable.candidates),
+        specListLine('注意点', cable.notices.slice(0, 4)),
+      ];
+    } catch (error) {
+      return [specLine('ケーブル', 'ケーブル条件を確認してください', { tone: 'warn' })];
+    }
+  }
+
+  function differentialDistanceFinalItems(result) {
+    if (!AppState.isDifferential()) return [specLine('\u5dee\u52d5\u6709\u7121', '\u306a\u3057')];
+    if (AppState.isCross()) return [];
+    const adopted = readRenderNumber('diffDistance', 0.5);
+    return [specLine('\u5dee\u52d5\u8ddd\u96e2', format(adopted, 2) + ' mm')];
+  }
+
+  function excitationDistanceFinalItems(result) {
+    if (!AppState.hasExcitation()) return [specLine('\u52b1\u78c1\u8ddd\u96e2', '\u52b1\u78c1\u306a\u3057')];
+    if (AppState.hasDualExcitation()) {
+      const d1 = readRenderNumber('ex1Distance', 1);
+      const d2 = readRenderNumber('ex2Distance', 1);
+      const gap = readRenderNumber('excitationGap', 2);
+      return [
+        specLine('\u52b1\u78c11-\u691c\u51fa\u8ddd\u96e2', format(d1, 2) + ' mm'),
+        specLine('\u52b1\u78c12-\u691c\u51fa\u8ddd\u96e2', format(d2, 2) + ' mm'),
+        specLine('\u52b1\u78c1\u9593\u8ddd\u96e2', format(gap, 2) + ' mm'),
+        specLine('\u52b1\u78c1\u6975\u6027', polarityText(getInputValue('excitationPolarity', 'same'))),
+      ];
+    }
+    const d = readRenderNumber('exciteDetectDistance', 1);
+    const items = [specLine('\u52b1\u78c1\u8ddd\u96e2', format(d, 2) + ' mm')];
+    if (AppState.isSimpleExcitationDetect()) {
+      items.push(specLine('\u52b1\u78c1\u914d\u7f6e', excitationPositionText(getInputValue('excitationPosition', 'outer'))));
+    }
+    return items;
+  }
+
+  function classifyFinalNotice(text) {
+    const value = String(text || '');
+    if (/NG|エラー|超え|収まり|巻線スペース|0より大き|強すぎ|過結合|漏れ|飽和|共振|危険|範囲外/.test(value)) return { level: 'danger', label: '危険', order: 0 };
+    if (/注意|低下|大き|高周波|短尺|容量|ノイズ|再検討/.test(value)) return { level: 'warn', label: '注意', order: 1 };
+    return { level: 'info', label: '推奨', order: 2 };
+  }
+
+  function collectFinalNotices(result) {
+    const warnings = [
+      '過結合: 励磁距離が近すぎる場合は励磁-検出距離を広げ、直接結合を確認してください。',
+      '漏れ磁束: 励磁線と検出線は可能な限り別ペア配線にし、シールド接地を測定器側へ寄せてください。',
+      'Q低下: フェライト・長尺ケーブル・線径過大でQが下がる可能性があります。実測Zと位相を確認してください。',
+    ];
+    const freq = readRenderNumber('freq', CONFIG.defaults.frequencyKHz);
+    if (freq >= CONFIG.thresholds.cable.highFrequencyKHz) {
+      warnings.push('高周波注意: 配線容量、治具容量、ケーブル長の影響が大きくなります。短尺・低容量を優先してください。');
+    }
+    if (result.estimated?.warnings) warnings.push(...result.estimated.warnings);
+    if (result.differential?.warnings) warnings.push(...result.differential.warnings);
+    if (state.ectInfo?.cautions?.length) warnings.push(...state.ectInfo.cautions);
+    return [...new Set(warnings)]
+      .map(text => ({ text, ...classifyFinalNotice(text) }))
+      .sort((a, b) => a.order - b.order)
+      .slice(0, 10);
+  }
+
+  function finalWarningTextItems(result) {
+    return collectFinalNotices(result).map(item =>
+      '<span class="' + (item.level === 'danger' ? 'text-bad' : item.level === 'warn' ? 'text-warn' : 'text-info') + '">' +
+      item.label + '</span>：<strong>' + escapeHtml(item.text) + '</strong>'
+    );
+  }
+
+  function finalMmText(value, digits = 3) {
+    if (!hasSpecValue(value)) return '-';
+    const n = Number(value);
+    return Number.isFinite(n) ? format(n, digits) + 'mm' : escapeHtml(String(value));
+  }
+
   function renderDesignSpec(result) {
     const cfg = CONFIG.coilConfigs.find(item => item.value === state.config) || CONFIG.coilConfigs[0];
     const detectEstimated = tunedEstimatedZ(result.estimated, 'detect');
-    const blocks = [];
-    blocks.push(specBlock('設計条件', [
-      'プローブ形式：<strong>' + (AppState.PROBE_STYLES[state.probeStyle] || '-') + '</strong>',
-      'コイル構成：<strong>' + cfg.label + '</strong>',
-      '測定周波数：<strong>' + format(readRenderNumber('freq', CONFIG.defaults.frequencyKHz), 1) + 'kHz</strong>',
-    ]));
-    blocks.push(specBlock('検出コイル', roleSpecItems('detect', result.singles.detect, detectEstimated)));
-    if (result.differential) {
-      blocks.push(specBlock('差動条件', [
-        '端面ギャップ：<strong>' + format(result.differential.edgeGap, 2) + 'mm</strong>',
-        '中心間距離：<strong>' + format(result.differential.centerDistance, 2) + 'mm</strong>',
-        '現在位置：<strong>' + result.differential.position + '</strong>',
-        '判定：<strong>' + result.differential.judgment + '</strong>',
-      ]));
-    }
+    const excitationRole = AppState.hasExcitation()
+      ? (AppState.hasDualExcitation() ? 'excitation1' : 'excitation')
+      : null;
+    const items = [];
+
+    const info = state.ectInfo || {};
+    items.push(
+      specSubhead('基本仕様'),
+      'プローブ形式：<strong>' + probeStyleText(state.probeStyle) + '</strong>',
+      'コイル構成：<strong>' + configText(state.config) + '</strong>',
+      '周波数：<strong>' + roleFrequencyText() + '</strong>',
+      '検出：<strong>' + coilTypeText(state.roles.detect.type) + '</strong>',
+      '励磁：<strong>' + (excitationRole ? (AppState.hasDualExcitation() ? '共通×2 / ' : '') + coilTypeText(state.roles[excitationRole].type) : 'なし') + '</strong>',
+      '差動：<strong>' + yesNo(cfg.differential) + '</strong>',
+      '推奨ケーブル：<strong>' + cableRecommendationSummary() + '</strong>'
+    );
+
+    items.push(
+      specSubhead('検査目的'),
+      '検査目的：<strong>' + escapeHtml(info.purpose || ectModeLabel(info.mode) || 'ECT-D未共有') + '</strong>',
+      'キズ種類：<strong>' + escapeHtml(info.flawType || '-') + '</strong>',
+      'キズ深さ：<strong>' + finalMmText(info.flawDepth) + '</strong>',
+      'キズ幅：<strong>' + finalMmText(info.flawWidth) + '</strong>',
+      '想定検査深さ：<strong>' + finalMmText(info.inspectDepth) + '</strong>',
+      '対象材質：<strong>' + escapeHtml(info.material || '-') + '</strong>',
+      '推奨探傷モード：<strong>' + escapeHtml(info.recommendedMode || '-') + '</strong>'
+    );
+
+    items.push(
+      specSubhead('検出コイル'),
+      ...roleSpecItems('detect', result.singles.detect, detectEstimated),
+      '周波数：<strong>' + roleFrequencyText() + '</strong>',
+      'コイル寸法：<strong>' + roleDimensionText('detect', result.singles.detect) + '</strong>',
+      'フェライト：<strong>' + ferriteSpecText('detect') + '</strong>'
+    );
+
+    const differentialItems = differentialDistanceFinalItems(result);
+    if (differentialItems.length) items.push(specSubhead('差動条件'), ...differentialItems);
+
     if (AppState.hasExcitation()) {
-      const showExcitationDistance = AppState.usesExcitationDistanceConditions();
-      const role = AppState.hasDualExcitation() ? 'excitation1' : 'excitation';
-      const estimatedZ = AppState.hasDualExcitation() ? tunedEstimatedZ(result.estimated, 'excitation1') : tunedEstimatedZ(result.estimated, 'excitation');
-      const items = ['励磁：<strong>あり</strong>'];
-      items.push(...roleSpecItems(role, result.singles[role], estimatedZ));
-      if (AppState.hasDualExcitation()) {
-        items.splice(1, 0, '励磁コイル：<strong>共通設計 ×2</strong>', '配置：<strong>左右対称</strong>');
-        if (showExcitationDistance) {
-          items.push(
-            '励磁1-検出距離：<strong>' + format(readRenderNumber('ex1Distance', 1), 2) + 'mm</strong>',
-            '励磁2-検出距離：<strong>' + format(readRenderNumber('ex2Distance', 1), 2) + 'mm</strong>',
-            '励磁1-励磁2距離：<strong>' + format(readRenderNumber('excitationGap', 2), 2) + 'mm</strong>',
-            '極性：<strong>' + polarityLabel(getInputValue('excitationPolarity', 'same')) + '</strong>',
-            '2励磁バランス：<strong>' + format(result.estimated.balanceDelta, 2) + 'mm</strong>'
-          );
-        }
-      } else {
-        if (showExcitationDistance) {
-          items.push(
-            '励磁-検出距離：<strong>' + format(readRenderNumber('exciteDetectDistance', 1), 2) + 'mm</strong>',
-            AppState.isSimpleExcitationDetect() ? '励磁位置：<strong>' + getExcitationPositionLabel(getInputValue('excitationPosition', 'outer')) + '</strong>' : ''
-          );
-        }
-      }
-      blocks.push(specBlock('励磁条件', items));
+      const estimatedZ = tunedEstimatedZ(result.estimated, excitationRole);
+      items.push(
+        specSubhead('励磁コイル'),
+        '仕様名：<strong>' + roleSpecTitle(excitationRole) + '</strong>',
+        ...roleSpecItems(excitationRole, result.singles[excitationRole], estimatedZ),
+        '周波数：<strong>' + roleFrequencyText() + '</strong>',
+        'コイル寸法：<strong>' + roleDimensionText(excitationRole, result.singles[excitationRole]) + '</strong>',
+        'フェライト：<strong>' + ferriteSpecText(excitationRole) + '</strong>'
+      );
     } else {
-      blocks.push(specBlock('励磁条件', ['励磁：<strong>なし</strong>']));
+      items.push(specSubhead('励磁コイル'), '励磁有無：<strong>なし</strong>', '配置条件：<strong>励磁コイルなし</strong>');
     }
-    blocks.push(specBlock('学習補正', learningSpecItems()));
-    blocks.push(specBlock('ケーブル候補', cableSpecItems()));
-    const notices = [
-      '構造込み推定Zは初期設計値です。最終値はLCRメータで確認してください。',
-      'フェライト材質や巻き方が変わる場合は、再度実測補正してください。',
-      '高周波ではケーブル容量の影響に注意してください。',
-    ];
-    blocks.push(specBlock('注意', notices));
-    setHtml('designSpecResults', '<div class="spec-view">' + blocks.join('') + '</div>');
+
+    items.push(specSubhead('励磁距離'), ...excitationDistanceFinalItems(result));
+    items.push(specSubhead('ケーブル候補'), ...cableFinalItems());
+    items.push(specSubhead('注意事項'), ...finalWarningTextItems(result).slice(0, 6));
+    setHtml('designSpecResults', '<div class="spec-view">' + specBlock('完成仕様プレビュー', items, { single: true }) + '</div>');
   }
 
   function colorNoticeText(text) {
@@ -3647,21 +4457,99 @@ const Render = (() => {
     }
     items.push(...estimated.warnings);
     if (differential) items.push(...differential.warnings);
-    const isWarning = items.some(item => item.includes('注意') || item.includes('NG') || item.includes('超え') || item.includes('以上'));
-    setHtml('noticeResults', '<div class="' + (isWarning ? 'warn-box' : 'info-box') + '">' + items.map(item => '- ' + colorNoticeText(item)).join('<br>') + '</div>');
+    const priorityItems = [...new Set(items)]
+      .map(text => ({ text, ...classifyFinalNotice(text) }))
+      .sort((a, b) => a.order - b.order);
+    const noticeItems = priorityItems.map(item =>
+      '<span class="' + (item.level === 'danger' ? 'text-bad' : item.level === 'warn' ? 'text-warn' : 'text-info') + '">' +
+      item.label + '</span>：<strong>' + colorNoticeText(item.text) + '</strong>'
+    );
+    setHtml('noticeResults', '<div class="spec-view">' + specBlock('注意事項', noticeItems, { single: true }) + '</div>');
+  }
+
+  function isSectionVisible(id) {
+    const element = $(id);
+    return !!element && !element.classList.contains('hidden') && element.offsetParent !== null;
+  }
+
+  function isDesignSubTabActive(tab) {
+    return $('designSubtab-' + tab)?.classList.contains('active');
+  }
+
+  function markResultDirty() {
+    detectResultDirty = true;
+    excitationResultDirty = true;
+    resultRenderDirty = true;
+  }
+
+  function renderDetectResultSection(result, force = false) {
+    const shouldRender = force || detectResultDirty || isDesignSubTabActive('detect');
+    if (!shouldRender) return;
+    setHtml('detectEstimatedResults', renderDetectEstimatedCards(result.estimated));
+    $('detectEstimateSection')?.classList.remove('hidden');
+    detectResultDirty = false;
+  }
+
+  function renderExcitationResultSection(result, force = false) {
+    const hasExcitation = AppState.hasExcitation();
+    $('excitationEstimateSection')?.classList.toggle('hidden', !hasExcitation);
+    if (!hasExcitation) {
+      setHtml('excitationEstimatedResults', '');
+      excitationResultDirty = false;
+      return;
+    }
+    const shouldRender = force || excitationResultDirty || isDesignSubTabActive('excitation');
+    if (!shouldRender) return;
+    renderExcitationSummary(result.estimated);
+    excitationResultDirty = false;
+  }
+
+  function renderResultTab(result, force = false) {
+    if (!force && !resultRenderDirty && !isDesignSubTabActive('result')) return;
+    if (!force && !isDesignSubTabActive('result') && !isSectionVisible('resultArea')) return;
+    $('resultArea')?.classList.remove('hidden');
+    renderTuningSection(result.estimated);
+    renderDesignSpec(result);
+    renderNotices(result.singles, result.estimated, result.differential);
+    renderIntegrationStatus();
+    resultRenderDirty = false;
+  }
+
+  function isCurrentDesignResult(result) {
+    if (!result || result.config !== AppState.state.config) return false;
+    return (result.activeRoles || []).join('|') === AppState.activeRoles().join('|');
+  }
+
+  function renderDesignState(result, options = {}) {
+    if (!isCurrentDesignResult(result)) return;
+    lastDesignResult = result;
+    markResultDirty();
+    clearError('errorArea');
+    const forceAll = options.force === true;
+    renderDetectResultSection(result, forceAll || isDesignSubTabActive('detect'));
+    renderExcitationResultSection(result, forceAll || isDesignSubTabActive('excitation'));
+    renderResultTab(result, forceAll || isDesignSubTabActive('result'));
   }
 
   function renderResults(result) {
-    lastDesignResult = result;
-    clearError('errorArea');
-    $('resultArea').classList.remove('hidden');
-    setHtml('detectEstimatedResults', renderDetectEstimatedCards(result.estimated));
-    $('detectEstimateSection')?.classList.remove('hidden');
-    renderTuningSection(result.estimated);
-    renderDifferentialResults(result.differential);
-    renderExcitationSummary(result.estimated);
-    renderDesignSpec(result);
-    renderNotices(result.singles, result.estimated, result.differential);
+    renderDesignState(result, { force: true });
+  }
+
+  function renderActiveDesignSubTab(tab) {
+    if (!lastDesignResult) {
+      if (tab !== 'detect' && tab !== 'excitation') return;
+      try {
+        renderDesignState(Calculation.calculateDesignState());
+      } catch (error) {
+        showError(error.message || '計算できませんでした。入力値を確認してください。', 'errorArea');
+      }
+      return;
+    }
+    if (tab === 'detect') renderDetectResultSection(lastDesignResult, true);
+    if (tab === 'excitation') {
+      renderExcitationResultSection(lastDesignResult, true);
+    }
+    if (tab === 'result') renderResultTab(lastDesignResult, true);
   }
 
   function renderMeasuredResult(inverse, mode = 'z') {
@@ -3748,14 +4636,14 @@ const Render = (() => {
 
   function previewNumber(id, fallback) {
     const element = $(id);
-    const raw = element ? element.value : state.inputs[id];
+    const raw = state.inputs[id] !== undefined ? state.inputs[id] : (element ? element.value : undefined);
     const value = parseFloat(raw);
     return Number.isFinite(value) ? value : fallback;
   }
 
   function hasPositivePreviewNumber(id) {
     const element = $(id);
-    const raw = element ? element.value : state.inputs[id];
+    const raw = state.inputs[id] !== undefined ? state.inputs[id] : (element ? element.value : undefined);
     if (raw === undefined || raw === null || String(raw).trim() === '') return false;
     const value = parseFloat(raw);
     return Number.isFinite(value) && value > 0;
@@ -3798,6 +4686,10 @@ const Render = (() => {
     return '<span class="preview-gap"></span>';
   }
 
+  function previewGroupLabel(label) {
+    return '<span class="preview-group-label">' + label + '</span>';
+  }
+
   function previewSeparator() {
     return '<span class="preview-separator"></span>';
   }
@@ -3815,8 +4707,9 @@ const Render = (() => {
     return Math.max(0.001, readRenderNumber('detect_length', 2));
   }
 
-  function differentialRecommendation() {
-    if (!AppState.showsDifferentialDistancePreview()) return null;
+  function differentialRecommendation(options = {}) {
+    const includeInactive = options.includeInactive === true;
+    if (!includeInactive && !AppState.showsDifferentialDistancePreview()) return null;
     const probeStyle = state.probeStyle || 'surface';
     const flawWidth = Math.max(0.001, readRenderNumber('flawWidth', 0.5));
     const depth = Math.max(0, readRenderNumber('inspectDepth', 0.05));
@@ -3978,6 +4871,8 @@ const Render = (() => {
 
     if (isTargetMode) lines.push(previewLine('目標Z', format(result.targetZ_ohm, 1) + ' Ω'));
     lines.push(previewLine('補正なし単体Z', format(fwd.Z, 1) + ' Ω', 'text-info'));
+    lines.push(previewLine('内訳', 'Rdc ' + format(fwd.R_ohm, 2) + ' Ω / Xl ' + format(fwd.XL_ohm, 2) + ' Ω', 'text-muted'));
+    lines.push(previewLine('線長', format(fwd.wireLength_m, 3) + ' m', 'text-muted'));
     if (['insert', 'ferrite', 'crossFerrite'].includes(roleState.type)) {
       const factor = Calculation.getTypeFactor(role);
       const correctedZ = fwd.Z * factor;
@@ -3992,33 +4887,18 @@ const Render = (() => {
     lines.push(previewLine('表皮深さ', format(fwd.skinD_mm, 3) + ' mm', 'text-info'));
     if (role === 'detect') {
       const diffRec = differentialRecommendation();
-      if (diffRec) lines.push(previewSeparator());
       if (diffRec) {
-        lines.push(previewLine('高感度・狭め', diffRec.itemLabel + rangeText(diffRec.sensitivity) + ' mm', 'text-info'));
-        lines.push(textSpan('text-muted', diffRec.comments.sensitivity[0]));
-        lines.push(previewGap());
-        lines.push(previewLine('標準', diffRec.itemLabel + rangeText(diffRec.standard) + ' mm', 'text-info'));
-        lines.push(textSpan('text-muted', diffRec.comments.standard[0]));
-        lines.push(previewGap());
-        lines.push(previewLine('安定・広め', diffRec.itemLabel + rangeText(diffRec.deep) + ' mm', 'text-info'));
-        lines.push(textSpan('text-muted', diffRec.comments.deep[0]));
-        if (!diffRec.isPlanarDistance) lines.push(textSpan('text-muted', diffRec.notes.join(' / ')));
+        lines.push(...differentialRecommendationPreviewLines(diffRec));
       }
     }
     if (role !== 'detect' && AppState.hasExcitation()) {
       const exRec = excitationDistanceRecommendation();
       if (exRec) {
-        lines.push(previewSeparator());
-        lines.push(previewLine('強結合・近め', exRec.itemLabel + rangeText(exRec.near) + ' mm', 'text-warn'));
-        lines.push(textSpan('text-muted', exRec.comments.near[0]));
-        lines.push(previewGap());
-        lines.push(previewLine('標準', exRec.itemLabel + rangeText(exRec.standard) + ' mm', 'text-info'));
-        lines.push(textSpan('text-muted', exRec.comments.standard[0]));
-        lines.push(previewGap());
-        lines.push(previewLine('安定・離し気味', exRec.itemLabel + rangeText(exRec.stable) + ' mm', 'text-info'));
-        lines.push(textSpan('text-muted', exRec.comments.stable[0]));
-        if (AppState.hasDualExcitation()) lines.push(previewLine('A/B差', format(exRec.balanceLimit, 1) + ' mm以内推奨', 'text-info'));
-        if (!exRec.isPlanarDistance) lines.push(textSpan('text-muted', '検出コイルを中心に対称配置。片側だけ近いと磁場分布が偏るため注意。'));
+        lines.push(...excitationRecommendationPreviewLines(exRec));
+        if (!exRec.isPlanarDistance) {
+          lines.push(previewGap());
+          lines.push(textSpan('text-muted', '検出コイルを中心に対称配置。片側だけ近いと磁場分布が偏るため注意。'));
+        }
       }
     }
 
@@ -4149,7 +5029,7 @@ const Render = (() => {
     clearTimeout(previewRenderTimer);
     const uniqueRoles = [...new Set(roles)].filter(role => AppState.activeRoles().includes(role));
     if (!uniqueRoles.length) return;
-    previewRenderTimer = setTimeout(() => scheduleFrame(() => uniqueRoles.forEach(role => updateRolePreview(role))), 180);
+    previewRenderTimer = setTimeout(() => uniqueRoles.forEach(role => updateRolePreview(role)), 180);
   }
 
   function refreshRoleInputs() {
@@ -4166,6 +5046,8 @@ const Render = (() => {
     renderAllScheduled = true;
     scheduleFrame(() => {
       renderAllScheduled = false;
+      clearTimeout(designRecalcTimer);
+      designRecalcTimer = null;
       renderAll();
     });
   }
@@ -4204,9 +5086,18 @@ const Render = (() => {
     });
   }
 
-  function updateDistancePreviews() {
-    updateDifferentialDistancePreview();
-    updateExcitationDistancePreview();
+  function scheduleRenderProbeStyle(reason = '') {
+    if (probeStyleScheduled) return;
+    probeStyleScheduled = true;
+    scheduleFrame(() => {
+      probeStyleScheduled = false;
+      renderProbeStyleChoices();
+      renderConfigSummary();
+      renderCouplingInputs();
+      disableNumberWheel();
+      updateDesignSubTabVisibility();
+      if (lastDesignResult) updateEstimatedResults();
+    });
   }
 
   function scheduleRenderCable(reason = '') {
@@ -4232,11 +5123,15 @@ const Render = (() => {
   }
 
   function updateDesignSubTabVisibility() {
-    $('diffEmptyMessage')?.classList.toggle('hidden', AppState.isDifferential());
+    const showDifferentialDistance = AppState.usesDifferentialDistanceConditions();
+    $('couplingSection')?.classList.toggle('hidden', !showDifferentialDistance);
+    $('diffEmptyMessage')?.classList.toggle('hidden', showDifferentialDistance);
     $('excitationEmptyMessage')?.classList.toggle('hidden', AppState.hasExcitation());
   }
 
   function renderAll() {
+    clearTimeout(designRecalcTimer);
+    designRecalcTimer = null;
     renderProbeStyleChoices();
     renderConfigChoices();
     renderConfigSummary();
@@ -4246,8 +5141,6 @@ const Render = (() => {
     if (!lastDesignResult) {
       $('resultArea').classList.add('hidden');
       $('detectEstimateSection')?.classList.add('hidden');
-      $('excitationEstimateSection')?.classList.add('hidden');
-      $('diffResultsSection')?.classList.add('hidden');
       setHtml('designSpecResults', '<div class="info-box">構成込み結果を更新すると、設計仕様まとめを表示します。</div>');
     }
     renderTuningPlaceholder();
@@ -4258,16 +5151,12 @@ const Render = (() => {
 
   function rerenderLastDesign() {
     if (!lastDesignResult) return;
-    setHtml('detectEstimatedResults', renderDetectEstimatedCards(lastDesignResult.estimated));
-    setHtml('excitationEstimatedResults', renderExcitationEstimatedCards(lastDesignResult.estimated));
-    renderTuningSection(lastDesignResult.estimated);
-    renderExcitationSummary(lastDesignResult.estimated);
-    renderDesignSpec(lastDesignResult);
-    renderNotices(lastDesignResult.singles, lastDesignResult.estimated, lastDesignResult.differential);
+    renderDesignState(lastDesignResult);
   }
 
   function inputAffectsDesign(id) {
     if (!id || id.startsWith('tune_') || id.startsWith('tz-entry-')) return false;
+    if (id.endsWith('_turnMode')) return true;
     if (id === 'freq' || id === 'globalFerriteMaterial' || id === 'globalFerriteFactor' || id === 'excitationPosition' || id === 'excitationPolarity') return true;
     if (['flawWidth', 'inspectDepth', 'diffDistance', 'ex1Distance', 'ex2Distance', 'excitationGap', 'exciteDetectDistance'].includes(id)) return true;
     return AppState.activeRoles().some(role => id.startsWith(role + '_'));
@@ -4276,18 +5165,30 @@ const Render = (() => {
   function scheduleDesignRecalc(id = '') {
     if (!lastDesignResult || !inputAffectsDesign(id)) return;
     clearTimeout(designRecalcTimer);
-    designRecalcTimer = setTimeout(() => scheduleFrame(() => {
+    designRecalcTimer = setTimeout(() => {
+      designRecalcTimer = null;
       updateEstimatedResults();
-    }), 180);
+    }, 180);
   }
 
   function updateEstimatedResults() {
     try {
-      const result = Calculation.calculateDesign();
-      renderResults(result);
+      const result = Calculation.calculateDesignState();
+      scheduleFrame(() => {
+        if (isCurrentDesignResult(result)) renderDesignState(result);
+      });
     } catch (error) {
       showError(error.message || '計算できませんでした。入力値を確認してください。', 'errorArea');
     }
+  }
+
+  function syncAfterTurnModeChange(role) {
+    clearTimeout(designRecalcTimer);
+    clearTimeout(previewRenderTimer);
+    if (AppState.hasDualExcitation() && role === 'excitation1') AppState.syncDualExcitationCommon();
+    renderRoleBlock(role);
+    if (AppState.hasDualExcitation() && role === 'excitation1') updateRolePreview('excitation1');
+    if (lastDesignResult) updateEstimatedResults();
   }
 
   function updateTuning() {
@@ -4324,18 +5225,303 @@ const Render = (() => {
     rerenderLastDesign();
   }
 
+  function roleExportLabel(role) {
+    if (role === 'detect') return '検出';
+    if (role === 'excitation1') return '励磁1';
+    if (role === 'excitation2') return '励磁2';
+    return '励磁';
+  }
+
+  function refreshWcRoleSelectors() {
+    const roles = AppState.activeRoles();
+    const exportEl = $('wcExportRole');
+    if (exportEl) {
+      const current = roles.includes(exportEl.value) ? exportEl.value : roles[0];
+      exportEl.innerHTML = roles.map(role => '<option value="' + role + '">' + roleExportLabel(role) + '</option>').join('');
+      exportEl.value = current || 'detect';
+    }
+    const importEl = $('wcImportRole');
+    if (importEl) {
+      [...importEl.options].forEach(option => {
+        option.hidden = !roles.includes(option.value);
+      });
+      if (!roles.includes(importEl.value)) importEl.value = roles.includes('detect') ? 'detect' : roles[0];
+    }
+  }
+
+  function roleCoilTypeForWc(role) {
+    const type = state.roles[role]?.type || 'air';
+    if (type === 'ferrite') return 'ferrite';
+    if (['insert', 'crossFerrite'].includes(type)) return 'insert';
+    return 'air';
+  }
+
+  function buildWcRecordFromRole(role, result) {
+    const roleState = state.roles[role] || {};
+    const prefix = role + '_';
+    const single = result?.singles?.[role] || {};
+    const fwd = single.fwd || {};
+    const inv = single.inv || {};
+    const shape = roleState.shape || 'cyl';
+    const record = {
+      role,
+      roleLabel: roleExportLabel(role),
+      wireDia: readRenderNumber(prefix + 'wireDia', 0.05),
+      totalTurns: Number.isFinite(inv.Nt) ? inv.Nt : readRenderNumber(prefix + 'turns', null),
+      oneLayerTurns: Number.isFinite(fwd.turnsPerLayer) ? fwd.turnsPerLayer : null,
+      layers: Number.isFinite(fwd.usedLayers) ? fwd.usedLayers : null,
+      windingLength: readRenderNumber(prefix + 'length', roleState.type === 'ferrite' ? 5 : 2),
+      frequency: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
+      frequency_kHz: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
+      coilType: roleCoilTypeForWc(role),
+      bobbinShape: shape === 'rect' ? 'rect' : 'round',
+      bobbinInnerDia: shape === 'rect' ? null : readRenderNumber(prefix + 'innerDia', 1),
+      bobbinOuterDia: shape === 'rect' ? null : readRenderNumber(prefix + 'outerDia', 3),
+      bobbinInnerH: shape === 'rect' ? readRenderNumber(prefix + 'innerH', 4) : null,
+      bobbinInnerW: shape === 'rect' ? readRenderNumber(prefix + 'innerW', 8) : null,
+      bobbinOuterH: shape === 'rect' ? readRenderNumber(prefix + 'outerH', 6) : null,
+      bobbinOuterW: shape === 'rect' ? readRenderNumber(prefix + 'outerW', 10) : null,
+      ferriteMaterial: getInputValue('globalFerriteMaterial', 'なし'),
+      ferriteShape: roleState.type === 'insert'
+        ? (roleState.insertShape === 'round' ? 'round' : 'rect')
+        : (roleState.ferriteShape === 'bar' ? 'rect' : (['ferrite', 'crossFerrite'].includes(roleState.type) ? 'round' : 'none')),
+      ferriteDia: readRenderNumber(prefix + (roleState.type === 'insert' ? 'insertDia' : 'ferriteDia'), null),
+      ferriteH: readRenderNumber(prefix + (roleState.type === 'insert' ? 'insertH' : 'ferriteH'), null),
+      ferriteW: readRenderNumber(prefix + (roleState.type === 'insert' ? 'insertW' : 'ferriteW'), null),
+      memo: 'CD連携: ' + roleExportLabel(role) + ' / ' + configText(state.config)
+    };
+    return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== null && value !== undefined && value !== ''));
+  }
+
+  function buildWcPayload(role = $('wcExportRole')?.value || 'detect') {
+    if (!lastDesignResult) return null;
+    const record = buildWcRecordFromRole(role, lastDesignResult);
+    return {
+      app: 'WC',
+      version: '2.1',
+      metadata: {
+        sourceApp: 'CD',
+        sourceVersion: '2.1',
+        exportedAt: new Date().toISOString(),
+        role,
+        roleLabel: roleExportLabel(role),
+      },
+      design: {
+        config: state.config,
+        configLabel: configText(state.config),
+        coilType: state.roles[role]?.type || 'air',
+        coilTypeLabel: coilTypeText(state.roles[role]?.type),
+        frequency_kHz: record.frequency_kHz,
+        wireDia_mm: record.wireDia,
+        turns: record.totalTurns,
+        coilDiameter_mm: lastDesignResult.singles?.[role]?.fwd?.coilOD_mm || record.bobbinOuterDia,
+        windingLength_mm: record.windingLength,
+        ferrite: {
+          material: record.ferriteMaterial,
+          shape: record.ferriteShape,
+          dia_mm: record.ferriteDia,
+          h_mm: record.ferriteH,
+          w_mm: record.ferriteW,
+        },
+      },
+      measurement: {
+        records: [record],
+        activeRecord: record,
+      },
+      correction: {
+        targetRole: role,
+        windingCorrectionFactor: 1,
+        ferriteCorrectionFactor: Calculation.getTypeFactor(role),
+        learningCorrectionFactor: validTuningFactor(role),
+      },
+      records: [record],
+    };
+  }
+
+  function showWcStatus(message, warn = false) {
+    const el = $('wcBridgeStatus');
+    if (!el) return;
+    el.className = warn ? 'mini-status text-warn' : 'mini-status';
+    el.textContent = message;
+  }
+
+  async function copyWcJson() {
+    const payload = buildWcPayload();
+    if (!payload) return showWcStatus('先に構成込み結果を更新してください。', true);
+    const text = JSON.stringify(payload, null, 2);
+    try {
+      await navigator.clipboard.writeText(text);
+      showWcStatus('WC JSONをコピーしました: ' + payload.metadata.roleLabel);
+    } catch (error) {
+      const input = $('wcJsonInput');
+      if (input) {
+        input.value = text;
+        input.select();
+      }
+      showWcStatus('クリップボードへ直接コピーできないため、JSON欄に出しました。', true);
+    }
+  }
+
+  function openWcWithJson() {
+    const payload = buildWcPayload();
+    if (!payload) return showWcStatus('先に構成込み結果を更新してください。', true);
+    try {
+      localStorage.setItem('coilDesigner.toWc.v1', JSON.stringify(payload));
+    } catch (error) {
+      showWcStatus('ブラウザ保存へ渡せませんでした。JSONコピーを使ってください。', true);
+      return;
+    }
+    const url = new URL('winding-calibrator.html', window.location.href);
+    url.searchParams.set('from', 'cd');
+    window.open(url.toString(), '_blank', 'noopener');
+    showWcStatus('WCを別タブで開きました。WC側で自動貼り付けします。');
+  }
+
+  function numberFromAny(value) {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    const match = String(value).match(/-?\d+(?:\.\d+)?/);
+    if (!match) return null;
+    const n = Number(match[0]);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function estimateWindingFactorFromWcRecord(record) {
+    const totalTurns = numberFromAny(record.totalTurns);
+    const layers = numberFromAny(record.layers);
+    const oneLayerTurns = numberFromAny(record.oneLayerTurns);
+    const windingLength = numberFromAny(record.windingLength);
+    const wireDia = numberFromAny(record.coveredDia) ?? numberFromAny(record.wireDia);
+    const measuredOneLayer = totalTurns > 0 && layers > 0 ? totalTurns / layers : null;
+    const theoryOneLayer = oneLayerTurns > 0
+      ? oneLayerTurns
+      : (windingLength > 0 && wireDia > 0 ? Math.floor(windingLength / wireDia) : null);
+    return measuredOneLayer > 0 && theoryOneLayer > 0 ? measuredOneLayer / theoryOneLayer : null;
+  }
+
+  function extractWcCorrection(data) {
+    const correction = data.correction || {};
+    const records = data.measurement?.records || data.records || (data.measurement?.activeRecord ? [data.measurement.activeRecord] : []);
+    const active = data.measurement?.activeRecord || records[records.length - 1] || {};
+    const factor = numberFromAny(correction.windingCorrectionFactor)
+      ?? numberFromAny(correction.learningCorrectionFactor)
+      ?? numberFromAny(correction.factors?.winding)
+      ?? numberFromAny(active.windingFactor)
+      ?? numberFromAny(active.correctionFactor)
+      ?? estimateWindingFactorFromWcRecord(active);
+    const ferriteFactor = numberFromAny(correction.ferriteCorrectionFactor)
+      ?? numberFromAny(correction.factors?.ferrite)
+      ?? numberFromAny(active.ferriteCorrectionFactor);
+    const learningFactor = numberFromAny(correction.learningCorrectionFactor)
+      ?? numberFromAny(correction.factors?.learning)
+      ?? factor;
+    return { factor, ferriteFactor, learningFactor, active };
+  }
+
+  function applyWcJsonText(text) {
+    let data = null;
+    try {
+      data = JSON.parse(String(text || '').trim());
+    } catch (error) {
+      return { ok: false, message: 'JSON破損: ' + error.message };
+    }
+    const role = $('wcImportRole')?.value || data.correction?.targetRole || data.metadata?.role || 'detect';
+    if (!AppState.activeRoles().includes(role)) {
+      return { ok: false, message: '反映先コイルが現在の構成にありません: ' + role };
+    }
+    const extracted = extractWcCorrection(data);
+    if (!Number.isFinite(extracted.learningFactor) && !Number.isFinite(extracted.factor)) {
+      return { ok: false, message: '補正係数を読み取れません。correction.windingCorrectionFactor または records[].windingFactor を確認してください。' };
+    }
+    const factor = extracted.learningFactor ?? extracted.factor;
+    AppState.setTuningCorrection(role, factor);
+    AppState.setTuningEnabled(true);
+    if (Number.isFinite(extracted.ferriteFactor) && extracted.ferriteFactor > 0) {
+      AppState.setInputValue('globalFerriteMaterial', 'manual');
+      AppState.setInputValue('globalFerriteFactor', String(Number(extracted.ferriteFactor.toFixed(4))));
+    }
+    AppState.state.tuningUpdatedAt = new Date().toISOString();
+    AppState.setWcImport({
+      role,
+      factor,
+      ferriteFactor: extracted.ferriteFactor,
+      sourceVersion: data.version || 'legacy',
+      updatedAt: AppState.state.tuningUpdatedAt,
+    });
+    Storage.setJson(AppState.TUNING_STORAGE_KEY, {
+      ...AppState.state.tuningCorrection,
+      updatedAt: AppState.state.tuningUpdatedAt,
+      source: 'WC',
+      version: data.version || 'legacy',
+    });
+    rerenderLastDesign();
+    return { ok: true, role, factor, ferriteFactor: extracted.ferriteFactor, version: data.version || 'legacy' };
+  }
+
+  function applyWcJson() {
+    const result = applyWcJsonText($('wcJsonInput')?.value || '');
+    if (!result.ok) return showWcStatus(result.message, true);
+    showWcStatus('WC補正を反映しました: ' + roleExportLabel(result.role) + ' / 学習補正 ' + format(result.factor, 3) + 'x' +
+      (Number.isFinite(result.ferriteFactor) ? ' / フェライト補正 ' + format(result.ferriteFactor, 3) + 'x' : '') +
+      ' / JSON v' + result.version);
+    if (lastDesignResult) {
+      try {
+        const recalculated = Calculation.calculateDesignState();
+        renderDesignState(recalculated, { force: true });
+      } catch (error) {
+        showWcStatus('補正は反映しましたが再計算に失敗しました: ' + error.message, true);
+      }
+    }
+  }
+
+  async function pasteAndApplyWcJson() {
+    const input = $('wcJsonInput');
+    try {
+      if (navigator.clipboard?.readText && input) input.value = await navigator.clipboard.readText();
+    } catch (error) {
+      showWcStatus('クリップボード読込ができません。JSON欄へ貼り付けてから自動反映してください。', true);
+      return;
+    }
+    applyWcJson();
+  }
+
+  function renderIntegrationStatus() {
+    refreshWcRoleSelectors();
+    const target = $('integrationStatus');
+    if (!target) return;
+    const ect = state.ectInfo ? '読込済み' : '未読込';
+    const wc = state.wcImport
+      ? roleExportLabel(state.wcImport.role) + 'のみ適用'
+      : (state.tuningUpdatedAt ? '学習補正あり' : '未適用');
+    const updated = state.wcImport?.updatedAt || state.tuningUpdatedAt || new Date().toISOString();
+    target.innerHTML = '<div class="integration-status-grid">' +
+      '<div class="integration-status-item"><b>ECT条件</b><span>' + escapeHtml(ect) + '</span></div>' +
+      '<div class="integration-status-item"><b>WC補正</b><span>' + escapeHtml(wc) + '</span></div>' +
+      '<div class="integration-status-item"><b>最終更新</b><span>' + escapeHtml(formatSavedAt(updated)) + '</span></div>' +
+      '</div>';
+  }
+
   return ({
     $, format, formatInt, card,
     showError,
     clearError,
     renderAll,
+    renderDesignState,
     renderResults,
+    renderActiveDesignSubTab,
     renderMeasuredResult,
     renderEctImportStatus,
     renderCableControls,
     renderCableResult,
+    copyWcJson,
+    openWcWithJson,
+    applyWcJson,
+    pasteAndApplyWcJson,
+    renderIntegrationStatus,
+    renderTypeChoices,
     updateTuning,
     toggleTuning,
+    toggleTuningHelp,
     saveTuningCorrection,
     resetTuningCorrection,
     updateRolePreview,
@@ -4343,12 +5529,13 @@ const Render = (() => {
     updateExcitationPreview,
     affectedPreviewRoles,
     scheduleRolePreviews,
-    updateDistancePreviews,
     updateEstimatedResults,
+    syncAfterTurnModeChange,
     scheduleDesignRecalc,
     scheduleRenderAll,
     scheduleRenderRole,
     scheduleRenderCoupling,
+    scheduleRenderProbeStyle,
     scheduleRenderCable,
     renderRoleBlock,
   });
@@ -4357,6 +5544,8 @@ const Render = (() => {
 /* Controller layer */
 const UI = (() => {
   const TARGET_Z_TUNER_KEY = 'coilDesigner.targetZTuner.v1';
+  const MAX_TARGET_Z_POINTS = 40;
+  let targetZTunerSaveTimer = null;
   let targetZTuner = {
     mode: 'z',
     frequency: '',
@@ -4415,33 +5604,61 @@ const UI = (() => {
     };
   }
 
+  function normalizeTargetZTunerPoints(points) {
+    const seen = new Set();
+    return (Array.isArray(points) ? points : [])
+      .map(point => ({
+        n: String(point?.n ?? '').trim(),
+        z: String(point?.z ?? '').trim(),
+      }))
+      .filter(point => point.n !== '' || point.z !== '')
+      .filter(point => {
+        const key = point.n + '\u0000' + point.z;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(-MAX_TARGET_Z_POINTS);
+  }
+
+  function compactTargetZTuner() {
+    targetZTuner.points = normalizeTargetZTunerPoints(targetZTuner.points);
+  }
+
   function loadTargetZTuner() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(TARGET_Z_TUNER_KEY) || 'null');
-      if (parsed && Array.isArray(parsed.points)) {
-        targetZTuner = {
-          mode: parsed.mode === 'l' ? 'l' : 'z',
-          frequency: parsed.frequency ?? '',
-          targetZ: parsed.targetZ ?? '',
-          entry: {
-            n: parsed.entry?.n ?? '',
-            z: parsed.entry?.z ?? '',
-          },
-          points: parsed.points.map(point => ({
-            n: point.n ?? '',
-            z: point.z ?? '',
-          })).filter(point => point.n !== '' || point.z !== ''),
-        };
-      }
-    } catch {
+    const parsed = Storage.getJson(TARGET_Z_TUNER_KEY, null);
+    if (!parsed) {
       targetZTuner = defaultTargetZTuner();
+      return;
+    }
+    if (Array.isArray(parsed.points)) {
+      targetZTuner = {
+        mode: parsed.mode === 'l' ? 'l' : 'z',
+        frequency: parsed.frequency ?? '',
+        targetZ: parsed.targetZ ?? '',
+        entry: {
+          n: parsed.entry?.n ?? '',
+          z: parsed.entry?.z ?? '',
+        },
+        points: normalizeTargetZTunerPoints(parsed.points),
+      };
     }
   }
 
-  function saveTargetZTuner() {
-    try {
-      localStorage.setItem(TARGET_Z_TUNER_KEY, JSON.stringify(targetZTuner));
-    } catch {}
+  function saveTargetZTuner(immediate = false) {
+    compactTargetZTuner();
+    if (targetZTunerSaveTimer) {
+      clearTimeout(targetZTunerSaveTimer);
+      targetZTunerSaveTimer = null;
+    }
+    if (!immediate) {
+      targetZTunerSaveTimer = setTimeout(() => {
+        targetZTunerSaveTimer = null;
+        Storage.setJson(TARGET_Z_TUNER_KEY, targetZTuner);
+      }, 250);
+      return;
+    }
+    Storage.setJson(TARGET_Z_TUNER_KEY, targetZTuner);
   }
 
   function numberOrNull(value) {
@@ -4642,6 +5859,11 @@ const UI = (() => {
     ctx.fillText('N', plot.left + plotW, height - 18);
   }
 
+  function resetTargetZTunerCanvasPoints() {
+    const canvas = Render.$('targetZTunerCanvas');
+    if (canvas) canvas._targetZTunerPoints = [];
+  }
+
   function hideTargetZTunerPopover() {
     const popover = Render.$('targetZTunerPopover');
     if (popover) popover.classList.add('hidden');
@@ -4681,6 +5903,7 @@ const UI = (() => {
   }
 
   function updateTargetZTuner() {
+    resetTargetZTunerCanvasPoints();
     readTargetZTunerFromDom();
     targetZTuner.frequency = Render.$('m-f')?.value || targetZTuner.frequency;
     targetZTuner.targetZ = Render.$('m-zt')?.value || targetZTuner.targetZ;
@@ -4755,6 +5978,7 @@ const UI = (() => {
   }
 
   function renderTargetZTuner() {
+    resetTargetZTunerCanvasPoints();
     if (!Render.$('tz-entry-n') || !Render.$('tz-entry-z')) return;
     renderMeasuredMode();
     Render.$('tz-entry-n').value = targetZTuner.entry?.n || '';
@@ -4794,14 +6018,14 @@ const UI = (() => {
       z:String(targetZTuner.entry.z).trim(),
     });
     targetZTuner.entry = { n:'', z:'' };
-    saveTargetZTuner();
+    saveTargetZTuner(true);
     renderTargetZTuner();
   }
 
   function deleteTargetZTunerPoint(index) {
     readTargetZTunerFromDom();
     targetZTuner.points.splice(index, 1);
-    saveTargetZTuner();
+    saveTargetZTuner(true);
     renderTargetZTuner();
   }
 
@@ -4811,9 +6035,11 @@ const UI = (() => {
     targetZTuner.mode = mode;
     hideTargetZTunerPopover();
     renderTargetZTuner();
-    try {
-      localStorage.removeItem(TARGET_Z_TUNER_KEY);
-    } catch {}
+    if (targetZTunerSaveTimer) {
+      clearTimeout(targetZTunerSaveTimer);
+      targetZTunerSaveTimer = null;
+    }
+    Storage.remove(TARGET_Z_TUNER_KEY);
   }
 
   function toggleMeasuredMode() {
@@ -4833,7 +6059,7 @@ const UI = (() => {
       z: convertZLValue(point.z, frequency_kHz, toMode),
     }));
     hideTargetZTunerPopover();
-    saveTargetZTuner();
+    saveTargetZTuner(true);
     Render.$('measuredResults')?.classList.add('hidden');
     renderTargetZTuner();
   }
@@ -4849,7 +6075,7 @@ const UI = (() => {
       if (!exists) targetZTuner.points.push({ n:String(n), z:String(z) });
     }
     targetZTuner.entry = { n:'', z:'' };
-    saveTargetZTuner();
+    saveTargetZTuner(true);
     renderTargetZTuner();
   }
 
@@ -4858,6 +6084,7 @@ const UI = (() => {
   }
 
   function openStep2Modal() {
+    Render.renderTypeChoices();
     document.getElementById('step2Modal')?.classList.remove('hidden');
   }
 
@@ -4897,6 +6124,10 @@ const UI = (() => {
       Render.scheduleRenderCoupling('diff-distance-mode');
       return;
     }
+    if (key === 'probeStyle') {
+      Render.scheduleRenderProbeStyle('probe-style');
+      return;
+    }
     Render.scheduleRenderAll('state-pick');
   }
 
@@ -4912,9 +6143,11 @@ const UI = (() => {
   }
 
   function toggleTurnMode(role, checked) {
-    AppState.setRoleValue(role, 'turnMode', checked ? 'turns' : 'targetZ');
+    const nextMode = checked ? 'turns' : 'targetZ';
+    if ((AppState.state.roles[role]?.turnMode || 'targetZ') === nextMode) return;
+    AppState.setRoleValue(role, 'turnMode', nextMode);
     if (role === 'excitation1' && AppState.hasDualExcitation()) AppState.syncDualExcitationCommon();
-    Render.scheduleRenderRole(role, 'turnMode');
+    Render.syncAfterTurnModeChange(role);
   }
 
   function saveInputValue(id, value) {
@@ -4923,7 +6156,6 @@ const UI = (() => {
       AppState.setInputValue('excitation2_' + id.slice('excitation1_'.length), value);
     }
     if (id === 'excitationPosition') Render.scheduleRolePreviews(['detect']);
-    Render.updateDistancePreviews();
     Render.scheduleDesignRecalc(id);
   }
 
@@ -4948,6 +6180,10 @@ const UI = (() => {
     Render.toggleTuning(enabled);
   }
 
+  function toggleTuningHelp() {
+    Render.toggleTuningHelp();
+  }
+
   function saveTuningCorrection() {
     const result = Render.saveTuningCorrection();
     if (result.ok) Render.clearError();
@@ -4956,6 +6192,22 @@ const UI = (() => {
 
   function resetTuningCorrection() {
     Render.resetTuningCorrection();
+  }
+
+  function copyWcJson() {
+    Render.copyWcJson();
+  }
+
+  function openWcWithJson() {
+    Render.openWcWithJson();
+  }
+
+  function applyWcJson() {
+    Render.applyWcJson();
+  }
+
+  function pasteAndApplyWcJson() {
+    Render.pasteAndApplyWcJson();
   }
 
   function updateRolePreviewFromInput(id) {
@@ -4972,6 +6224,7 @@ const UI = (() => {
     }
     if (input) input.disabled = true;
     Render.scheduleRenderAll('ect-json-import');
+    Render.updateEstimatedResults();
     Render.renderEctImportStatus(result);
     reflectCableFromDesign(false);
   }
@@ -4983,7 +6236,10 @@ const UI = (() => {
       input.value = '';
       input.focus();
     }
+    AppState.setEctInfo(null);
+    AppState.state.ectImport = null;
     Render.renderEctImportStatus(null);
+    Render.scheduleRenderAll('ect-json-clear');
   }
 
   function reflectCableFromDesign(calculateAfter = false) {
@@ -5021,33 +6277,10 @@ const UI = (() => {
     }
   }
 
-  function calculate() {
-    const btn = document.getElementById('designCalcBtn');
-    if (!btn) return;
-
-    btn.disabled = true;
-    btn.classList.add('loading');
-    btn.textContent = '計算中...';
-
-    setTimeout(() => {
-      try {
-        Render.clearError('errorArea');
-        const result = Calculation.calculateDesign();
-        Render.renderResults(result);
-      } catch (error) {
-        Render.$('resultArea').classList.add('hidden');
-        Render.showError(error.message || '計算できませんでした。入力値を確認してください。', 'errorArea');
-      } finally {
-        btn.disabled = false;
-        btn.classList.remove('loading');
-        btn.textContent = '構成込み結果を更新';
-      }
-    }, 100);
-  }
-
   function calcMeasured() {
     try {
       Render.clearError('measuredErrorArea');
+      Render.$('measuredResults')?.classList.add('hidden');
       const mode = measuredMode();
       const meta = measuredModeMeta();
       const n1 = Calculation.readNumber('m-n1', null);
@@ -5062,12 +6295,128 @@ const UI = (() => {
 
       const inverse = Coil.calcMeasuredInverse(n1, value1, targetValue, freq_kHz * 1000, mode);
       if (!inverse) throw Error('実測逆算できませんでした。入力値を確認してください。');
-      Render.renderMeasuredResult(inverse, mode);
       copyMeasuredToTuner();
+      Render.renderMeasuredResult(inverse, mode);
     } catch (error) {
-      Render.$('measuredResults').classList.add('hidden');
+      Render.$('measuredResults')?.classList.add('hidden');
       Render.showError(error.message || '計算できませんでした。入力値を確認してください。', 'measuredErrorArea');
     }
+  }
+
+  function designSpecFilename(ext) {
+    const pad = value => String(value).padStart(2, '0');
+    const now = new Date();
+    return 'coil-design-spec-' + now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) +
+      '-' + pad(now.getHours()) + pad(now.getMinutes()) + '.' + ext;
+  }
+
+  function ensureDesignSpecRendered() {
+    const target = Render.$('designSpecResults');
+    if (target && target.textContent.trim()) return true;
+    try {
+      const result = Calculation.calculateDesignState();
+      Render.renderDesignState(result, { force: true });
+      return !!Render.$('designSpecResults')?.textContent.trim();
+    } catch (error) {
+      Render.showError(error.message || '完成仕様プレビューを作成できませんでした。入力値を確認してください。', 'errorArea');
+      return false;
+    }
+  }
+
+  function exportDesignSpecPdf() {
+    if (!ensureDesignSpecRendered()) return;
+    window.print();
+  }
+
+  function wrapCanvasText(ctx, text, maxWidth) {
+    const chars = Array.from(String(text || ''));
+    const lines = [];
+    let line = '';
+    chars.forEach(char => {
+      const next = line + char;
+      if (line && ctx.measureText(next).width > maxWidth) {
+        lines.push(line);
+        line = char;
+      } else {
+        line = next;
+      }
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function exportDesignSpecImage() {
+    if (!ensureDesignSpecRendered()) return;
+    const spec = Render.$('designSpecResults');
+    const rows = [...spec.querySelectorAll('li')].map(li => ({
+      text: li.textContent.trim(),
+      heading: li.classList.contains('spec-subhead-row'),
+    })).filter(row => row.text);
+    if (!rows.length) return Render.showError('画像保存できる完成仕様プレビューがありません。', 'errorArea');
+
+    const scale = Math.max(2, Math.min(3, window.devicePixelRatio || 2));
+    const cssWidth = 900;
+    const margin = 36;
+    const contentWidth = cssWidth - margin * 2;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font = '700 18px "Noto Sans JP", sans-serif';
+    const measured = rows.flatMap(row => {
+      ctx.font = row.heading ? '800 18px "Noto Sans JP", sans-serif' : '700 17px "Noto Sans JP", sans-serif';
+      const wrapped = wrapCanvasText(ctx, row.text, contentWidth - (row.heading ? 0 : 18));
+      return [{ ...row, lines: wrapped }];
+    });
+    const height = margin * 2 + 42 + measured.reduce((sum, row) => sum + (row.heading ? 32 : 24) + (row.lines.length - 1) * 22, 0);
+    canvas.width = Math.ceil(cssWidth * scale);
+    canvas.height = Math.ceil(height * scale);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, cssWidth, height);
+    ctx.strokeStyle = 'rgba(227,179,65,.55)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(16, 16, cssWidth - 32, height - 32);
+    ctx.fillStyle = '#58a6ff';
+    ctx.font = '800 22px "Noto Sans JP", sans-serif';
+    ctx.fillText('完成仕様プレビュー', margin, margin + 6);
+    let y = margin + 42;
+    measured.forEach(row => {
+      if (row.heading) {
+        if (y > margin + 48) {
+          ctx.strokeStyle = 'rgba(227,179,65,.35)';
+          ctx.beginPath();
+          ctx.moveTo(margin, y - 13);
+          ctx.lineTo(cssWidth - margin, y - 13);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#58a6ff';
+        ctx.font = '800 18px "Noto Sans JP", sans-serif';
+        row.lines.forEach(line => {
+          ctx.fillText(line, margin, y);
+          y += 22;
+        });
+        y += 5;
+      } else {
+        ctx.fillStyle = '#8b949e';
+        ctx.font = '700 17px "Noto Sans JP", sans-serif';
+        row.lines.forEach((line, index) => {
+          ctx.fillText((index === 0 ? '- ' : '  ') + line, margin, y);
+          y += 22;
+        });
+        y += 2;
+      }
+    });
+
+    canvas.toBlob(blob => {
+      if (!blob) return Render.showError('画像を作成できませんでした。', 'errorArea');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = designSpecFilename('png');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
   }
 
   function switchMainTab(tab) {
@@ -5084,6 +6433,11 @@ const UI = (() => {
       Render.$('designSubtab-' + id)?.classList.toggle('active', id === tab);
       Render.$('designSubtabBtn-' + id)?.classList.toggle('active', id === tab);
     });
+    if (tab === 'result') {
+      Render.updateEstimatedResults();
+      return;
+    }
+    Render.renderActiveDesignSubTab(tab);
   }
 
   function init() {
@@ -5093,7 +6447,7 @@ const UI = (() => {
     bindModalOutsideClick();
   }
 
-  return ({ init, pick, pickRole, toggleTurnMode, saveInputValue, pickGlobalFerriteMaterial, updateTuning, toggleTuning, saveTuningCorrection, resetTuningCorrection, updateRolePreviewFromInput, loadEctJson, clearEctJson, reflectCableFromDesign, calculateCable, calculate, calcMeasured, switchMainTab, switchDesignSubTab, toggleMeasuredMode, addTargetZTunerPoint, deleteTargetZTunerPoint, clearTargetZTuner, copyMeasuredToTuner, openStep1Modal, openStep2Modal, closeModal, backToStep1, finishStep2 });
+  return ({ init, pick, pickRole, toggleTurnMode, saveInputValue, pickGlobalFerriteMaterial, updateTuning, toggleTuning, toggleTuningHelp, saveTuningCorrection, resetTuningCorrection, copyWcJson, openWcWithJson, applyWcJson, pasteAndApplyWcJson, updateRolePreviewFromInput, loadEctJson, clearEctJson, reflectCableFromDesign, calculateCable, calcMeasured, exportDesignSpecPdf, exportDesignSpecImage, switchMainTab, switchDesignSubTab, toggleMeasuredMode, addTargetZTunerPoint, deleteTargetZTunerPoint, clearTargetZTuner, copyMeasuredToTuner, openStep1Modal, openStep2Modal, closeModal, backToStep1, finishStep2 });
 })();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
