@@ -675,14 +675,6 @@ details.section[open] > summary.section-title::after { content:'▲'; }
 .text-bad { color:var(--accent3); font-weight:700; }
 .text-info { color:var(--accent); font-weight:700; }
 .text-muted { color:var(--muted); }
-.tuning-actions {
-  display:flex;
-  gap:8px;
-  margin-top:10px;
-}
-.tuning-actions .calc-btn {
-  margin:0;
-}
 .section-title-help {
   margin-left:auto;
   border:1px solid rgba(227,179,65,.35);
@@ -701,25 +693,6 @@ details.section[open] > summary.section-title::after { content:'▲'; }
   border-color:rgba(227,179,65,.65);
   background:rgba(227,179,65,.16);
   color:var(--text);
-}
-.tuning-inline-results {
-  min-width:0;
-}
-.tuning-inline-results.result-grid {
-  grid-template-columns:repeat(2, minmax(0, 1fr));
-  gap:6px;
-}
-.tuning-inline-results .result-card {
-  padding:8px;
-}
-.tuning-inline-results .result-card:first-child:last-child {
-  grid-column:1 / -1;
-}
-.tuning-inline-results .result-label { font-size:8px; }
-.tuning-inline-results .result-value { font-size:17px; }
-.tuning-inline-results .result-unit {
-  font-size:9px;
-  line-height:1.35;
 }
 .action-row {
   display:flex;
@@ -1035,11 +1008,6 @@ details.section[open] > summary.section-title::after { content:'▲'; }
   .mini-check-grid .turn-mode-switch { min-height:26px; padding:0 4px; gap:2px; }
   .calc-btn { margin-bottom:8px; padding:9px; border-radius:6px; font-size:12px; }
   .action-row { flex-direction:column; align-items:stretch; gap:6px; }
-  .tuning-actions { flex-direction:column; gap:6px; }
-  .tuning-inline-results.result-grid { gap:4px; }
-  .tuning-inline-results .result-card { padding:6px; }
-  .tuning-inline-results .result-value { font-size:15px; }
-  .tuning-inline-results .result-unit { font-size:8px; }
   .tuner-entry-grid {
     grid-template-columns:1fr 1fr;
     gap:6px;
@@ -1199,10 +1167,6 @@ details.section[open] > summary.section-title::after { content:'▲'; }
         <div class="section-title">検出推定Z</div>
         <div class="result-grid" id="detectEstimatedResults"></div>
       </section>
-      <section class="section" id="tuningSection">
-        <div class="section-title">検出コイル 実測補正・学習<button class="section-title-help" id="tuningHelpToggle" type="button" onclick="UI.toggleTuningHelp()">（説明）</button></div>
-        <div id="tuningArea"></div>
-      </section>
     </div>
 
     <div class="design-subpanel" id="designSubtab-excitation">
@@ -1249,7 +1213,7 @@ details.section[open] > summary.section-title::after { content:'▲'; }
               <button class="calc-btn secondary" type="button" onclick="UI.copyWcJson()">WC JSONコピー</button>
               <button class="calc-btn secondary" type="button" onclick="UI.openWcWithJson()">WCへ送る（別タブ自動貼り付け）</button>
             </div>
-            <textarea class="textarea-input" id="wcJsonInput" placeholder='{"app":"WC","version":"2.1","correction":{...}}'></textarea>
+            <textarea class="textarea-input" id="wcJsonInput" placeholder='CDからコピーしたWC用JSON、またはWC補正JSONを貼り付け'></textarea>
             <div class="action-row">
               <button class="calc-btn secondary" type="button" onclick="UI.applyWcJson()">WC補正を自動反映</button>
               <button class="calc-btn secondary" type="button" onclick="UI.pasteAndApplyWcJson()">貼り付け→自動反映→即計算</button>
@@ -1527,8 +1491,6 @@ const CONFIG = {
   },
   /* 補正係数 */
   correction: {
-    tuningFactorMin: 0.2,
-    tuningFactorMax: 5.0,
     detectCrossFerriteFactor: 1.8,
     distanceCoupling: {
       farMm: 3,
@@ -1574,15 +1536,12 @@ const CONFIG = {
 /* Storage layer */
 const Storage = (() => {
   function getJson(key, fallback = null) {
-    const fallbackValue = fallback === undefined ? null : fallback;
     try {
-      if (typeof localStorage === 'undefined') return fallbackValue;
+      if (typeof localStorage === 'undefined') return fallback;
       const raw = localStorage.getItem(key);
-      if (raw === null || raw === undefined || raw === '') return fallbackValue;
-      const parsed = JSON.parse(raw);
-      return parsed === undefined ? fallbackValue : parsed;
+      return raw ? JSON.parse(raw) : fallback;
     } catch (error) {
-      return fallbackValue;
+      return fallback;
     }
   }
 
@@ -1616,34 +1575,7 @@ const AppState = (() => {
     insert: '内挿型',
     through: '貫通型',
   };
-  const TUNING_STORAGE_KEY = 'coilDesigner.tuningCorrection.v1';
   const roleState = () => ({ ...CONFIG.defaultRoleState });
-  const defaultTuningCorrection = () => ({
-    detect: 1,
-    excitation: 1,
-    excitation1: 1,
-    excitation2: 1,
-  });
-
-  function isValidTuningFactor(value) {
-    return Number.isFinite(value) &&
-      value >= CONFIG.correction.tuningFactorMin &&
-      value <= CONFIG.correction.tuningFactorMax;
-  }
-
-  function readStoredTuningCorrection() {
-    const fallback = { values: defaultTuningCorrection(), updatedAt: '' };
-    const saved = Storage.getJson(TUNING_STORAGE_KEY, null);
-    if (!saved) return fallback;
-    const values = defaultTuningCorrection();
-    Object.keys(values).forEach(role => {
-      const value = Number(saved[role]);
-      values[role] = isValidTuningFactor(value) ? value : 1;
-    });
-    return { values, updatedAt: saved.updatedAt || '' };
-  }
-
-  const storedTuning = readStoredTuningCorrection();
   const state = {
     probeStyle: 'surface',
     config: 'single',
@@ -1660,9 +1592,6 @@ const AppState = (() => {
       excitation1: roleState(),
       excitation2: roleState(),
     },
-    tuningCorrection: storedTuning.values,
-    tuningEnabled: false,
-    tuningUpdatedAt: storedTuning.updatedAt,
     ectImport: null,
     ectInfo: null,
     wcImport: null,
@@ -1735,39 +1664,9 @@ const AppState = (() => {
     });
   }
 
-  function setTuningEnabled(enabled) {
-    state.tuningEnabled = !!enabled;
-  }
-
-  function setTuningCorrection(role, value) {
-    if (!Object.prototype.hasOwnProperty.call(state.tuningCorrection, role)) return;
-    const factor = Number(value);
-    state.tuningCorrection[role] = isValidTuningFactor(factor) ? factor : 1;
-  }
-
-  function saveTuningCorrection() {
-    const values = defaultTuningCorrection();
-    for (const role of Object.keys(values)) {
-      const value = Number(state.tuningCorrection[role]);
-      if (!isValidTuningFactor(value)) return false;
-      values[role] = value;
-    }
-    const updatedAt = new Date().toISOString();
-    state.tuningCorrection = values;
-    state.tuningUpdatedAt = updatedAt;
-    return Storage.setJson(TUNING_STORAGE_KEY, { ...values, updatedAt });
-  }
-
-  function resetTuningCorrection() {
-    state.tuningCorrection = defaultTuningCorrection();
-    state.tuningUpdatedAt = '';
-    Storage.remove(TUNING_STORAGE_KEY);
-  }
-
   return ({
     state,
     PROBE_STYLES,
-    TUNING_STORAGE_KEY,
     getConfig,
     activeRoles,
     isDifferential,
@@ -1786,12 +1685,7 @@ const AppState = (() => {
     setInputValue,
     setEctInfo,
     setWcImport,
-    setTuningEnabled,
-    setTuningCorrection,
-    saveTuningCorrection,
-    resetTuningCorrection,
     syncDualExcitationCommon,
-    isValidTuningFactor,
     resetDifferentialDistanceInputs,
   });
 })();
@@ -3046,7 +2940,6 @@ const Render = (() => {
   let couplingScheduled = false;
   let cableScheduled = false;
   let probeStyleScheduled = false;
-  let tuningHelpOpen = false;
   let resultRenderDirty = true;
   let detectResultDirty = true;
   let excitationResultDirty = true;
@@ -3722,14 +3615,8 @@ const Render = (() => {
     return safeNumber(estimated?.[estimatedKey(role)], null);
   }
 
-  function validTuningFactor(role) {
-    const factor = Number(state.tuningCorrection[role]);
-    return AppState.isValidTuningFactor(factor) ? factor : 1;
-  }
-
   function tunedEstimatedZ(estimated, role) {
-    const base = roleEstimatedZ(estimated, role);
-    return base === null ? null : state.tuningEnabled ? base * validTuningFactor(role) : base;
+    return roleEstimatedZ(estimated, role);
   }
 
   function resultRoleLabel(role) {
@@ -3737,14 +3624,8 @@ const Render = (() => {
     return roleShortLabel(role);
   }
 
-  function tuningDetail(estimated, role) {
-    if (!state.tuningEnabled) return '';
-    return '<span class="text-muted">通常推定：' + format(roleEstimatedZ(estimated, role), 1) + 'Ω / 補正係数：' + format(validTuningFactor(role), 2) + '</span>';
-  }
-
   function estimatedZCard(estimated, role, className = 'highlight') {
-    const details = [tuningDetail(estimated, role)];
-    return card(resultRoleLabel(role) + '推定Z', format(tunedEstimatedZ(estimated, role), 1), 'Ω', className, details.filter(Boolean).join('<br>'));
+    return card(resultRoleLabel(role) + '推定Z', format(tunedEstimatedZ(estimated, role), 1), 'Ω', className);
   }
 
   function renderDetectEstimatedCards(estimated) {
@@ -3801,7 +3682,6 @@ const Render = (() => {
     return cards.join('');
   }
 
-  // UTF-8の日本語ラベルを直接保持するため、文字化けしたリテラルが混入していないか全検索で確認すること。
   function roleResultCards(estimated, role) {
     if (!estimated || !state.roles[role]) return '';
     const isTargetMode = (state.roles[role]?.turnMode || 'targetZ') === 'targetZ';
@@ -3822,64 +3702,25 @@ const Render = (() => {
     return AppState.hasDualExcitation() ? ['excitation1'] : ['excitation'];
   }
 
-  function tuningInput(role) {
-    const id = 'tune_' + role + 'Z';
-    const currentValue = getInputValue(id, '');
-    return createNumericField({
-      id,
-      label: '実測 ' + roleShortLabel(role) + 'Z',
-      value: currentValue,
-      unit: 'Ω',
-      onInput: "UI.saveInputValue('" + id + "', this.value); UI.updateTuning()",
-    });
+  function renderDetectEstimatedCards(estimated) {
+    return renderRoleResult('detect', estimated);
   }
 
-  function tuningMeasuredZ(role) {
-    const value = parseFloat(getInputValue('tune_' + role + 'Z', ''));
-    return Number.isFinite(value) && value > 0 ? value : null;
-  }
-
-  function tuningErrorClass(errorPct) {
-    if (errorPct <= 5) return 'text-good';
-    if (errorPct <= 10) return 'text-warn';
-    return 'text-bad';
-  }
-
-  function tuningRoleResult(estimated, role) {
-    const measured = tuningMeasuredZ(role);
-    const base = roleEstimatedZ(estimated, role);
-    if (!Number.isFinite(base) || base <= 0) return null;
-    if (measured === null) {
-      return card(roleShortLabel(role) + '保存補正係数', format(validTuningFactor(role), 2), 'x', '', '<span class="text-muted">実測Zを入力すると係数を計算します</span>');
+  function renderExcitationEstimatedCards(estimated) {
+    const cards = excitationResultRoles().map(role => renderRoleResult(role, estimated));
+    if (AppState.usesExcitationDistanceConditions() && AppState.isSimpleExcitationDetect()) {
+      cards.push(card('蜉ｱ逎∽ｽ咲ｽｮ陬懈ｭ｣', format(estimated?.positionFactor, 2), 'x'));
     }
-    const factor = measured / base;
-    if (!AppState.isValidTuningFactor(factor)) {
-      return card(roleShortLabel(role) + '補正係数', format(factor, 2), 'x', 'bad', '<span class="text-bad">補正係数が極端です。入力値か測定条件を確認してください。</span>');
-    }
-    const corrected = base * factor;
-    const diff = corrected - measured;
-    const errorPct = Math.abs(diff) / measured * 100;
-    const errorClass = tuningErrorClass(errorPct);
-    return [
-      card(roleShortLabel(role) + '補正係数', format(factor, 2), 'x'),
-      card(roleShortLabel(role) + '補正後推定Z', format(corrected, 1), 'Ω', 'highlight', '<span class="text-muted">通常推定：' + format(base, 1) + 'Ω</span>'),
-      card(roleShortLabel(role) + '実測との差', '<span class="' + errorClass + '">' + format(diff, 1) + '</span>', 'Ω'),
-      card(roleShortLabel(role) + '誤差率', '<span class="' + errorClass + '">' + format(errorPct, 1) + '</span>', '%'),
-    ].join('');
+    return cards.join('');
   }
 
-  function collectTuningFactors(estimated) {
-    const factors = {};
-    const invalid = [];
-    ['detect'].forEach(role => {
-      const measured = tuningMeasuredZ(role);
-      const base = roleEstimatedZ(estimated, role);
-      if (measured === null || !Number.isFinite(base) || base <= 0) return;
-      const factor = measured / base;
-      if (!AppState.isValidTuningFactor(factor)) invalid.push(role);
-      else factors[role] = factor;
-    });
-    return { factors, invalid };
+  function renderEstimatedCards(estimated) {
+    const cards = [renderRoleResult('detect', estimated)];
+    excitationResultRoles().forEach(role => cards.push(renderRoleResult(role, estimated)));
+    if (AppState.usesExcitationDistanceConditions() && AppState.isSimpleExcitationDetect()) {
+      cards.push(card('繧ｳ繧､繝ｫ驟咲ｽｮ陬懈ｭ｣', format(estimated?.positionFactor, 2), 'x'));
+    }
+    return cards.join('');
   }
 
   function formatSavedAt(value) {
@@ -3888,70 +3729,6 @@ const Render = (() => {
     if (Number.isNaN(date.getTime())) return value;
     const pad = number => String(number).padStart(2, '0');
     return date.getFullYear() + '/' + pad(date.getMonth() + 1) + '/' + pad(date.getDate()) + ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes());
-  }
-
-  function tuningSavedStateHtml(roles, enabled) {
-    if (!state.tuningUpdatedAt) return '';
-    const factors = roles
-      .map(role => roleShortLabel(role) + ' ' + format(validTuningFactor(role), 2) + '倍')
-      .join(' / ');
-    return '<div class="info-box" style="margin-top:12px">' +
-      '<strong>学習済み補正あり</strong><br>' +
-      '補正係数：' + factors + '<br>' +
-      '保存日時：' + formatSavedAt(state.tuningUpdatedAt) + '<br>' +
-      (enabled ? '現在の推定Zに反映中' : '現在は推定Zに反映していません') +
-      '</div>';
-  }
-
-  function tuningIntroHtml() {
-    const toggle = $('tuningHelpToggle');
-    if (toggle) toggle.classList.toggle('active', tuningHelpOpen);
-    if (!tuningHelpOpen) return '';
-    return '<div class="info-box"><strong>検出コイルの計算値と実測値のズレから補正係数を作ります。</strong><br>' +
-      '保存すると、次回以降の検出コイル推定Zへ反映できます。<br><br>' +
-      '例：<br>' +
-      '計算値 250Ω / 実測値 280Ω<br>' +
-      '→ 補正係数 1.12倍として保存<br>' +
-      '→ 次回から同じような条件の検出コイル推定Zを実測寄りに補正<br><br>' +
-      'フェライト・巻き方・線径・周波数によるクセを少しずつ学習して、<br>' +
-      '検出コイルの設計精度を上げるための機能です。</div>';
-  }
-
-  function toggleTuningHelp() {
-    tuningHelpOpen = !tuningHelpOpen;
-    if (lastDesignResult) renderTuningSection(lastDesignResult.estimated);
-    else renderTuningPlaceholder();
-  }
-
-  function renderTuningPlaceholder() {
-    setHtml('tuningArea', tuningIntroHtml() + '<div class="info-box">構成込み結果を更新すると、検出コイル単体Zの実測入力と学習保存を使えます。</div>');
-  }
-
-  function renderTuningSection(estimated) {
-    const roles = ['detect'].filter(role => Number.isFinite(roleEstimatedZ(estimated, role)));
-    const inputRows = roles.map(tuningInput).join('');
-    const resultCards = roles.map(role => tuningRoleResult(estimated, role)).filter(Boolean).join('');
-    const enabled = state.tuningEnabled;
-    const intro = tuningIntroHtml();
-    const savedState = tuningSavedStateHtml(roles, enabled);
-    const caution = '<div class="section-note" style="margin-top:12px">この補正は検出コイル単体Z用です。<br>' +
-      '励磁込み・差動込み・組み込み全体Zの補正ではありません。<br>' +
-      'フェライト材質・線径・巻き方・周波数が大きく変わる場合は、再度実測して補正してください。</div>';
-    setHtml('tuningArea',
-      intro +
-      '<div class="input-grid" style="margin-top:12px">' + inputRows +
-      '<div class="result-grid tuning-inline-results" id="tuningResultCards">' + (resultCards || list(['<span class="text-muted">実測Zを入力すると補正係数を計算します。</span>'])) + '</div>' +
-      '<div class="input-group full"><span class="input-label">推定Zへの反映</span><div class="turn-mode-switch">' +
-      '<button type="button" class="mini-check ' + (enabled ? 'selected' : '') + '" onclick="UI.toggleTuning(true)"><span class="mode-mark">' + (enabled ? '✓' : '-') + '</span><span>学習した補正を推定Zへ反映する</span></button>' +
-      '<button type="button" class="mini-check ' + (!enabled ? 'selected' : '') + '" onclick="UI.toggleTuning(false)"><span class="mode-mark">' + (!enabled ? '✓' : '-') + '</span><span>学習補正を使わない</span></button>' +
-      '</div></div></div>' +
-      savedState +
-      '<div class="tuning-actions">' +
-      '<button class="calc-btn" type="button" onclick="UI.saveTuningCorrection()">このズレを学習して保存</button>' +
-      '<button class="calc-btn" type="button" onclick="UI.resetTuningCorrection()">学習補正をリセット</button>' +
-      '</div>' + caution
-    );
-    disableNumberWheel();
   }
 
   function renderExcitationSummary(estimated) {
@@ -3997,19 +3774,6 @@ const Render = (() => {
     items.push('推定Z：<strong>' + format(estimatedZ, 2) + 'Ω</strong>');
     if (Number.isFinite(inductance)) items.push('推定L：<strong>' + format(inductance, 3) + 'uH</strong>');
     return items;
-  }
-
-  function learningSpecItems() {
-    if (!state.tuningUpdatedAt) return [
-      '対象：<strong>検出コイル単体Z</strong>',
-      '状態：<strong>未学習</strong>',
-    ];
-    return [
-      '対象：<strong>検出コイル単体Z</strong>',
-      '補正係数：<strong>' + format(validTuningFactor('detect'), 2) + '倍</strong>',
-      '状態：<strong>' + (state.tuningEnabled ? '推定Zへ反映中' : '現在は推定Zに反映していません') + '</strong>',
-      '保存日時：<strong>' + formatSavedAt(state.tuningUpdatedAt) + '</strong>',
-    ];
   }
 
   function cableSpecItems() {
@@ -4207,16 +3971,6 @@ const Render = (() => {
     return parts.join(' / ');
   }
 
-  function tuningStateText() {
-    if (!state.tuningUpdatedAt) return '未学習';
-    const roles = AppState.activeRoles()
-      .filter(role => Math.abs(validTuningFactor(role) - 1) > 0.0001)
-      .map(role => roleShortLabel(role) + ' ' + format(validTuningFactor(role), 2) + 'x')
-      .join(' / ') || '補正 1.00x';
-    return (state.tuningEnabled ? '反映中' : '保存済み・未反映') +
-      ' / ' + roles + ' / ' + formatSavedAt(state.tuningUpdatedAt);
-  }
-
   function turnModeText(role) {
     return (state.roles[role]?.turnMode || 'targetZ') === 'turns' ? '巻数指定' : '目標Z';
   }
@@ -4225,7 +3979,6 @@ const Render = (() => {
     const roleState = state.roles[role];
     const factors = [];
     if (['insert', 'ferrite', 'crossFerrite'].includes(roleState.type)) factors.push('構造 ' + format(Calculation.getTypeFactor(role), 2) + 'x');
-    if (state.tuningEnabled) factors.push('実測 ' + format(validTuningFactor(role), 2) + 'x');
     return factors.length ? factors.join(' / ') : '1.00x';
   }
 
@@ -4448,13 +4201,6 @@ const Render = (() => {
     if (Object.values(state.roles).some(role => ['insert', 'ferrite'].includes(role.type))) items.push('フェライト補正は材質・周波数・サイズから推定した簡易モデルです。初期設計用の目安であり、最終値は実測Zに合わせて確認してください。');
     if (AppState.isCross()) items.push('クロス差動はコイルA/Bを1層ずつ重ねるため、占有率・最大層数は通常コイルの約2倍高さとして計算しています。');
     if (AppState.hasCrossFerrite()) items.push('クロス差動＋フェライトは、上側交差点から下側交差点を通す交差点ブリッジ型フェライトとして扱い、検出インピーダンスに約1.8倍の補正を適用しています（固定補正）。');
-    if (state.tuningEnabled) {
-      items.push('実測補正を反映中です。測定周波数・治具条件が変わると補正係数も変わります。');
-      AppState.activeRoles().forEach(role => {
-        const factor = validTuningFactor(role);
-        if (factor >= 1.5 || factor <= 0.7) items.push(roleShortLabel(role) + '補正係数が大きくズレています。フェライト補正・結合距離・実測条件を確認してください。');
-      });
-    }
     items.push(...estimated.warnings);
     if (differential) items.push(...differential.warnings);
     const priorityItems = [...new Set(items)]
@@ -4508,7 +4254,6 @@ const Render = (() => {
     if (!force && !resultRenderDirty && !isDesignSubTabActive('result')) return;
     if (!force && !isDesignSubTabActive('result') && !isSectionVisible('resultArea')) return;
     $('resultArea')?.classList.remove('hidden');
-    renderTuningSection(result.estimated);
     renderDesignSpec(result);
     renderNotices(result.singles, result.estimated, result.differential);
     renderIntegrationStatus();
@@ -5046,8 +4791,6 @@ const Render = (() => {
     renderAllScheduled = true;
     scheduleFrame(() => {
       renderAllScheduled = false;
-      clearTimeout(designRecalcTimer);
-      designRecalcTimer = null;
       renderAll();
     });
   }
@@ -5130,8 +4873,6 @@ const Render = (() => {
   }
 
   function renderAll() {
-    clearTimeout(designRecalcTimer);
-    designRecalcTimer = null;
     renderProbeStyleChoices();
     renderConfigChoices();
     renderConfigSummary();
@@ -5143,7 +4884,6 @@ const Render = (() => {
       $('detectEstimateSection')?.classList.add('hidden');
       setHtml('designSpecResults', '<div class="info-box">構成込み結果を更新すると、設計仕様まとめを表示します。</div>');
     }
-    renderTuningPlaceholder();
     updateDesignSubTabVisibility();
     clearError();
     if (lastDesignResult) updateEstimatedResults();
@@ -5166,7 +4906,6 @@ const Render = (() => {
     if (!lastDesignResult || !inputAffectsDesign(id)) return;
     clearTimeout(designRecalcTimer);
     designRecalcTimer = setTimeout(() => {
-      designRecalcTimer = null;
       updateEstimatedResults();
     }, 180);
   }
@@ -5191,45 +4930,15 @@ const Render = (() => {
     if (lastDesignResult) updateEstimatedResults();
   }
 
-  function updateTuning() {
-    if (!lastDesignResult) return;
-    const roles = ['detect'].filter(role => Number.isFinite(roleEstimatedZ(lastDesignResult.estimated, role)));
-    const resultCards = roles.map(role => tuningRoleResult(lastDesignResult.estimated, role)).filter(Boolean).join('');
-    const target = $('tuningResultCards');
-    if (target) {
-      target.innerHTML = resultCards || list(['<span class="text-muted">実測Zを入力すると補正係数を計算します。</span>']);
-    }
-  }
-
-  function toggleTuning(enabled) {
-    AppState.setTuningEnabled(enabled);
-    rerenderLastDesign();
-  }
-
-  function saveTuningCorrection() {
-    if (!lastDesignResult) return { ok: false, message: '先に構成込み結果を更新してください。' };
-    const collected = collectTuningFactors(lastDesignResult.estimated);
-    if (collected.invalid.length) {
-      return { ok: false, message: '補正係数が極端です。入力値か測定条件を確認してください。' };
-    }
-    const roles = Object.keys(collected.factors);
-    if (!roles.length) return { ok: false, message: '保存する実測Zを入力してください。' };
-    roles.forEach(role => AppState.setTuningCorrection(role, collected.factors[role]));
-    if (!AppState.saveTuningCorrection()) return { ok: false, message: '学習補正を保存できませんでした。' };
-    rerenderLastDesign();
-    return { ok: true, message: 'このズレを学習して保存しました。' };
-  }
-
-  function resetTuningCorrection() {
-    AppState.resetTuningCorrection();
-    rerenderLastDesign();
-  }
-
   function roleExportLabel(role) {
     if (role === 'detect') return '検出';
     if (role === 'excitation1') return '励磁1';
     if (role === 'excitation2') return '励磁2';
     return '励磁';
+  }
+
+  function roleWcLabel(role) {
+    return CONFIG.roles[role]?.label || roleExportLabel(role);
   }
 
   function refreshWcRoleSelectors() {
@@ -5252,28 +4961,45 @@ const Render = (() => {
   function roleCoilTypeForWc(role) {
     const type = state.roles[role]?.type || 'air';
     if (type === 'ferrite') return 'ferrite';
-    if (['insert', 'crossFerrite'].includes(type)) return 'insert';
+    if (type === 'insert') return 'insert';
+    if (type === 'cross' || type === 'crossFerrite') return null;
     return 'air';
   }
 
-  function buildWcRecordFromRole(role, result) {
+  function finiteOrNull(value) {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  function ferriteShapeForWc(roleState) {
+    if (roleState.type === 'air') return 'none';
+    const shape = roleState.type === 'insert' ? roleState.insertShape : roleState.ferriteShape;
+    if (shape === 'round') return 'round';
+    if (shape === 'bar' || shape === 'rect') return 'rect';
+    return roleState.type === 'ferrite' || roleState.type === 'insert' ? 'round' : 'none';
+  }
+
+  function buildWcDesignFromRole(role, result) {
     const roleState = state.roles[role] || {};
     const prefix = role + '_';
     const single = result?.singles?.[role] || {};
     const fwd = single.fwd || {};
     const inv = single.inv || {};
     const shape = roleState.shape || 'cyl';
-    const record = {
-      role,
-      roleLabel: roleExportLabel(role),
+    const coilType = roleCoilTypeForWc(role);
+    if (!coilType) return null;
+    const ferriteShape = ferriteShapeForWc(roleState);
+    const ferriteSource = roleState.type === 'insert' ? 'insert' : 'ferrite';
+    return {
+      coilType,
+      ferriteMaterial: coilType === 'air' ? 'なし' : getInputValue('globalFerriteMaterial', 'なし'),
+      ferriteShape,
+      ferriteDia: ferriteShape === 'round' ? finiteOrNull(readRenderNumber(prefix + ferriteSource + 'Dia', null)) : null,
+      ferriteH: ferriteShape === 'rect' ? finiteOrNull(readRenderNumber(prefix + ferriteSource + 'H', null)) : null,
+      ferriteW: ferriteShape === 'rect' ? finiteOrNull(readRenderNumber(prefix + ferriteSource + 'W', null)) : null,
       wireDia: readRenderNumber(prefix + 'wireDia', 0.05),
       totalTurns: Number.isFinite(inv.Nt) ? inv.Nt : readRenderNumber(prefix + 'turns', null),
       oneLayerTurns: Number.isFinite(fwd.turnsPerLayer) ? fwd.turnsPerLayer : null,
       layers: Number.isFinite(fwd.usedLayers) ? fwd.usedLayers : null,
-      windingLength: readRenderNumber(prefix + 'length', roleState.type === 'ferrite' ? 5 : 2),
-      frequency: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
-      frequency_kHz: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
-      coilType: roleCoilTypeForWc(role),
       bobbinShape: shape === 'rect' ? 'rect' : 'round',
       bobbinInnerDia: shape === 'rect' ? null : readRenderNumber(prefix + 'innerDia', 1),
       bobbinOuterDia: shape === 'rect' ? null : readRenderNumber(prefix + 'outerDia', 3),
@@ -5281,60 +5007,38 @@ const Render = (() => {
       bobbinInnerW: shape === 'rect' ? readRenderNumber(prefix + 'innerW', 8) : null,
       bobbinOuterH: shape === 'rect' ? readRenderNumber(prefix + 'outerH', 6) : null,
       bobbinOuterW: shape === 'rect' ? readRenderNumber(prefix + 'outerW', 10) : null,
-      ferriteMaterial: getInputValue('globalFerriteMaterial', 'なし'),
-      ferriteShape: roleState.type === 'insert'
-        ? (roleState.insertShape === 'round' ? 'round' : 'rect')
-        : (roleState.ferriteShape === 'bar' ? 'rect' : (['ferrite', 'crossFerrite'].includes(roleState.type) ? 'round' : 'none')),
-      ferriteDia: readRenderNumber(prefix + (roleState.type === 'insert' ? 'insertDia' : 'ferriteDia'), null),
-      ferriteH: readRenderNumber(prefix + (roleState.type === 'insert' ? 'insertH' : 'ferriteH'), null),
-      ferriteW: readRenderNumber(prefix + (roleState.type === 'insert' ? 'insertW' : 'ferriteW'), null),
-      memo: 'CD連携: ' + roleExportLabel(role) + ' / ' + configText(state.config)
+      windingLength: readRenderNumber(prefix + 'length', roleState.type === 'ferrite' ? 5 : 2),
+      frequency: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
+      memo: 'CDから取り込み: ' + roleWcLabel(role) + ' / ' + getInputValue('globalFerriteMaterial', 'なし') + (coilType === 'ferrite' ? '直巻き' : '')
     };
-    return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== null && value !== undefined && value !== ''));
   }
 
   function buildWcPayload(role = $('wcExportRole')?.value || 'detect') {
+    if (!role) return null;
     if (!lastDesignResult) return null;
-    const record = buildWcRecordFromRole(role, lastDesignResult);
+    const design = buildWcDesignFromRole(role, lastDesignResult);
+    if (!design) return { unsupported: true };
+    const fwd = lastDesignResult.singles?.[role]?.fwd || {};
+    const estimatedZ = tunedEstimatedZ(lastDesignResult.estimated, role);
     return {
-      app: 'WC',
-      version: '2.1',
-      metadata: {
-        sourceApp: 'CD',
-        sourceVersion: '2.1',
-        exportedAt: new Date().toISOString(),
-        role,
-        roleLabel: roleExportLabel(role),
+      app: 'COIL DESIGNER',
+      target: 'WINDING CALIBRATOR',
+      type: 'cd-design-transfer',
+      version: 1,
+      createdAt: new Date().toISOString(),
+      role,
+      roleLabel: roleWcLabel(role),
+      source: {
+        probeStyle: state.probeStyle || 'surface',
+        coilConfig: state.config
       },
-      design: {
-        config: state.config,
-        configLabel: configText(state.config),
-        coilType: state.roles[role]?.type || 'air',
-        coilTypeLabel: coilTypeText(state.roles[role]?.type),
-        frequency_kHz: record.frequency_kHz,
-        wireDia_mm: record.wireDia,
-        turns: record.totalTurns,
-        coilDiameter_mm: lastDesignResult.singles?.[role]?.fwd?.coilOD_mm || record.bobbinOuterDia,
-        windingLength_mm: record.windingLength,
-        ferrite: {
-          material: record.ferriteMaterial,
-          shape: record.ferriteShape,
-          dia_mm: record.ferriteDia,
-          h_mm: record.ferriteH,
-          w_mm: record.ferriteW,
-        },
-      },
-      measurement: {
-        records: [record],
-        activeRecord: record,
-      },
-      correction: {
-        targetRole: role,
-        windingCorrectionFactor: 1,
-        ferriteCorrectionFactor: Calculation.getTypeFactor(role),
-        learningCorrectionFactor: validTuningFactor(role),
-      },
-      records: [record],
+      design,
+      prediction: {
+        estimatedZ: finiteOrNull(estimatedZ),
+        estimatedL_uH: finiteOrNull(fwd.L_uH),
+        estimatedR: finiteOrNull(fwd.R_ohm),
+        estimatedX: finiteOrNull(fwd.XL_ohm)
+      }
     };
   }
 
@@ -5347,24 +5051,28 @@ const Render = (() => {
 
   async function copyWcJson() {
     const payload = buildWcPayload();
+    if (!$('wcExportRole')?.value) return showWcStatus('WCへ送るコイルを選択してください。', true);
     if (!payload) return showWcStatus('先に構成込み結果を更新してください。', true);
+    if (payload.unsupported) return showWcStatus('このコイル形式はCD→WC取り込みの初期対応外です。', true);
     const text = JSON.stringify(payload, null, 2);
     try {
       await navigator.clipboard.writeText(text);
-      showWcStatus('WC JSONをコピーしました: ' + payload.metadata.roleLabel);
+      showWcStatus('WC用JSONをコピーしました。WCのCD設計JSON取り込み欄に貼り付けてください。');
     } catch (error) {
       const input = $('wcJsonInput');
       if (input) {
         input.value = text;
         input.select();
       }
-      showWcStatus('クリップボードへ直接コピーできないため、JSON欄に出しました。', true);
+      showWcStatus('クリップボードへ直接コピーできないため、JSON欄に出しました。WCのCD設計JSON取り込み欄に貼り付けてください。', true);
     }
   }
 
   function openWcWithJson() {
     const payload = buildWcPayload();
+    if (!$('wcExportRole')?.value) return showWcStatus('WCへ送るコイルを選択してください。', true);
     if (!payload) return showWcStatus('先に構成込み結果を更新してください。', true);
+    if (payload.unsupported) return showWcStatus('このコイル形式はCD→WC取り込みの初期対応外です。', true);
     try {
       localStorage.setItem('coilDesigner.toWc.v1', JSON.stringify(payload));
     } catch (error) {
@@ -5404,7 +5112,6 @@ const Render = (() => {
     const records = data.measurement?.records || data.records || (data.measurement?.activeRecord ? [data.measurement.activeRecord] : []);
     const active = data.measurement?.activeRecord || records[records.length - 1] || {};
     const factor = numberFromAny(correction.windingCorrectionFactor)
-      ?? numberFromAny(correction.learningCorrectionFactor)
       ?? numberFromAny(correction.factors?.winding)
       ?? numberFromAny(active.windingFactor)
       ?? numberFromAny(active.correctionFactor)
@@ -5412,10 +5119,7 @@ const Render = (() => {
     const ferriteFactor = numberFromAny(correction.ferriteCorrectionFactor)
       ?? numberFromAny(correction.factors?.ferrite)
       ?? numberFromAny(active.ferriteCorrectionFactor);
-    const learningFactor = numberFromAny(correction.learningCorrectionFactor)
-      ?? numberFromAny(correction.factors?.learning)
-      ?? factor;
-    return { factor, ferriteFactor, learningFactor, active };
+    return { factor, ferriteFactor, active };
   }
 
   function applyWcJsonText(text) {
@@ -5430,38 +5134,28 @@ const Render = (() => {
       return { ok: false, message: '反映先コイルが現在の構成にありません: ' + role };
     }
     const extracted = extractWcCorrection(data);
-    if (!Number.isFinite(extracted.learningFactor) && !Number.isFinite(extracted.factor)) {
-      return { ok: false, message: '補正係数を読み取れません。correction.windingCorrectionFactor または records[].windingFactor を確認してください。' };
+    if (!Number.isFinite(extracted.ferriteFactor) || extracted.ferriteFactor <= 0) {
+      return { ok: false, message: 'フェライト補正係数を読み取れません。correction.ferriteCorrectionFactor を確認してください。' };
     }
-    const factor = extracted.learningFactor ?? extracted.factor;
-    AppState.setTuningCorrection(role, factor);
-    AppState.setTuningEnabled(true);
     if (Number.isFinite(extracted.ferriteFactor) && extracted.ferriteFactor > 0) {
       AppState.setInputValue('globalFerriteMaterial', 'manual');
       AppState.setInputValue('globalFerriteFactor', String(Number(extracted.ferriteFactor.toFixed(4))));
     }
-    AppState.state.tuningUpdatedAt = new Date().toISOString();
+    const updatedAt = new Date().toISOString();
     AppState.setWcImport({
       role,
-      factor,
       ferriteFactor: extracted.ferriteFactor,
       sourceVersion: data.version || 'legacy',
-      updatedAt: AppState.state.tuningUpdatedAt,
-    });
-    Storage.setJson(AppState.TUNING_STORAGE_KEY, {
-      ...AppState.state.tuningCorrection,
-      updatedAt: AppState.state.tuningUpdatedAt,
-      source: 'WC',
-      version: data.version || 'legacy',
+      updatedAt,
     });
     rerenderLastDesign();
-    return { ok: true, role, factor, ferriteFactor: extracted.ferriteFactor, version: data.version || 'legacy' };
+    return { ok: true, role, ferriteFactor: extracted.ferriteFactor, version: data.version || 'legacy' };
   }
 
   function applyWcJson() {
     const result = applyWcJsonText($('wcJsonInput')?.value || '');
     if (!result.ok) return showWcStatus(result.message, true);
-    showWcStatus('WC補正を反映しました: ' + roleExportLabel(result.role) + ' / 学習補正 ' + format(result.factor, 3) + 'x' +
+    showWcStatus('WC補正を反映しました: ' + roleExportLabel(result.role) +
       (Number.isFinite(result.ferriteFactor) ? ' / フェライト補正 ' + format(result.ferriteFactor, 3) + 'x' : '') +
       ' / JSON v' + result.version);
     if (lastDesignResult) {
@@ -5492,8 +5186,8 @@ const Render = (() => {
     const ect = state.ectInfo ? '読込済み' : '未読込';
     const wc = state.wcImport
       ? roleExportLabel(state.wcImport.role) + 'のみ適用'
-      : (state.tuningUpdatedAt ? '学習補正あり' : '未適用');
-    const updated = state.wcImport?.updatedAt || state.tuningUpdatedAt || new Date().toISOString();
+      : '未適用';
+    const updated = state.wcImport?.updatedAt || new Date().toISOString();
     target.innerHTML = '<div class="integration-status-grid">' +
       '<div class="integration-status-item"><b>ECT条件</b><span>' + escapeHtml(ect) + '</span></div>' +
       '<div class="integration-status-item"><b>WC補正</b><span>' + escapeHtml(wc) + '</span></div>' +
@@ -5518,12 +5212,6 @@ const Render = (() => {
     applyWcJson,
     pasteAndApplyWcJson,
     renderIntegrationStatus,
-    renderTypeChoices,
-    updateTuning,
-    toggleTuning,
-    toggleTuningHelp,
-    saveTuningCorrection,
-    resetTuningCorrection,
     updateRolePreview,
     updateDetectPreview,
     updateExcitationPreview,
@@ -5859,11 +5547,6 @@ const UI = (() => {
     ctx.fillText('N', plot.left + plotW, height - 18);
   }
 
-  function resetTargetZTunerCanvasPoints() {
-    const canvas = Render.$('targetZTunerCanvas');
-    if (canvas) canvas._targetZTunerPoints = [];
-  }
-
   function hideTargetZTunerPopover() {
     const popover = Render.$('targetZTunerPopover');
     if (popover) popover.classList.add('hidden');
@@ -5903,7 +5586,6 @@ const UI = (() => {
   }
 
   function updateTargetZTuner() {
-    resetTargetZTunerCanvasPoints();
     readTargetZTunerFromDom();
     targetZTuner.frequency = Render.$('m-f')?.value || targetZTuner.frequency;
     targetZTuner.targetZ = Render.$('m-zt')?.value || targetZTuner.targetZ;
@@ -5978,7 +5660,6 @@ const UI = (() => {
   }
 
   function renderTargetZTuner() {
-    resetTargetZTunerCanvasPoints();
     if (!Render.$('tz-entry-n') || !Render.$('tz-entry-z')) return;
     renderMeasuredMode();
     Render.$('tz-entry-n').value = targetZTuner.entry?.n || '';
@@ -6084,7 +5765,6 @@ const UI = (() => {
   }
 
   function openStep2Modal() {
-    Render.renderTypeChoices();
     document.getElementById('step2Modal')?.classList.remove('hidden');
   }
 
@@ -6172,28 +5852,6 @@ const UI = (() => {
     Render.scheduleDesignRecalc('globalFerriteMaterial');
   }
 
-  function updateTuning() {
-    Render.updateTuning();
-  }
-
-  function toggleTuning(enabled) {
-    Render.toggleTuning(enabled);
-  }
-
-  function toggleTuningHelp() {
-    Render.toggleTuningHelp();
-  }
-
-  function saveTuningCorrection() {
-    const result = Render.saveTuningCorrection();
-    if (result.ok) Render.clearError();
-    else Render.showError(result.message);
-  }
-
-  function resetTuningCorrection() {
-    Render.resetTuningCorrection();
-  }
-
   function copyWcJson() {
     Render.copyWcJson();
   }
@@ -6275,6 +5933,35 @@ const UI = (() => {
       Render.$('cableNoticeSection')?.classList.add('hidden');
       Render.showError(error.message || 'ケーブル選定を計算できませんでした。入力値を確認してください。', 'cableErrorArea');
     }
+  }
+
+  function calculate() {
+    const btn = document.getElementById('designCalcBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.remove('warm-press');
+      void btn.offsetWidth;
+      btn.classList.add('loading', 'warm-press');
+      btn.textContent = '計算中...';
+    }
+
+    setTimeout(() => {
+      try {
+        Render.clearError('errorArea');
+        const result = Calculation.calculateDesignState();
+        Render.renderDesignState(result, { force: true });
+      } catch (error) {
+        Render.$('resultArea').classList.add('hidden');
+        Render.showError(error.message || '計算できませんでした。入力値を確認してください。', 'errorArea');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('loading');
+          setTimeout(() => btn.classList.remove('warm-press'), 360);
+          btn.textContent = '構成込み結果を更新';
+        }
+      }
+    }, 100);
   }
 
   function calcMeasured() {
@@ -6433,8 +6120,14 @@ const UI = (() => {
       Render.$('designSubtab-' + id)?.classList.toggle('active', id === tab);
       Render.$('designSubtabBtn-' + id)?.classList.toggle('active', id === tab);
     });
+    Render.$('designCalcBtn')?.classList.toggle('hidden', tab === 'result');
     if (tab === 'result') {
-      Render.updateEstimatedResults();
+      try {
+        const result = Calculation.calculateDesignState();
+        Render.renderDesignState(result, { force: true });
+      } catch (error) {
+        Render.showError(error.message || '計算できませんでした。入力値を確認してください。', 'errorArea');
+      }
       return;
     }
     Render.renderActiveDesignSubTab(tab);
@@ -6447,7 +6140,7 @@ const UI = (() => {
     bindModalOutsideClick();
   }
 
-  return ({ init, pick, pickRole, toggleTurnMode, saveInputValue, pickGlobalFerriteMaterial, updateTuning, toggleTuning, toggleTuningHelp, saveTuningCorrection, resetTuningCorrection, copyWcJson, openWcWithJson, applyWcJson, pasteAndApplyWcJson, updateRolePreviewFromInput, loadEctJson, clearEctJson, reflectCableFromDesign, calculateCable, calcMeasured, exportDesignSpecPdf, exportDesignSpecImage, switchMainTab, switchDesignSubTab, toggleMeasuredMode, addTargetZTunerPoint, deleteTargetZTunerPoint, clearTargetZTuner, copyMeasuredToTuner, openStep1Modal, openStep2Modal, closeModal, backToStep1, finishStep2 });
+  return ({ init, pick, pickRole, toggleTurnMode, saveInputValue, pickGlobalFerriteMaterial, copyWcJson, openWcWithJson, applyWcJson, pasteAndApplyWcJson, updateRolePreviewFromInput, loadEctJson, clearEctJson, reflectCableFromDesign, calculateCable, calculate, calcMeasured, exportDesignSpecPdf, exportDesignSpecImage, switchMainTab, switchDesignSubTab, toggleMeasuredMode, addTargetZTunerPoint, deleteTargetZTunerPoint, clearTargetZTuner, copyMeasuredToTuner, openStep1Modal, openStep2Modal, closeModal, backToStep1, finishStep2 });
 })();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
