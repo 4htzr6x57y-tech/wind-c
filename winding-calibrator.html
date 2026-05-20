@@ -839,17 +839,6 @@ tr:last-child td { border-bottom:0; }
         <div class="status" id="formStatus"></div>
       </section>
 
-      <details class="section collapsible-section" id="cdDesignImportSection">
-        <summary>CD設計JSON取り込み</summary>
-        <div class="collapsible-body">
-          <textarea class="import-area code-box" id="cdDesignJsonInput" placeholder="CDからコピーしたWC用JSONを貼り付け"></textarea>
-          <div class="button-row">
-            <button id="importCdDesignJsonBtn">CD設計JSONを取り込み</button>
-          </div>
-          <div class="status" id="cdDesignImportStatus"></div>
-        </div>
-      </details>
-
     </div>
 
     <div>
@@ -2401,114 +2390,6 @@ tr:last-child td { border-bottom:0; }
     updatePreview();
   }
 
-  function selectValueOrDefault(id, value, fallback) {
-    const el = $(id);
-    if (!el) return;
-    const text = String(value ?? '').trim();
-    const option = Array.from(el.options).find(item => item.value === text);
-    el.value = option ? text : fallback;
-  }
-
-  function setNumericInput(id, value) {
-    const el = $(id);
-    if (!el) return;
-    const n = toNumber(value);
-    el.value = Number.isFinite(n) ? String(n) : '';
-  }
-
-  function setTextInput(id, value) {
-    const el = $(id);
-    if (!el) return;
-    el.value = value === null || value === undefined ? '' : String(value);
-  }
-
-  function isCdDesignTransfer(data) {
-    return data
-      && data.app === 'COIL DESIGNER'
-      && data.target === 'WINDING CALIBRATOR'
-      && data.type === 'cd-design-transfer'
-      && data.design
-      && typeof data.design === 'object'
-      && !Array.isArray(data.design);
-  }
-
-  function fallbackCdMemo(data, design) {
-    const parts = [];
-    if (data.roleLabel) parts.push(data.roleLabel);
-    const material = String(design.ferriteMaterial || '').trim();
-    if (material && material !== 'なし') parts.push(material + (design.coilType === 'ferrite' ? '直巻き' : ''));
-    const freq = toNumber(design.frequency);
-    if (Number.isFinite(freq)) parts.push(freq + 'kHz');
-    return 'CDから取り込み' + (parts.length ? ': ' + parts.join(' / ') : '');
-  }
-
-  function setCdDesignImportStatus(message, isError = false) {
-    const el = $('cdDesignImportStatus');
-    if (!el) return;
-    el.textContent = message || '';
-    el.classList.toggle('form-error', !!isError && !!message);
-  }
-
-  function applyCdDesignTransfer(data) {
-    if (!isCdDesignTransfer(data)) {
-      setCdDesignImportStatus('CD設計JSONではありません。', true);
-      return false;
-    }
-    const design = data.design;
-    exitEditMode();
-    discardFormDraft();
-
-    selectValueOrDefault('coilType', coilTypeAliases[design.coilType] || design.coilType, 'air');
-    selectValueOrDefault('ferriteMaterial', design.ferriteMaterial || 'なし', 'なし');
-    selectValueOrDefault('ferriteShape', ferriteShapeAliases[design.ferriteShape] || design.ferriteShape, 'none');
-    selectValueOrDefault('bobbinShape', bobbinShapeAliases[design.bobbinShape] || design.bobbinShape, 'round');
-
-    [
-      'ferriteDia','ferriteH','ferriteW','wireDia','totalTurns','oneLayerTurns','layers',
-      'bobbinInnerDia','bobbinOuterDia','bobbinInnerH','bobbinInnerW',
-      'bobbinOuterH','bobbinOuterW','windingLength','frequency'
-    ].forEach(key => setNumericInput(key, design[key]));
-
-    setTextInput('measuredZ', '');
-    setTextInput('phaseDeg', '');
-    setTextInput('memo', String(design.memo || '').trim() || fallbackCdMemo(data, design));
-
-    syncEditUi();
-    updateShapeVisibility();
-    updatePreview();
-    render();
-    setFormStatus('');
-    setCdDesignImportStatus('CD設計JSONを取り込みました。実測Zと位相角を入力して保存してください。');
-    return true;
-  }
-
-  function importCdDesignJson() {
-    let data = null;
-    try {
-      data = JSON.parse(String($('cdDesignJsonInput')?.value || '').trim());
-    } catch {
-      setCdDesignImportStatus('CD設計JSONではありません。', true);
-      return;
-    }
-    applyCdDesignTransfer(data);
-  }
-
-  function loadCdDesignTransferFromStorage() {
-    if (new URLSearchParams(location.search).get('from') !== 'cd') return;
-    let data = null;
-    try {
-      data = JSON.parse(localStorage.getItem('coilDesigner.toWc.v1') || 'null');
-    } catch {
-      data = null;
-    }
-    if (!isCdDesignTransfer(data)) return;
-    const input = $('cdDesignJsonInput');
-    if (input) input.value = JSON.stringify(data, null, 2);
-    const details = $('cdDesignImportSection');
-    if (details) details.open = true;
-    setCdDesignImportStatus('CDから受け取ったJSONを貼り付けました。内容を確認して取り込んでください。');
-  }
-
   function restoreEditDraft() {
     let draft = null;
     try {
@@ -3088,7 +2969,6 @@ tr:last-child td { border-bottom:0; }
       ($('csvStatus') || $('ioStatus')).textContent = '';
     });
     $('copyConfigBtn').addEventListener('click', copyConfig);
-    $('importCdDesignJsonBtn')?.addEventListener('click', importCdDesignJson);
     $('dataTable').addEventListener('click', event => {
       const editBtn = event.target.closest('[data-edit]');
       const duplicateBtn = event.target.closest('[data-duplicate]');
@@ -3159,7 +3039,6 @@ tr:last-child td { border-bottom:0; }
     render();
     updatePreview();
     bindEvents();
-    loadCdDesignTransferFromStorage();
   }
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
