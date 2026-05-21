@@ -1278,7 +1278,20 @@ details.section[open] > summary.section-title::after { content:'▲'; }
 <script>
 'use strict';
 
-/* CONFIG layer */
+/*
+  Edit checklist for maintainers and AI agents:
+  1. Place changes in the narrowest matching zone below.
+  2. Keep product behavior unchanged unless the task explicitly asks for it.
+  3. Run AppDiagnostics.guide(scope) before uncertain edits.
+  4. Run AppDiagnostics.afterEdit(scope) after structural edits.
+  5. Run preset "full" after calculation, rendering, interaction, or storage edits.
+*/
+
+/*
+  CONFIG zone
+  Owns static product choices, labels, constants, and lookup tables.
+  Add domain options here; keep DOM reads, state mutation, and calculations out.
+*/
 const CONFIG = {
   roles: {
     detect: { label: '検出コイル', prefix: '検出 ', defaultTargetZ: 100 },
@@ -1439,7 +1452,113 @@ const CONFIG = {
   },
 };
 
-/* Storage layer */
+/* Shared helpers - do not delete: Calculation and Render both depend on these. */
+const AppShared = (() => {
+  /*
+    Stable shared surface.
+    Do not reference AppShared inside this initializer, and keep these helpers UI-free.
+    Calculation, Render, and diagnostics use this as the small common toolbox.
+  */
+  function roleLabel(role) {
+    return CONFIG.roles?.[role]?.label || role;
+  }
+
+  function resultRoleLabel(role) {
+    return roleLabel(role);
+  }
+
+  function safeArray(value) {
+    return Array.isArray(value) ? value : [];
+  }
+
+  function safeObject(value) {
+    return value && typeof value === 'object' ? value : {};
+  }
+
+  function clonePlain(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function safeNumber(value, fallback = null) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function format(value, digits = 2, fallback = '-') {
+    const number = safeNumber(value, null);
+    return number === null ? fallback : number.toFixed(digits);
+  }
+
+  function assertFinitePositive(value, message) {
+    if (!Number.isFinite(value) || value <= 0) throw Error(message);
+  }
+
+  function readStoredOrElementValue(state, id, fallback = undefined, elementGetter = null) {
+    const inputs = state?.inputs || {};
+    if (inputs[id] !== undefined) return inputs[id];
+    const element = typeof elementGetter === 'function' ? elementGetter(id) : null;
+    return element && element.value !== undefined ? element.value : fallback;
+  }
+
+  function readStoredOrElementNumber(state, id, fallback = null, elementGetter = null) {
+    const raw = readStoredOrElementValue(state, id, fallback, elementGetter);
+    const value = parseFloat(raw);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  return ({
+    roleLabel,
+    resultRoleLabel,
+    safeArray,
+    safeObject,
+    clonePlain,
+    safeNumber,
+    format,
+    assertFinitePositive,
+    readStoredOrElementValue,
+    readStoredOrElementNumber,
+  });
+})();
+
+/*
+  Single source for browser-visible UI methods.
+  Keep this list aligned with Render's returned object; AppDiagnostics verifies the match.
+*/
+const UI_PUBLIC_API = Object.freeze([
+  'format',
+  'init',
+  'pick',
+  'pickRole',
+  'toggleTurnMode',
+  'saveInputValue',
+  'pickGlobalFerriteMaterial',
+  'updateRolePreviewFromInput',
+  'loadEctJson',
+  'clearEctJson',
+  'reflectCableFromDesign',
+  'calculateCable',
+  'calcMeasured',
+  'exportDesignSpecPdf',
+  'exportDesignSpecImage',
+  'switchMainTab',
+  'switchDesignSubTab',
+  'toggleMeasuredMode',
+  'addTargetZTunerPoint',
+  'deleteTargetZTunerPoint',
+  'clearTargetZTuner',
+  'copyMeasuredToTuner',
+  'openStep1Modal',
+  'openStep2Modal',
+  'closeModal',
+  'backToStep1',
+  'finishStep2',
+]);
+
+/*
+  Storage zone
+  Owns localStorage serialization only.
+  Keep repair automatic-free: diagnostics may suggest fixes, but this layer should not rewrite data by itself.
+*/
 const Storage = (() => {
   function getJson(key, fallback = null) {
     const fallbackValue = fallback === undefined ? null : fallback;
@@ -1477,7 +1596,11 @@ const Storage = (() => {
   return ({ getJson, setJson, remove });
 })();
 
-/* State layer */
+/*
+  AppState zone
+  Owns mutable UI state shape and safe state transitions.
+  Add defaults and migration normalization here; keep DOM rendering and formula work out.
+*/
 const AppState = (() => {
   const PROBE_STYLES = {
     surface: '上置型',
@@ -1514,10 +1637,24 @@ const AppState = (() => {
     ectImport: null,
     ectInfo: null,
     inputs: {},
+    revision: 0,
   };
 
+  /* Growability note: normalizes restored state so new fields can be added safely. */
+  function ensureStateShape() {
+    if (!state.roles || typeof state.roles !== 'object') state.roles = {};
+    ['detect', 'excitation', 'excitation1', 'excitation2'].forEach(role => {
+      if (!state.roles[role] || typeof state.roles[role] !== 'object') state.roles[role] = roleState();
+    });
+    if (!state.inputs || typeof state.inputs !== 'object') state.inputs = {};
+    if (!state.detailsOpen || typeof state.detailsOpen !== 'object') state.detailsOpen = {};
+  }
+
   const getConfig = () => CONFIG.coilConfigs.find(item => item.value === state.config) || CONFIG.coilConfigs[0];
-  const activeRoles = () => getConfig().roles;
+  const activeRoles = () => {
+    ensureStateShape();
+    return getConfig().roles;
+  };
   const isDifferential = () => getConfig().differential;
   const hasExcitation = () => getConfig().excitation;
   const hasDualExcitation = () => getConfig().dual;
@@ -1535,21 +1672,42 @@ const AppState = (() => {
     ['diffDistance', 'diffX', 'diffY', 'crossAngle'].forEach(key => delete state.inputs[key]);
   }
 
+  function bumpRevision() {
+    state.revision = (Number.isFinite(state.revision) ? state.revision : 0) + 1;
+  }
+
   function setConfig(value) {
+    ensureStateShape();
+    const beforeConfig = state.config;
+    const beforeDetectType = state.roles.detect?.type;
     state.config = value;
     if (!isDifferential() && ['cross', 'crossFerrite'].includes(state.roles.detect.type)) {
       state.roles.detect.type = 'air';
       resetDifferentialDistanceInputs();
     }
+    if (state.config !== beforeConfig || state.roles.detect?.type !== beforeDetectType) bumpRevision();
   }
 
   function setValue(key, value) {
+    ensureStateShape();
     if (key === 'config') setConfig(value);
-    else if (key === 'probeStyle' && Object.prototype.hasOwnProperty.call(PROBE_STYLES, value)) state.probeStyle = value;
-    else state[key] = value;
+    else if (key === 'probeStyle' && Object.prototype.hasOwnProperty.call(PROBE_STYLES, value)) {
+      if (state.probeStyle !== value) {
+        state.probeStyle = value;
+        resetDifferentialDistanceInputs();
+        bumpRevision();
+      }
+    }
+    else if (state[key] !== value) {
+      state[key] = value;
+      bumpRevision();
+    }
   }
 
   function setRoleValue(role, key, value) {
+    ensureStateShape();
+    if (!state.roles[role]) state.roles[role] = roleState();
+    const before = state.roles[role][key];
     if (key === 'turnMode') value = value === 'turns' ? 'turns' : 'targetZ';
     if (key === 'type') {
       const crossType = ['cross', 'crossFerrite'].includes(value);
@@ -1558,10 +1716,14 @@ const AppState = (() => {
     }
     state.roles[role][key] = value;
     if (role === 'detect' && key === 'type' && ['cross', 'crossFerrite'].includes(value)) resetDifferentialDistanceInputs();
+    if (before !== value) bumpRevision();
   }
 
   function setInputValue(id, value) {
+    ensureStateShape();
+    const before = state.inputs[id];
     state.inputs[id] = value;
+    if (before !== value) bumpRevision();
   }
 
   function setEctInfo(info) {
@@ -1569,8 +1731,9 @@ const AppState = (() => {
   }
 
   function syncDualExcitationCommon() {
+    ensureStateShape();
     if (!hasDualExcitation()) return;
-    state.roles.excitation2 = { ...state.roles.excitation1 };
+    state.roles.excitation2 = AppShared.clonePlain(state.roles.excitation1);
     Object.keys(state.inputs).forEach(key => {
       if (key.startsWith('excitation1_')) {
         state.inputs['excitation2_' + key.slice('excitation1_'.length)] = state.inputs[key];
@@ -1604,7 +1767,11 @@ const AppState = (() => {
   });
 })();
 
-/* Calculation layer */
+/*
+  Calculation zone
+  Owns pure-ish formulas and result object shape.
+  Prefer inputs from AppState/AppShared; do not render DOM or call UI handlers from here.
+*/
 const Physics = (() => {
   const MU0 = CONFIG.physics.mu0;
 
@@ -1677,6 +1844,17 @@ const Coil = (() => {
     return usedLayers;
   }
 
+  function inverseTurnsFromRatio(numerator, denominator) {
+    if (!Number.isFinite(numerator) || !Number.isFinite(denominator)) return null;
+    if (numerator <= 0 || denominator <= 0) return null;
+    const ratio = numerator / denominator;
+    if (!Number.isFinite(ratio) || ratio <= 0) return null;
+    const raw = Math.sqrt(ratio);
+    if (!Number.isFinite(raw) || raw <= 0) return null;
+    const turns = Math.round(raw);
+    return Number.isFinite(turns) && turns > 0 ? turns : null;
+  }
+
   function calcCylForward(p) {
     const { innerDia_mm, outerDia_mm, length_mm, wireDia_mm, turns, freq_Hz, windingMode, layerHeightFactor = 1 } = p;
     const windingHeight = (outerDia_mm - innerDia_mm) / 2;
@@ -1710,17 +1888,20 @@ const Coil = (() => {
 
   function calcCylInverse(p) {
     const { innerDia_mm, outerDia_mm, length_mm, wireDia_mm, targetZ_ohm, freq_Hz, maxLayers, turnsPerLayer, maxTurns, windingMode, layerHeightFactor = 1 } = p;
+    if (![innerDia_mm, outerDia_mm, length_mm, wireDia_mm, targetZ_ohm, freq_Hz, maxLayers, turnsPerLayer, maxTurns].every(Number.isFinite)) return null;
+    if (innerDia_mm <= 0 || outerDia_mm <= innerDia_mm || length_mm <= 0 || wireDia_mm <= 0 || targetZ_ohm <= 0 || freq_Hz <= 0 || maxLayers <= 0 || turnsPerLayer <= 0 || maxTurns <= 0) return null;
     const layerHeight_mm = wireDia_mm * layerHeightFactor;
     const length_m = length_mm / 1000;
     const area0 = Math.PI * ((innerDia_mm / 2 + outerDia_mm / 2) / 2 / 1000) ** 2;
-    const N0 = Math.sqrt(targetZ_ohm * length_m / (2 * Math.PI * freq_Hz * Physics.MU0 * area0));
+    const N0 = inverseTurnsFromRatio(targetZ_ohm * length_m, 2 * Math.PI * freq_Hz * Physics.MU0 * area0);
+    if (N0 === null) return null;
     const usedL0 = Math.min(maxLayers, Math.ceil(N0 / turnsPerLayer));
     const coilOD0 = innerDia_mm + 2 * usedL0 * layerHeight_mm;
     const avgR0 = ((innerDia_mm / 2 + coilOD0 / 2) / 2) / 1000;
     const K0 = nagaokaK(avgR0, length_m);
     const area1 = Math.PI * avgR0 ** 2;
-    const NtRaw = Math.round(Math.sqrt(targetZ_ohm * length_m / (2 * Math.PI * freq_Hz * Physics.MU0 * area1 * K0)));
-    if (!isFinite(NtRaw)) return null;
+    const NtRaw = inverseTurnsFromRatio(targetZ_ohm * length_m, 2 * Math.PI * freq_Hz * Physics.MU0 * area1 * K0);
+    if (NtRaw === null) return null;
     const Nt = Math.max(1, NtRaw);
     const requiredLayers = Nt > maxTurns ? maxLayers + 1 : countRequiredLayers(turnsPerLayer, Nt, windingMode, maxLayers);
     const calcLayers = Math.min(maxLayers, requiredLayers);
@@ -1766,13 +1947,15 @@ const Coil = (() => {
 
   function calcRectInverse(p) {
     const { ih, iw, oh, ow, wd, targetZ_ohm, freq_Hz, maxLayers, turnsPerLayer, maxTurns, avgH_m, avgW_m, len_m, windingMode, layerHeightFactor = 1 } = p;
+    if (![ih, iw, oh, ow, wd, targetZ_ohm, freq_Hz, maxLayers, turnsPerLayer, maxTurns, avgH_m, avgW_m, len_m].every(Number.isFinite)) return null;
+    if (ih <= 0 || iw <= 0 || oh <= ih || ow <= iw || wd <= 0 || targetZ_ohm <= 0 || freq_Hz <= 0 || maxLayers <= 0 || turnsPerLayer <= 0 || maxTurns <= 0 || avgH_m <= 0 || avgW_m <= 0 || len_m <= 0) return null;
     const layerHeight_mm = wd * layerHeightFactor;
     const area = avgH_m * avgW_m;
     const equivR = Math.sqrt(area / Math.PI);
     const K = nagaokaK(equivR, len_m);
     const denom = 2 * Math.PI * freq_Hz * Physics.MU0 * area * K;
-    const NtRaw = Math.round(Math.sqrt(targetZ_ohm * len_m / denom));
-    if (!isFinite(NtRaw)) return null;
+    const NtRaw = inverseTurnsFromRatio(targetZ_ohm * len_m, denom);
+    if (NtRaw === null) return null;
     const Nt = Math.max(1, NtRaw);
     const requiredLayers = Nt > maxTurns ? maxLayers + 1 : countRequiredLayers(turnsPerLayer, Nt, windingMode, maxLayers);
     const calcLayers = Math.min(maxLayers, requiredLayers);
@@ -1786,10 +1969,12 @@ const Coil = (() => {
 
   function calcMeasuredInverse(N1, V1, Vt, f_Hz, mode = 'z') {
     if (N1 <= 0 || V1 <= 0 || Vt <= 0 || f_Hz <= 0) return null;
+    const normalizedMode = String(mode || 'z').toLowerCase();
+    if (!['z', 'l'].includes(normalizedMode)) return null;
     const Nraw = N1 * Math.sqrt(Vt / V1);
     if (!isFinite(Nraw) || Nraw <= 0) return null;
     const omega = 2 * Math.PI * f_Hz;
-    const isL = mode === 'l';
+    const isL = normalizedMode === 'l';
     const L1_uH = isL ? V1 : (V1 / omega) * 1e6;
     const Lt_uH = isL ? Vt : (Vt / omega) * 1e6;
     const Nt = Math.round(Nraw);
@@ -1816,20 +2001,14 @@ const Calculation = (() => {
   }
 
   function readNumber(id, fallback = null) {
-    const element = document.getElementById(id);
-    const raw = state.inputs[id] !== undefined ? state.inputs[id] : (element ? element.value : undefined);
-    const value = parseFloat(raw);
-    return Number.isFinite(value) ? value : fallback;
+    return AppShared.readStoredOrElementNumber(state, id, fallback, item => document.getElementById(item));
   }
 
   function readValue(id, fallback = '') {
-    const element = document.getElementById(id);
-    return state.inputs[id] !== undefined ? state.inputs[id] : (element && element.value !== undefined ? element.value : fallback);
+    return AppShared.readStoredOrElementValue(state, id, fallback, item => document.getElementById(item));
   }
 
-  function roleLabel(role) {
-    return CONFIG.roles?.[role]?.label || role;
-  }
+  const roleLabel = AppShared.roleLabel;
 
   function assertPositive(value, message) {
     if (!Number.isFinite(value) || value <= 0) throw Error(message);
@@ -1852,14 +2031,17 @@ const Calculation = (() => {
   }
 
   function refineInverseTurns(Nt, targetZ_ohm, makeForward, maxTurns = Infinity) {
+    if (!Number.isFinite(Nt) || Nt <= 0 || !Number.isFinite(targetZ_ohm) || targetZ_ohm <= 0) return null;
     const safeNt = Math.min(Math.max(1, Nt), maxTurns);
     let best = null;
     const finiteMax = Number.isFinite(maxTurns) ? Math.max(1, Math.floor(maxTurns)) : Math.max(1, Math.ceil(safeNt * 4));
+    if (!Number.isFinite(finiteMax) || finiteMax <= 0) return null;
     let lo = 1;
     let hi = finiteMax;
     while (lo < hi) {
       const mid = Math.floor((lo + hi) / 2);
       const fwd = makeForward(mid);
+      if (!fwd || !Number.isFinite(fwd.Z)) return null;
       if (fwd.Z < targetZ_ohm) lo = mid + 1;
       else hi = mid;
     }
@@ -1867,6 +2049,7 @@ const Calculation = (() => {
     const span = Math.max(8, Math.ceil(center * 0.08));
     for (let turns = Math.max(1, center - span); turns <= Math.min(finiteMax, center + span); turns++) {
       const fwd = makeForward(turns);
+      if (!fwd || !Number.isFinite(fwd.Z)) continue;
       const error = Math.abs(fwd.Z - targetZ_ohm);
       if (!best || error < best.error) best = { turns, fwd, error };
     }
@@ -2231,7 +2414,7 @@ const Calculation = (() => {
       statusY: null,
       angleStatus: null,
       reasons: [
-        'きず幅 ' + Render.format(width, 2) + ' mm を基準',
+        'きず幅 ' + AppShared.format(width, 2) + ' mm を基準',
         className + ' 条件',
         '通常差動は一軸方向の距離を使用します',
       ],
@@ -2305,7 +2488,7 @@ const Calculation = (() => {
       angleStatus: null,
       reasons: [
         'プローブ形式: ' + probeLabel,
-        'コイル長 ' + Render.format(coilLength, 2) + ' mm を基準',
+        'コイル長 ' + AppShared.format(coilLength, 2) + ' mm を基準',
         distanceLabel + 'をプローブ形式別の倍率で評価',
       ],
       warnings: [],
@@ -2398,17 +2581,29 @@ const Calculation = (() => {
       status: judgment(position),
       reasons: [
         'プローブ形式: ' + probeLabel,
-        '欠陥幅 ' + Render.format(flawWidth, 2) + ' mm を基準',
+        '欠陥幅 ' + AppShared.format(flawWidth, 2) + ' mm を基準',
         (isInsert ? 'A/B軸方向間隔' : isThrough ? 'A/B配置距離' : '端面ギャップ') + 'を高感度・標準・安定の3候補で評価',
       ].concat(notes),
       warnings: [],
     };
   }
 
+  /* Growability note: stable calculation entry point for existing CD flows. */
   function calculateDesign() {
     return calculateDesignState();
   }
 
+  /*
+    Growability note: single source for the Render result/state shape.
+    Shape:
+      activeRoles: ordered role ids currently shown by AppState
+      config: current coil configuration id
+      revision: AppState mutation counter used to reject stale lastDesignResult
+      calculatedAt: timestamp for diagnostics only
+      singles: per-role calculated coil details keyed by role id
+      estimated: configured impedance/coupling summary
+      differential: differential-distance recommendation or null
+  */
   function calculateDesignState() {
     AppState.syncDualExcitationCommon();
     const activeRoles = AppState.activeRoles();
@@ -2416,6 +2611,7 @@ const Calculation = (() => {
     return {
       activeRoles,
       config: AppState.state.config,
+      revision: AppState.state.revision,
       calculatedAt: Date.now(),
       singles,
       estimated: estimateConfiguredZ(singles),
@@ -2425,33 +2621,64 @@ const Calculation = (() => {
 
   function runRegressionTests() {
     const failures = [];
+    const passed = [];
     const assert = (condition, message) => { if (!condition) failures.push(message); };
     const savedConfig = state.config;
     const savedInputs = { ...state.inputs };
     const savedRoles = JSON.parse(JSON.stringify(state.roles));
+    const savedRevision = state.revision;
+
+    function seedRegressionInputs() {
+      state.inputs.diffDistance = '0.8';
+      state.inputs.flawWidth = '0.5';
+      state.inputs.inspectDepth = '0.05';
+      state.inputs.exciteDetectDistance = '1.2';
+      state.inputs.ex1Distance = '1.2';
+      state.inputs.ex2Distance = '1.2';
+      state.inputs.excitationGap = '2.0';
+    }
+
+    function assertDesignResult(label) {
+      const result = calculateDesignState();
+      assert(result.config === state.config, label + ': config mismatch');
+      assert(result.revision === state.revision, label + ': revision mismatch');
+      assert(result.activeRoles.includes('detect'), label + ': detect role missing');
+      result.activeRoles.forEach(role => {
+        const single = result.singles[role];
+        assert(single?.inv?.Nt > 0, label + ': ' + role + ' has invalid turns');
+        assert(Number.isFinite(single?.fwd?.Z), label + ': ' + role + ' has invalid Z');
+      });
+      passed.push(label);
+      return result;
+    }
+
     try {
       ['single', 'differential', 'excitationDetect', 'excitationDifferential', 'dualExcitationDetect', 'dualExcitationDifferential'].forEach(config => {
         AppState.setValue('config', config);
-        state.inputs.diffDistance = '0.8';
-        state.inputs.exciteDetectDistance = '1.2';
-        state.inputs.ex1Distance = '1.2';
-        state.inputs.ex2Distance = '1.2';
-        state.inputs.excitationGap = '2.0';
-        const result = calculateDesignState();
-        assert(result.activeRoles.includes('detect'), config + ': detect role missing');
-        result.activeRoles.forEach(role => {
-          const single = result.singles[role];
-          assert(single?.inv?.Nt > 0, config + ': ' + role + ' has invalid turns');
-          assert(Number.isFinite(single?.fwd?.Z), config + ': ' + role + ' has invalid Z');
-        });
+        seedRegressionInputs();
+        assertDesignResult(config);
+      });
+
+      [
+        { label: 'turn-count mode', config: 'single', role: 'detect', values: { turnMode: 'turns' }, inputs: { detect_turns: '25' } },
+        { label: 'insert ferrite core', config: 'single', role: 'detect', values: { type: 'insert', insertShape: 'round' }, inputs: { detect_insertDia: '1', detect_insertLength: '8' } },
+        { label: 'external ferrite', config: 'single', role: 'detect', values: { type: 'ferrite', ferriteShape: 'round' }, inputs: { detect_ferriteDia: '1.2', detect_ferriteLength: '8', globalFerriteMaterial: 'manual', globalFerriteFactor: '2.0' } },
+        { label: 'dual excitation turns', config: 'dualExcitationDetect', role: 'excitation1', values: { turnMode: 'turns' }, inputs: { excitation1_turns: '30' } },
+      ].forEach(test => {
+        AppState.setValue('config', test.config);
+        seedRegressionInputs();
+        Object.entries(test.values).forEach(([key, value]) => AppState.setRoleValue(test.role, key, value));
+        Object.assign(state.inputs, test.inputs);
+        assertDesignResult(test.label);
       });
     } finally {
       state.config = savedConfig;
       state.inputs = savedInputs;
       state.roles = savedRoles;
+      state.revision = savedRevision;
     }
     if (failures.length) throw Error('CD regression failed:\n- ' + failures.join('\n- '));
-    return { ok: true };
+    return { ok: true, cases: passed, count: passed.length };
   }
 
   return ({
@@ -2467,7 +2694,13 @@ const Calculation = (() => {
   });
 })();
 
+/*
+  ECTBridge zone
+  Owns import normalization from ECT JSON into CD state.
+  Keep compatibility mapping here; do not add old cross-app shims back into Render or Calculation.
+*/
 const ECTBridge = (() => {
+  /* Do not restore removed wcBridge/tuning compatibility shims here. CD imports only ECTBridge data. */
   const getNested = (obj, path) => path.split('.').reduce((cur, key) => cur && cur[key], obj);
 
   function toHzFromKHz(kHz) {
@@ -2683,6 +2916,11 @@ const ECTBridge = (() => {
   return ({ apply, toHzFromKHz, toKHzFromText, normalizeFrequencyKHz });
 })();
 
+/*
+  CableSelection zone
+  Owns cable recommendation rules derived from design state and ECT hints.
+  Return reasons/notices for Render; avoid direct DOM writes here.
+*/
 const CableSelection = (() => {
   const CAP_PF_PER_M = CONFIG.cable.capacitancePfPerM;
   const STRUCTURE_LABELS = CONFIG.cable.structureLabels;
@@ -2844,7 +3082,11 @@ const CableSelection = (() => {
   return ({ calculate, configInfo, ENV_LABELS, LOAD_LABELS });
 })();
 
-/* Render layer */
+/*
+  Render DOM zone
+  Owns HTML generation, event-driven rerenders, previews, and visible error messages.
+  Keep formulas in Calculation and expose only handlers listed in UI_PUBLIC_API.
+*/
 const Render = (() => {
   const { state } = AppState;
   let previewRenderTimer = null;
@@ -2860,6 +3102,10 @@ const Render = (() => {
   const scheduledRoles = new Set();
   let lastDesignResult = null;
   const $ = id => document.getElementById(id);
+  /*
+    Internal generated HTML only.
+    User-provided text must pass through escapeHtml/htmlText before it reaches this helper.
+  */
   const setHtml = (id, html) => {
     const element = $(id);
     if (element) element.innerHTML = html;
@@ -2868,6 +3114,17 @@ const Render = (() => {
     if (typeof window !== 'undefined' && window.requestAnimationFrame) window.requestAnimationFrame(callback);
     else setTimeout(callback, 16);
   };
+
+  /* Internal helpers - reusable building blocks for future renderers. */
+
+  /* Growability note: keep result/state coercion centralized as new fields appear. */
+  function safeResult(result) {
+    return AppShared.safeObject(result);
+  }
+
+  function safeWarnings(source) {
+    return AppShared.safeArray(source?.warnings);
+  }
 
   function safeNumber(value, fallback = null) {
     const number = Number(value);
@@ -2880,8 +3137,7 @@ const Render = (() => {
   }
 
   function formatValue(value, digits = 2, fallback = '-') {
-    const number = safeNumber(value, null);
-    return number === null ? fallback : number.toFixed(digits);
+    return AppShared.format(value, digits, fallback);
   }
 
   function formatOhm(value, digits = 1) {
@@ -3065,6 +3321,8 @@ const Render = (() => {
     return createChoiceGroup({ options, selectedValue, onClick, twoColumns });
   }
 
+  /* Render builders - return HTML strings or update a narrow DOM section. */
+
   function card(label, value, unit = '', className = '', detail = '') {
     const unitHtml = unit + (detail ? '<br>' + detail : '');
     return '<div class="result-card ' + className + '"><div class="result-label">' + label + '</div><div class="result-value">' + value + '</div><div class="result-unit">' + unitHtml + '</div></div>';
@@ -3079,10 +3337,7 @@ const Render = (() => {
   }
 
   function readRenderNumber(id, fallback = null) {
-    const elementValue = $(id)?.value;
-    const raw = state.inputs[id] !== undefined ? state.inputs[id] : (elementValue !== undefined ? elementValue : getInputValue(id, fallback));
-    const value = parseFloat(raw);
-    return Number.isFinite(value) ? value : fallback;
+    return AppShared.readStoredOrElementNumber(state, id, fallback, $);
   }
 
   function numberInput(id, label, value, unit, step = '0.1', min = '0.001') {
@@ -3237,6 +3492,8 @@ const Render = (() => {
       '<button type="button" class="choice-btn ' + (state.config === option.value ? 'sel' : '') + '" onclick="UI.pick(\'config\',\'' + option.value + '\')">' + option.label + '</button>'
     ).join(''));
   }
+
+  /* Result rendering - keep this path aligned with calculateDesignState() result shape. */
 
   function renderProbeStyleChoices() {
     const labels = AppState.PROBE_STYLES;
@@ -3599,7 +3856,11 @@ const Render = (() => {
     return cards.join('');
   }
 
-  // UTF-8の日本語ラベルを直接保持するため、文字化けしたリテラルが混入していないか全検索で確認すること。
+  /*
+    Display copy zone.
+    Some literals are legacy mojibake from older generated builds; do not rewrite labels
+    by guessing. Replace copy only from a verified source string or a user-supplied wording.
+  */
   function roleResultCards(estimated, role) {
     if (!estimated || !state.roles[role]) return '';
     const isTargetMode = (state.roles[role]?.turnMode || 'targetZ') === 'targetZ';
@@ -3951,6 +4212,7 @@ const Render = (() => {
   }
 
   function collectFinalNotices(result) {
+    result = safeResult(result);
     const warnings = [
       '過結合: 励磁距離が近すぎる場合は励磁-検出距離を広げ、直接結合を確認してください。',
       '漏れ磁束: 励磁線と検出線は可能な限り別ペア配線にし、シールド接地を測定器側へ寄せてください。',
@@ -3960,11 +4222,11 @@ const Render = (() => {
     if (freq >= CONFIG.thresholds.cable.highFrequencyKHz) {
       warnings.push('高周波注意: 配線容量、治具容量、ケーブル長の影響が大きくなります。短尺・低容量を優先してください。');
     }
-    const estimatedWarnings = Array.isArray(result.estimated?.warnings) ? result.estimated.warnings : [];
-    const differentialWarnings = Array.isArray(result.differential?.warnings) ? result.differential.warnings : [];
+    const estimatedWarnings = safeWarnings(result.estimated);
+    const differentialWarnings = safeWarnings(result.differential);
     warnings.push(...estimatedWarnings);
     warnings.push(...differentialWarnings);
-    if (state.ectInfo?.cautions?.length) warnings.push(...state.ectInfo.cautions);
+    if (AppShared.safeArray(state.ectInfo?.cautions).length) warnings.push(...state.ectInfo.cautions);
     return [...new Set(warnings)]
       .map(text => ({ text, ...classifyFinalNotice(text) }))
       .sort((a, b) => a.order - b.order)
@@ -3985,6 +4247,10 @@ const Render = (() => {
   }
 
   function renderDesignSpec(result) {
+    result = safeResult(result);
+    result.singles = AppShared.safeObject(result.singles);
+    result.estimated = AppShared.safeObject(result.estimated);
+    result.differential = AppShared.safeObject(result.differential);
     const cfg = CONFIG.coilConfigs.find(item => item.value === state.config) || CONFIG.coilConfigs[0];
     const detectEstimated = displayedEstimatedZ(result.estimated, 'detect');
     const excitationRole = AppState.hasExcitation()
@@ -4077,6 +4343,9 @@ const Render = (() => {
   }
 
   function renderNotices(singles, estimated, differential) {
+    singles = AppShared.safeObject(singles);
+    estimated = AppShared.safeObject(estimated);
+    differential = AppShared.safeObject(differential);
     const items = ['フェライト補正は初期設計用の実用補正値です。最終値はLCRメータで実測確認してください。'];
     Object.values(singles).forEach(single => {
       const label = roleLabel(single.role);
@@ -4092,8 +4361,8 @@ const Render = (() => {
     if (Object.values(state.roles).some(role => ['insert', 'ferrite'].includes(role.type))) items.push('フェライト補正は材質・周波数・サイズから推定した簡易モデルです。初期設計用の目安であり、最終値は実測Zに合わせて確認してください。');
     if (AppState.isCross()) items.push('クロス差動はコイルA/Bを1層ずつ重ねるため、占有率・最大層数は通常コイルの約2倍高さとして計算しています。');
     if (AppState.hasCrossFerrite()) items.push('クロス差動＋フェライトは、上側交差点から下側交差点を通す交差点ブリッジ型フェライトとして扱い、検出インピーダンスに約1.8倍の補正を適用しています（固定補正）。');
-    const estimatedWarnings = Array.isArray(estimated?.warnings) ? estimated.warnings : [];
-    const differentialWarnings = Array.isArray(differential?.warnings) ? differential.warnings : [];
+    const estimatedWarnings = safeWarnings(estimated);
+    const differentialWarnings = safeWarnings(differential);
     items.push(...estimatedWarnings);
     items.push(...differentialWarnings);
     const priorityItems = [...new Set(items)]
@@ -4122,6 +4391,7 @@ const Render = (() => {
   }
 
   function renderDetectResultSection(result, force = false) {
+    result = safeResult(result);
     const shouldRender = force || detectResultDirty || isDesignSubTabActive('detect');
     if (!shouldRender) return;
     setHtml('detectEstimatedResults', renderDetectEstimatedCards(result.estimated));
@@ -4130,6 +4400,7 @@ const Render = (() => {
   }
 
   function renderExcitationResultSection(result, force = false) {
+    result = safeResult(result);
     const hasExcitation = AppState.hasExcitation();
     $('excitationEstimateSection')?.classList.toggle('hidden', !hasExcitation);
     if (!hasExcitation) {
@@ -4144,6 +4415,7 @@ const Render = (() => {
   }
 
   function renderResultTab(result, force = false) {
+    result = safeResult(result);
     if (!force && !resultRenderDirty && !isDesignSubTabActive('result')) return;
     if (!force && !isDesignSubTabActive('result') && !isSectionVisible('resultArea')) return;
     $('resultArea')?.classList.remove('hidden');
@@ -4153,11 +4425,15 @@ const Render = (() => {
   }
 
   function isCurrentDesignResult(result) {
+    result = safeResult(result);
     if (!result || result.config !== AppState.state.config) return false;
+    if (result.revision !== AppState.state.revision) return false;
     return (result.activeRoles || []).join('|') === AppState.activeRoles().join('|');
   }
 
+  /* Growability note: central result renderer; tabs depend on its dirty-flag contract. */
   function renderDesignState(result, options = {}) {
+    result = safeResult(result);
     if (!isCurrentDesignResult(result)) return;
     lastDesignResult = result;
     markResultDirty();
@@ -4173,8 +4449,8 @@ const Render = (() => {
   }
 
   function renderActiveDesignSubTab(tab) {
-    if (!lastDesignResult) {
-      if (tab !== 'detect' && tab !== 'excitation') return;
+    if (!lastDesignResult || !isCurrentDesignResult(lastDesignResult)) {
+      if (!['detect', 'excitation', 'result'].includes(tab)) return;
       try {
         renderDesignState(Calculation.calculateDesignState());
       } catch (error) {
@@ -4272,15 +4548,11 @@ const Render = (() => {
   }
 
   function previewNumber(id, fallback) {
-    const element = $(id);
-    const raw = state.inputs[id] !== undefined ? state.inputs[id] : (element ? element.value : undefined);
-    const value = parseFloat(raw);
-    return Number.isFinite(value) ? value : fallback;
+    return AppShared.readStoredOrElementNumber(state, id, fallback, $);
   }
 
   function hasPositivePreviewNumber(id) {
-    const element = $(id);
-    const raw = state.inputs[id] !== undefined ? state.inputs[id] : (element ? element.value : undefined);
+    const raw = AppShared.readStoredOrElementValue(state, id, undefined, $);
     if (raw === undefined || raw === null || String(raw).trim() === '') return false;
     const value = parseFloat(raw);
     return Number.isFinite(value) && value > 0;
@@ -4445,6 +4717,7 @@ const Render = (() => {
   }
 
   function previewGapClass(gap) {
+    if (!Number.isFinite(Number(gap))) return 'text-bad';
     return gap < 0 ? 'text-bad' : 'text-good';
   }
 
@@ -4678,6 +4951,7 @@ const Render = (() => {
     scheduleRolePreviews(AppState.activeRoles());
   }
 
+  /* Growability note: public-safe full-render scheduler used after UI state changes. */
   function scheduleRenderAll(reason = '') {
     if (renderAllScheduled) return;
     renderAllScheduled = true;
@@ -4766,7 +5040,18 @@ const Render = (() => {
     $('excitationEmptyMessage')?.classList.toggle('hidden', AppState.hasExcitation());
   }
 
+  /* Growability note: rebuilds the CD UI in dependency order after state changes. */
   function renderAll() {
+    /*
+      Add new render steps by placing them beside the dependency they need.
+      Current order:
+        1. Probe/config/type controls: later sections read their current selected state.
+        2. Role inputs and details binding: these replace DOM nodes, so handlers must be rebound.
+        3. Number-wheel binding: must run after input DOM replacement.
+        4. Role previews, coupling, and cable controls: depend on role inputs existing.
+        5. Empty/result visibility: keeps first-load UI from showing stale result cards.
+        6. Subtab visibility, errors, and result refresh: last so stale lastDesignResult is rejected.
+    */
     clearTimeout(designRecalcTimer);
     designRecalcTimer = null;
     renderProbeStyleChoices();
@@ -4780,7 +5065,7 @@ const Render = (() => {
     renderCouplingInputs();
     renderCableControls();
     if (!lastDesignResult) {
-      $('resultArea').classList.add('hidden');
+      $('resultArea')?.classList.add('hidden');
       $('detectEstimateSection')?.classList.add('hidden');
       setHtml('designSpecResults', '<div class="info-box">構成込み結果を更新すると、設計仕様まとめを表示します。</div>');
     }
@@ -4811,6 +5096,7 @@ const Render = (() => {
     }, 180);
   }
 
+  /* Growability note: recalculates without rebuilding the whole UI during typing. */
   function updateEstimatedResults() {
     try {
       const result = Calculation.calculateDesignState();
@@ -4833,6 +5119,12 @@ const Render = (() => {
 
   let measuredMode = 'z';
   let targetZTunerPoints = [];
+
+  /*
+    Public UI handlers zone
+    Every function below may be called by inline onclick or app buttons.
+    Keep this zone thin: mutate AppState, call Calculation/Render helpers, then refresh visible state.
+  */
 
   function init() {
     renderAll();
@@ -4999,6 +5291,12 @@ const Render = (() => {
       return;
     }
     const target = Number($('m-zt')?.value);
+    if (!Number.isFinite(target) || target <= 0) {
+      setHtml('targetZTunerOutput', '');
+      setHtml('targetZTunerWarnings', '<div class="warn-box">目標値を0より大きい値で入力してください。</div>');
+      setHtml('targetZTunerQuick', '目標値を入力すると推定巻数を表示します。');
+      return;
+    }
     const sorted = [...targetZTunerPoints].sort((a, b) => a.z - b.z);
     let estimated = null;
     for (let i = 1; i < sorted.length; i += 1) {
@@ -5051,10 +5349,1129 @@ const Render = (() => {
   }
 
 
-  return ({ init, pick, pickRole, toggleTurnMode, saveInputValue, pickGlobalFerriteMaterial, updateRolePreviewFromInput, loadEctJson, clearEctJson, reflectCableFromDesign, calculateCable, calcMeasured, exportDesignSpecPdf, exportDesignSpecImage, switchMainTab, switchDesignSubTab, toggleMeasuredMode, addTargetZTunerPoint, deleteTargetZTunerPoint, clearTargetZTuner, copyMeasuredToTuner, openStep1Modal, openStep2Modal, closeModal, backToStep1, finishStep2 });
+  /*
+    Public UI API - do not delete.
+    All inline onclick="UI.xxx(...)" handlers must have a matching method here and on window.UI.
+    UI_PUBLIC_API is the diagnostics source of truth for this returned object.
+    HTML/static handlers:
+      switchMainTab, switchDesignSubTab, loadEctJson, clearEctJson, openStep1Modal,
+      exportDesignSpecPdf, exportDesignSpecImage, reflectCableFromDesign, toggleMeasuredMode,
+      calcMeasured, addTargetZTunerPoint, clearTargetZTuner, calculateCable, closeModal,
+      backToStep1, finishStep2.
+    Rendered handlers:
+      pick, pickRole, toggleTurnMode, saveInputValue, pickGlobalFerriteMaterial,
+      updateRolePreviewFromInput, deleteTargetZTunerPoint, copyMeasuredToTuner, openStep2Modal.
+  */
+  return ({
+    format,
+    init,
+    pick,
+    pickRole,
+    toggleTurnMode,
+    saveInputValue,
+    pickGlobalFerriteMaterial,
+    updateRolePreviewFromInput,
+    loadEctJson,
+    clearEctJson,
+    reflectCableFromDesign,
+    calculateCable,
+    calcMeasured,
+    exportDesignSpecPdf,
+    exportDesignSpecImage,
+    switchMainTab,
+    switchDesignSubTab,
+    toggleMeasuredMode,
+    addTargetZTunerPoint,
+    deleteTargetZTunerPoint,
+    clearTargetZTuner,
+    copyMeasuredToTuner,
+    openStep1Modal,
+    openStep2Modal,
+    closeModal,
+    backToStep1,
+    finishStep2,
+  });
 })();
 
 const UI = Render;
+const CD_SOURCE_TEXT = document.currentScript?.textContent || '';
+
+/*
+  Developer diagnostics - not called automatically.
+  Use AppDiagnostics.runSmokeChecks() after edits to catch UI export drift and core calculation breaks.
+*/
+/*
+  Diagnostics zone
+  Owns edit-time checks and human/AI guidance.
+  Do not auto-fix app data here; return summaries, metrics, and suggested next steps.
+  Console examples:
+    const s = AppDiagnostics.runDiagnostics({ preset: "edit", log: true });
+    AppDiagnostics.report(s);
+    AppDiagnostics.guide("render");
+    AppDiagnostics.start("render button tab");
+    AppDiagnostics.workbench("render button tab");
+    AppDiagnostics.handoff("render button tab");
+    AppDiagnostics.recommend("変更後の確認");
+    AppDiagnostics.protocol("markdown");
+    AppDiagnostics.inventory("markdown");
+    AppDiagnostics.budget("markdown");
+    AppDiagnostics.prunePlan("markdown");
+    AppDiagnostics.coach("render button tab", "markdown");
+    AppDiagnostics.brief("render");
+    AppDiagnostics.route("ケーブル選定の表示を直す");
+    AppDiagnostics.map("markdown");
+    AppDiagnostics.afterEdit("render");
+    AppDiagnostics.runDiagnostics({ preset: "full", log: true });
+*/
+const AppDiagnostics = (() => {
+  const FORBIDDEN_SOURCE_PATTERNS = [
+    { name: 'wcBridge restored', pattern: /\bwcBridge\b(?!\/tuning compatibility shims here)/ },
+    { name: 'tuning restored', pattern: /\btuning\b(?! compatibility shims here)/ },
+  ];
+  const PRESETS = Object.freeze({
+    edit: ['ui', 'domHandlers', 'boundary', 'self'],
+    quick: ['ui', 'domHandlers', 'sourceGuards', 'boundary', 'invariants', 'self'],
+    full: ['ui', 'domHandlers', 'sourceGuards', 'boundary', 'invariants', 'self', 'regression', 'interaction', 'storage'],
+    storage: ['storage'],
+  });
+  const CHECK_LABELS = Object.freeze({
+    ui: 'UI public API',
+    domHandlers: 'DOM onclick handlers',
+    sourceGuards: 'Growability checks',
+    boundary: 'Zone boundary checks',
+    invariants: 'Invariants',
+    self: 'Diagnostics self-tests',
+    regression: 'Calculation regression',
+    interaction: 'Interaction checks',
+    storage: 'Storage',
+  });
+  const DIAGNOSTIC_BUDGETS = Object.freeze({
+    maxPublicApi: 28,
+    maxScopes: 10,
+    maxChecks: 12,
+    maxFixtures: 28,
+  });
+  const CHANGE_SCOPES = Object.freeze({
+    edit: {
+      preset: 'edit',
+      keywords: ['edit', 'refactor', 'cleanup', '整理', '改善', '育て', '作業効率'],
+      zones: ['Narrowest matching zone'],
+      anchors: ['Edit checklist for maintainers and AI agents'],
+      queries: ['AppDiagnostics.guide', 'AppDiagnostics.afterEdit'],
+      steps: ['Make the smallest behavior-preserving edit', 'Run edit diagnostics', 'Use report() only when sharing results'],
+    },
+    config: {
+      preset: 'quick',
+      keywords: ['config', 'option', 'label', 'constant', '選択肢', 'ラベル', '定数', '構成'],
+      zones: ['CONFIG zone', 'Render DOM zone'],
+      anchors: ['const CONFIG', 'renderConfigChoices', 'renderTypeChoices'],
+      queries: ['CONFIG.', 'coilConfigs', 'coilTypes'],
+      steps: ['Update static options/constants', 'Confirm labels still render', 'Run quick diagnostics'],
+    },
+    state: {
+      preset: 'quick',
+      keywords: ['state', 'input', 'default', 'revision', '状態', '入力', '初期値', '復元'],
+      zones: ['AppState zone', 'Calculation zone'],
+      anchors: ['const AppState', 'ensureStateShape', 'calculateDesignState'],
+      queries: ['AppState.setValue', 'AppState.setRoleValue', 'state.inputs'],
+      steps: ['Update defaults and ensureStateShape()', 'Confirm calculateDesignState() still returns the expected shape', 'Run quick diagnostics'],
+    },
+    calculation: {
+      preset: 'full',
+      keywords: ['calculation', 'formula', 'impedance', 'turns', 'Z', '計算', '式', '巻数', 'インピーダンス', '推定'],
+      zones: ['Calculation zone'],
+      anchors: ['const Calculation', 'calculateRole', 'runRegressionTests'],
+      queries: ['Calculation.', 'calculateDesignState', 'estimateConfiguredZ'],
+      steps: ['Keep formula changes in Calculation', 'Check regression cases', 'Run full diagnostics'],
+    },
+    render: {
+      preset: 'full',
+      keywords: ['render', 'ui', 'button', 'tab', 'modal', '表示', '画面', 'ボタン', 'タブ', 'モーダル'],
+      zones: ['Render DOM zone', 'Public UI handlers zone'],
+      anchors: ['const Render', 'renderAll', 'Public UI handlers zone'],
+      queries: ['setHtml', 'renderDesignState', 'UI_PUBLIC_API'],
+      steps: ['Keep handlers thin', 'Confirm tabs/modals still respond', 'Run full diagnostics'],
+    },
+    storage: {
+      preset: 'storage',
+      keywords: ['storage', 'localStorage', 'save', 'duplicate', '保存', '重複', 'JSON'],
+      zones: ['Storage zone', 'Diagnostics zone'],
+      anchors: ['const Storage', 'checkStorage', 'storageRepairSuggestions'],
+      queries: ['Storage.', 'localStorage', 'repairSuggestions'],
+      steps: ['Inspect saved data only', 'Return repair suggestions instead of auto-fixing', 'Run storage diagnostics'],
+    },
+    diagnostics: {
+      preset: 'edit',
+      keywords: ['diagnostics', 'report', 'preset', 'guide', '診断', 'レポート', 'プリセット', 'ガイド'],
+      zones: ['Diagnostics zone'],
+      anchors: ['const AppDiagnostics', 'checkDiagnosticsSelfTests', 'report(summary'],
+      queries: ['PRESETS', 'CHECK_LABELS', 'CHANGE_SCOPES'],
+      steps: ['Update fixtures with new diagnostic behavior', 'Keep report output compact', 'Run edit diagnostics'],
+    },
+  });
+
+  function restoreState(snapshot) {
+    Object.keys(AppState.state).forEach(key => delete AppState.state[key]);
+    Object.assign(AppState.state, AppShared.clonePlain(snapshot));
+  }
+
+  function checkUiPublicApi() {
+    const requiredUi = UI_PUBLIC_API;
+    const missingUi = requiredUi.filter(name => typeof UI[name] !== 'function');
+    const extraUi = Object.keys(UI).filter(name => !requiredUi.includes(name));
+    return { ok: missingUi.length === 0, required: requiredUi.length, missing: missingUi, extra: extraUi };
+  }
+
+  function checkUiHandlersFromDom(root = document) {
+    const handlers = [];
+    const missing = [];
+    root.querySelectorAll?.('[onclick]').forEach(element => {
+      const onclick = element.getAttribute?.('onclick') || '';
+      onclick.replace(/UI\.([A-Za-z0-9_]+)\s*\(/g, (_, name) => {
+        handlers.push(name);
+        if (typeof UI[name] !== 'function') missing.push(name);
+        return '';
+      });
+    });
+    const uniqueHandlers = [...new Set(handlers)].sort();
+    const uniqueMissing = [...new Set(missing)].sort();
+    return { ok: uniqueMissing.length === 0, handlers: uniqueHandlers, missing: uniqueMissing };
+  }
+
+  function collectIds(value, ids = []) {
+    if (!value || typeof value !== 'object') return ids;
+    if (typeof value.id === 'string' || typeof value.id === 'number') ids.push(String(value.id));
+    if (Array.isArray(value)) value.forEach(item => collectIds(item, ids));
+    else Object.keys(value).forEach(key => collectIds(value[key], ids));
+    return ids;
+  }
+
+  function duplicateValues(values) {
+    const seen = new Set();
+    const duplicates = new Set();
+    values.forEach(value => {
+      if (seen.has(value)) duplicates.add(value);
+      else seen.add(value);
+    });
+    return [...duplicates].sort();
+  }
+
+  function storageRepairSuggestions(record) {
+    if (!record?.ids?.length) return [];
+    return record.ids.map(id => ({
+      key: record.key,
+      id,
+      proposal: 'duplicate id "' + id + '" の2件目以降に suffix を付ける候補を確認する',
+    }));
+  }
+
+  function checkStorage() {
+    const result = { ok: true, checkedKeys: 0, malformedJson: [], duplicateIds: [], repairSuggestions: [] };
+    try {
+      if (typeof localStorage === 'undefined') return { ...result, skipped: true, reason: 'localStorage unavailable' };
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        const raw = localStorage.getItem(key);
+        if (!raw || !/^\s*[\[{]/.test(raw)) continue;
+        result.checkedKeys += 1;
+        try {
+          const parsed = JSON.parse(raw);
+          const duplicates = duplicateValues(collectIds(parsed));
+          if (duplicates.length) {
+            const record = { key, ids: duplicates };
+            result.duplicateIds.push(record);
+            result.repairSuggestions.push(...storageRepairSuggestions(record));
+          }
+        } catch (error) {
+          result.malformedJson.push({ key, message: error.message });
+        }
+      }
+    } catch (error) {
+      return { ok: false, error: error.message, checkedKeys: result.checkedKeys };
+    }
+    result.ok = result.malformedJson.length === 0 && result.duplicateIds.length === 0;
+    return result;
+  }
+
+  function checkInvariants() {
+    const failures = [];
+    const state = AppState.state;
+    ['detect', 'excitation', 'excitation1', 'excitation2'].forEach(role => {
+      if (!state.roles?.[role]) failures.push('missing role state: ' + role);
+    });
+    if (!state.inputs || typeof state.inputs !== 'object') failures.push('state.inputs must be an object');
+    if (!Number.isFinite(state.revision)) failures.push('state.revision must be finite');
+    const result = Calculation.calculateDesignState();
+    ['activeRoles', 'config', 'revision', 'calculatedAt', 'singles', 'estimated'].forEach(key => {
+      if (!(key in result)) failures.push('calculateDesignState missing ' + key);
+    });
+    if (!Array.isArray(result.activeRoles) || !result.activeRoles.length) failures.push('activeRoles must be a non-empty array');
+    if (result.config !== state.config) failures.push('result.config must match AppState.state.config');
+    if (result.revision !== state.revision) failures.push('result.revision must match AppState.state.revision');
+    result.activeRoles.forEach(role => {
+      if (!result.singles?.[role]) failures.push('missing single result for ' + role);
+    });
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkSourceGuards(source = CD_SOURCE_TEXT) {
+    const failures = [];
+    const warnings = [];
+    if (!source) warnings.push('source text unavailable; browser may not expose document.currentScript text');
+    const preDiagnostics = source ? source.slice(0, source.indexOf('const AppDiagnostics') > -1 ? source.indexOf('const AppDiagnostics') : source.length) : '';
+    const withoutDiagnostics = source
+      ? source.replace(/const AppDiagnostics\s*=\s*\(\(\)\s*=>\s*\{[\s\S]*?\}\)\(\);\s*if \('serviceWorker'/, "if ('serviceWorker'")
+      : '';
+    const checkedSource = withoutDiagnostics
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+    FORBIDDEN_SOURCE_PATTERNS.forEach(rule => {
+      if (checkedSource && rule.pattern.test(checkedSource)) failures.push(rule.name);
+    });
+    const appSharedSource = preDiagnostics.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    const appSharedBlock = appSharedSource.match(/const AppShared\s*=\s*\(\(\)\s*=>\s*\{[\s\S]*?\n\}\)\(\);/)?.[0] || '';
+    if (appSharedBlock && /AppShared\./.test(appSharedBlock)) failures.push('AppShared self-reference');
+    const calculationStart = checkedSource.indexOf('const Calculation');
+    const calculationEnd = checkedSource.indexOf('const ECTBridge');
+    const calculationBlock = calculationStart > -1 && calculationEnd > calculationStart
+      ? checkedSource.slice(calculationStart, calculationEnd)
+      : '';
+    if (calculationBlock && /Render\./.test(calculationBlock)) failures.push('Calculation -> Render boundary leak');
+    if (checkedSource && !/window\.UI\s*=\s*UI/.test(checkedSource)) failures.push('window.UI assignment missing');
+    if (checkedSource && !/window\.AppDiagnostics\s*=\s*AppDiagnostics/.test(checkedSource)) failures.push('window.AppDiagnostics assignment missing');
+    if (checkedSource && !/function renderAll\s*\(/.test(checkedSource)) failures.push('renderAll missing');
+    if (checkedSource && !/const UI_PUBLIC_API\s*=\s*Object\.freeze/.test(checkedSource)) failures.push('UI_PUBLIC_API missing');
+    if (withoutDiagnostics && !/Do not restore removed wcBridge\/tuning compatibility shims here/.test(withoutDiagnostics)) warnings.push('wcBridge/tuning tombstone comment missing');
+    return { ok: failures.length === 0, failures, warnings };
+  }
+
+  function codeWithoutComments(source) {
+    return (source || '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  }
+
+  function blockBetween(source, startNeedle, endNeedle) {
+    const start = source.indexOf(startNeedle);
+    if (start < 0) return '';
+    const end = endNeedle ? source.indexOf(endNeedle, start + startNeedle.length) : -1;
+    return source.slice(start, end > start ? end : source.length);
+  }
+
+  function countMatches(text, pattern) {
+    return [...String(text || '').matchAll(pattern)].length;
+  }
+
+  function checkZoneBoundaries(source = CD_SOURCE_TEXT) {
+    const failures = [];
+    const warnings = [];
+    const checkedSource = codeWithoutComments(source);
+    const requiredZones = [
+      'CONFIG zone',
+      'Storage zone',
+      'AppState zone',
+      'Calculation zone',
+      'ECTBridge zone',
+      'CableSelection zone',
+      'Render DOM zone',
+      'Public UI handlers zone',
+      'Diagnostics zone',
+    ];
+    requiredZones.forEach(zone => {
+      if (!source.includes(zone)) failures.push('zone marker missing: ' + zone);
+    });
+
+    const calculationBlock = blockBetween(checkedSource, 'const Calculation', 'const ECTBridge');
+    const renderBlock = blockBetween(checkedSource, 'const Render', 'const UI = Render');
+    const publicHandlerBlock = blockBetween(checkedSource, 'function init()', 'return ({');
+    const diagnosticsBlock = blockBetween(checkedSource, 'const AppDiagnostics', "if ('serviceWorker'");
+    const storageBlock = blockBetween(checkedSource, 'const Storage', 'const AppState');
+
+    if (calculationBlock && /\b(Render|UI)\s*\./.test(calculationBlock)) failures.push('Calculation calls Render/UI');
+    if (calculationBlock && /\b(setHtml|innerHTML|classList|window\.print|localStorage)\b/.test(calculationBlock)) failures.push('Calculation contains DOM/storage side effect');
+
+    const localStorageOutsideAllowed = checkedSource
+      .replace(storageBlock, '')
+      .replace(diagnosticsBlock, '');
+    if (/\blocalStorage\b/.test(localStorageOutsideAllowed)) failures.push('localStorage used outside Storage/Diagnostics zones');
+
+    const publicHandlerFunctions = countMatches(publicHandlerBlock, /\bfunction\s+[A-Za-z0-9_]+\s*\(/g);
+    const publicHandlerLines = publicHandlerBlock.split('\n').length;
+    if (publicHandlerFunctions > UI_PUBLIC_API.length + 6) warnings.push('Public UI handlers zone has ' + publicHandlerFunctions + ' functions; consider moving private helpers above it');
+    if (publicHandlerLines > 360) warnings.push('Public UI handlers zone is ' + publicHandlerLines + ' lines; consider thinning handlers');
+    if (renderBlock && countMatches(renderBlock, /\bStorage\./g) > 2) warnings.push('Render uses Storage directly multiple times; consider routing through AppState');
+
+    return {
+      ok: failures.length === 0,
+      failures,
+      warnings,
+      metrics: {
+        publicHandlerFunctions,
+        publicHandlerLines,
+        renderStorageCalls: countMatches(renderBlock, /\bStorage\./g),
+      },
+    };
+  }
+
+  function checkDiagnosticsSelfTests() {
+    const failures = [];
+    const passed = [];
+    const assert = (condition, message) => {
+      if (condition) passed.push(message);
+      else failures.push(message);
+    };
+    const fake = (preset, check) => ({
+      preset,
+      selectedChecks: [check],
+      failures: [{ check, label: CHECK_LABELS[check] || check, message: 'synthetic failure' }],
+      [check]: { ok: false, failures: ['synthetic failure'] },
+    });
+    const fixtures = [
+      { name: 'edit preset resolves', run: () => normalizePreset('edit') === 'edit' },
+      { name: 'quick preset resolves', run: () => normalizePreset('quick') === 'quick' },
+      { name: 'unknown preset falls back to full', run: () => normalizePreset('unknown') === 'full' },
+      { name: 'render guide uses full preset', run: () => guide('render').preset === 'full' },
+      { name: 'unknown guide falls back to edit', run: () => guide('unknown').scope === 'edit' },
+      { name: 'render guide exposes search anchors', run: () => guide('render').anchors.includes('renderAll') },
+      { name: 'map includes render scope', run: () => map().some(row => row.scope === 'render') },
+      { name: 'markdown map has table header', run: () => map('markdown').startsWith('| Scope |') },
+      { name: 'route finds render scope', run: () => route('ボタン表示とタブUIを直す').scope === 'render' },
+      { name: 'route finds storage scope', run: () => route('保存JSONの重複を確認').scope === 'storage' },
+      { name: 'start returns first search terms', run: () => start('render button tab').firstSearch.includes('setHtml') },
+      { name: 'workbench stays lazy by default', run: () => workbench('render button tab').summary === null },
+      { name: 'workbench markdown starts with heading', run: () => workbench('render button tab', { format: 'markdown' }).markdown.startsWith('# CD Workbench') },
+      { name: 'handoff starts with compact heading', run: () => handoff('render button tab').startsWith('CD handoff:') },
+      { name: 'inventory tracks public api', run: () => inventory().publicApi.length >= 10 },
+      { name: 'budget reports ok state', run: () => budget().ok === true },
+      { name: 'prune plan returns suggestions', run: () => prunePlan().suggestions.length > 0 },
+      { name: 'coach returns loop sections', run: () => coach('render button tab').read.length > 0 && coach('render button tab').verify.length > 0 },
+      { name: 'recommend picks coach for how-to', run: () => recommend('どう進めるか整理して').helper === 'coach' },
+      { name: 'recommend picks afterEdit after changes', run: () => recommend('変更後の確認').helper === 'afterEdit' },
+      { name: 'recommend explains choice', run: () => !!recommend('render button tab').why && recommend('render button tab').budgetOk === true },
+      { name: 'protocol names primary helper', run: () => protocol().primary === 'recommend' },
+      { name: 'brief returns compact scope line', run: () => brief('diagnostics').includes('scope=diagnostics') },
+      { name: 'UI failure suggests public API check', run: () => suggestNextSteps(fake('quick', 'ui')).some(step => step.id === 'check-public-ui') },
+      { name: 'boundary failure suggests zone review', run: () => suggestNextSteps(fake('quick', 'boundary')).some(step => step.id === 'check-boundaries') },
+      { name: 'storage failure suggests storage inspection', run: () => suggestNextSteps(fake('full', 'storage')).some(step => step.id === 'inspect-storage') },
+      { name: 'clean quick suggests full when behavior changed', run: () => suggestNextSteps({ preset: 'quick', failures: [], storage: { repairSuggestions: [] } }).some(step => step.id === 'run-full') },
+      { name: 'clean edit suggests small next edit', run: () => suggestNextSteps({ preset: 'edit', failures: [], storage: { repairSuggestions: [] } }).some(step => step.id === 'keep-small') },
+      { name: 'report returns markdown title', run: () => report({ ok: true, preset: 'edit', selectedChecks: ['self'], failures: [], warnings: [], nextSteps: [], metrics: {} }).startsWith('# CD Diagnostics Report') },
+    ];
+    fixtures.forEach(fixture => assert(fixture.run(), fixture.name));
+    return { ok: failures.length === 0, failures, cases: passed, count: passed.length };
+  }
+
+  function runInteractionChecks() {
+    const failures = [];
+    const check = (condition, message) => { if (!condition) failures.push(message); };
+    const setValue = (id, value) => {
+      const element = document.getElementById(id);
+      if (element) element.value = value;
+      return element;
+    };
+
+    UI.openStep1Modal();
+    check(!document.getElementById('step1Modal')?.classList.contains('hidden'), 'STEP1 modal did not open');
+    UI.openStep2Modal();
+    check(!document.getElementById('step2Modal')?.classList.contains('hidden'), 'STEP2 modal did not open');
+
+    ['config', 'detect', 'excitation', 'result'].forEach(tab => UI.switchDesignSubTab(tab));
+    check(document.getElementById('designSubtab-result')?.classList.contains('active'), 'Result tab did not activate');
+
+    ['cable', 'measured', 'coil'].forEach(tab => UI.switchMainTab(tab));
+    check(document.getElementById('tab-coil')?.classList.contains('active'), 'Main coil tab did not reactivate');
+
+    UI.reflectCableFromDesign();
+    check(document.getElementById('tab-cable')?.classList.contains('active'), 'Cable tab did not activate from reflect');
+    setValue('cable-freq', '100');
+    setValue('cable-length', '1');
+    UI.calculateCable();
+    check(!document.getElementById('cableResultArea')?.classList.contains('hidden'), 'Cable result area did not render');
+    check(document.getElementById('cableResults')?.innerHTML, 'Cable results are empty');
+
+    UI.switchMainTab('measured');
+    const beforeMode = document.getElementById('measuredModeToggle')?.textContent;
+    UI.toggleMeasuredMode();
+    check(document.getElementById('measuredModeToggle')?.textContent !== beforeMode, 'Measured mode did not toggle');
+    UI.toggleMeasuredMode();
+    setValue('m-n1', '50');
+    setValue('m-z1', '25');
+    setValue('m-f', '100');
+    setValue('m-zt', '100');
+    UI.calcMeasured();
+    check(!document.getElementById('measuredResults')?.classList.contains('hidden'), 'Measured result area did not render');
+
+    const nInput = document.getElementById('tz-entry-n');
+    const zInput = document.getElementById('tz-entry-z');
+    const targetInput = document.getElementById('m-zt');
+    if (nInput && zInput && targetInput) {
+      targetInput.value = '';
+      nInput.value = '10';
+      zInput.value = '20';
+      UI.addTargetZTunerPoint();
+      nInput.value = '20';
+      zInput.value = '80';
+      UI.addTargetZTunerPoint();
+      check(document.getElementById('targetZTunerWarnings')?.innerHTML, 'Target Z tuner did not warn for missing target');
+      UI.clearTargetZTuner();
+    }
+
+    const ectInput = document.getElementById('ectJsonInput');
+    if (ectInput) {
+      ectInput.value = '{"frequency_kHz":100}';
+      UI.loadEctJson();
+      check(document.getElementById('ectJsonStatus')?.innerHTML, 'ECT import status did not render');
+      UI.clearEctJson();
+    }
+
+    return { ok: failures.length === 0, failures, passed: failures.length === 0 };
+  }
+
+  function skippedCheck(name) {
+    return { ok: true, skipped: true, check: name, label: CHECK_LABELS[name] || name };
+  }
+
+  function runCheck(name, callback) {
+    try {
+      const result = callback();
+      return {
+        ...(result && typeof result === 'object' ? result : {}),
+        ok: result?.ok !== false,
+        check: name,
+        label: CHECK_LABELS[name] || name,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        check: name,
+        label: CHECK_LABELS[name] || name,
+        error: error.message || String(error),
+        failures: [error.message || String(error)],
+      };
+    }
+  }
+
+  function normalizePreset(preset = 'full') {
+    return PRESETS[preset] ? preset : 'full';
+  }
+
+  function normalizeScope(scope = 'edit') {
+    return CHANGE_SCOPES[scope] ? scope : 'edit';
+  }
+
+  function collectFailures(summary) {
+    const failures = [];
+    summary.selectedChecks.forEach(name => {
+      const result = summary[name];
+      if (!result || result.ok) return;
+      const messages = []
+        .concat(result.failures || [])
+        .concat(result.missing?.map(item => 'missing: ' + item) || [])
+        .concat(result.malformedJson?.map(item => item.key + ': ' + item.message) || [])
+        .concat(result.duplicateIds?.map(item => item.key + ': duplicate id ' + item.ids.join(', ')) || [])
+        .concat(result.error || []);
+      failures.push(...messages.filter(Boolean).map(message => ({
+        check: name,
+        label: result.label || CHECK_LABELS[name] || name,
+        message,
+      })));
+    });
+    return failures;
+  }
+
+  function collectWarnings(summary) {
+    const warnings = [];
+    summary.selectedChecks.forEach(name => {
+      const result = summary[name];
+      if (!result || result.skipped) return;
+      const messages = []
+        .concat(result.warnings || [])
+        .concat(result.repairSuggestions?.map(item => item.key + ': ' + item.proposal) || []);
+      warnings.push(...messages.filter(Boolean).map(message => ({
+        check: name,
+        label: result.label || CHECK_LABELS[name] || name,
+        message,
+      })));
+    });
+    return warnings;
+  }
+
+  function buildMetrics(summary) {
+    return {
+      publicUi: summary.ui?.required || 0,
+      domHandlers: summary.domHandlers?.handlers?.length || 0,
+      regressionCases: summary.regression?.count || summary.regression?.cases?.length || 0,
+      diagnosticsSelfCases: summary.self?.count || summary.self?.cases?.length || 0,
+      storageKeys: summary.storage?.checkedKeys || 0,
+      sourceRules: FORBIDDEN_SOURCE_PATTERNS.length + 5,
+      boundaryPublicHandlerFunctions: summary.boundary?.metrics?.publicHandlerFunctions || 0,
+      boundaryPublicHandlerLines: summary.boundary?.metrics?.publicHandlerLines || 0,
+      selectedChecks: summary.selectedChecks.length,
+    };
+  }
+
+  function hasFailure(summary, name) {
+    return summary?.failures?.some(item => item.check === name);
+  }
+
+  function addStep(steps, id, title, detail) {
+    if (steps.some(step => step.id === id)) return;
+    steps.push({ id, title, detail });
+  }
+
+  function suggestNextSteps(summary) {
+    const steps = [];
+    if (!summary) {
+      return [{ id: 'run-diagnostics', title: 'Run diagnostics', detail: 'Call AppDiagnostics.runDiagnostics({ preset: "quick" }) before editing.' }];
+    }
+    if (hasFailure(summary, 'ui') || hasFailure(summary, 'domHandlers')) {
+      addStep(steps, 'check-public-ui', 'Check Render public API', 'Compare UI_PUBLIC_API with Render returned methods and inline onclick="UI.xxx()" handlers.');
+    }
+    if (hasFailure(summary, 'sourceGuards')) {
+      addStep(steps, 'check-zones', 'Check zone boundaries', 'Review AppShared, Calculation, Render, and window exports before changing behavior.');
+    }
+    if (hasFailure(summary, 'boundary')) {
+      addStep(steps, 'check-boundaries', 'Review zone boundary findings', 'Keep formulas in Calculation, DOM writes in Render, storage serialization in Storage, and public handlers thin.');
+    }
+    if (hasFailure(summary, 'invariants')) {
+      addStep(steps, 'check-state-shape', 'Check AppState shape', 'Review role defaults, ensureStateShape(), and calculateDesignState() result fields.');
+    }
+    if (hasFailure(summary, 'self')) {
+      addStep(steps, 'check-diagnostics', 'Check diagnostics helpers', 'Review suggestNextSteps(), presets, and failure aggregation before trusting diagnostic output.');
+    }
+    if (hasFailure(summary, 'regression')) {
+      addStep(steps, 'check-calculation', 'Check Calculation changes', 'Re-run the failing regression case and keep formula changes inside the Calculation zone.');
+    }
+    if (hasFailure(summary, 'interaction')) {
+      addStep(steps, 'check-render-flow', 'Check Render flow', 'Review tab switching, modal handlers, and renderAll() dependency order.');
+    }
+    if (hasFailure(summary, 'storage') || summary.storage?.repairSuggestions?.length) {
+      addStep(steps, 'inspect-storage', 'Inspect saved data', 'Use storage repairSuggestions as proposals only; do not rewrite localStorage automatically.');
+    }
+    if (!steps.length && summary.preset === 'quick') {
+      addStep(steps, 'run-full', 'Run full diagnostics when behavior changed', 'Call AppDiagnostics.runDiagnostics({ preset: "full" }) after calculation, rendering, or storage edits.');
+    }
+    if (!steps.length) {
+      addStep(steps, 'keep-small', 'Keep the next edit small', 'Use the zone comments to place the change, then run the smallest matching diagnostic preset.');
+    }
+    return steps;
+  }
+
+  function explain(summary) {
+    const lines = [];
+    const preset = summary?.preset || 'unknown';
+    if (!summary) return '診断結果がありません。';
+    lines.push('CD診断 ' + (summary.ok ? 'OK' : 'NG') + '（preset: ' + preset + '）');
+    if (summary.failures?.length) {
+      lines.push('失敗: ' + summary.failures.length + '件');
+      summary.failures.slice(0, 8).forEach(item => lines.push('- ' + item.label + ': ' + item.message));
+      if (summary.failures.length > 8) lines.push('- ほか ' + (summary.failures.length - 8) + '件');
+    } else {
+      lines.push('選択したチェックはすべて通っています。');
+    }
+    if (summary.warnings?.length) {
+      lines.push('Warnings: ' + summary.warnings.length + '件');
+    }
+    if (summary.storage?.repairSuggestions?.length) {
+      lines.push('修復提案: storage重複ID ' + summary.storage.repairSuggestions.length + '件。勝手には修復しません。');
+    }
+    if (summary.metrics) {
+      lines.push('見張り範囲: UI公開 ' + summary.metrics.publicUi + ' / DOM handler ' + summary.metrics.domHandlers + ' / regression ' + summary.metrics.regressionCases + ' / storage key ' + summary.metrics.storageKeys);
+    }
+    const nextSteps = summary.nextSteps || suggestNextSteps(summary);
+    if (nextSteps.length) lines.push('Next: ' + nextSteps.slice(0, 3).map(step => step.title).join(' / '));
+    return lines.join('\n');
+  }
+
+  function bulletLines(items, emptyText, limit = 8) {
+    if (!items?.length) return ['- ' + emptyText];
+    const lines = items.slice(0, limit).map(item => '- ' + (item.label || item.title || item.check || 'Item') + ': ' + (item.message || item.detail || '-'));
+    if (items.length > limit) lines.push('- ...and ' + (items.length - limit) + ' more');
+    return lines;
+  }
+
+  function guide(scope = 'edit') {
+    const normalized = normalizeScope(scope);
+    const plan = CHANGE_SCOPES[normalized];
+    return {
+      scope: normalized,
+      preset: plan.preset,
+      keywords: [...plan.keywords],
+      zones: [...plan.zones],
+      anchors: [...plan.anchors],
+      queries: [...plan.queries],
+      steps: [...plan.steps],
+      commands: [
+        'const s = AppDiagnostics.runDiagnostics({ preset: "' + plan.preset + '", log: true });',
+        'AppDiagnostics.report(s);',
+      ],
+    };
+  }
+
+  function scopeRows() {
+    return Object.entries(CHANGE_SCOPES).map(([scope, plan]) => ({
+      scope,
+      preset: plan.preset,
+      zones: [...plan.zones],
+      anchors: [...plan.anchors],
+      queries: [...plan.queries],
+      keywords: [...plan.keywords],
+      steps: [...plan.steps],
+    }));
+  }
+
+  function map(format = 'object') {
+    const rows = scopeRows();
+    if (format !== 'markdown') return rows;
+    return [
+      '| Scope | Preset | First anchors | Search queries |',
+      '| --- | --- | --- | --- |',
+      ...rows.map(row => '| ' + row.scope + ' | ' + row.preset + ' | ' + row.anchors.slice(0, 3).join('<br>') + ' | ' + row.queries.slice(0, 3).join('<br>') + ' |'),
+    ].join('\n');
+  }
+
+  function route(text = '') {
+    const haystack = String(text || '').toLowerCase();
+    const matches = Object.entries(CHANGE_SCOPES).map(([scope, plan]) => {
+      const hits = plan.keywords.filter(keyword => haystack.includes(String(keyword).toLowerCase()));
+      return { scope, score: hits.length, hits };
+    }).filter(item => item.score > 0).sort((a, b) => b.score - a.score || a.scope.localeCompare(b.scope));
+    const best = matches[0]?.scope || 'edit';
+    return {
+      input: String(text || ''),
+      scope: best,
+      matches,
+      guide: guide(best),
+    };
+  }
+
+  function start(text = '') {
+    const routed = route(text);
+    const plan = routed.guide;
+    return {
+      input: routed.input,
+      scope: routed.scope,
+      confidence: routed.matches[0]?.score || 0,
+      preset: plan.preset,
+      firstRead: plan.anchors.slice(0, 3),
+      firstSearch: plan.queries.slice(0, 4),
+      steps: plan.steps,
+      commands: [
+        'AppDiagnostics.brief("' + plan.scope + '");',
+        'const s = AppDiagnostics.runDiagnostics({ preset: "' + plan.preset + '", log: true });',
+        'AppDiagnostics.report(s);',
+      ],
+      matches: routed.matches,
+    };
+  }
+
+  function workbench(text = '', options = {}) {
+    const starter = start(text);
+    const shouldRun = options.run === true;
+    const preset = options.preset || starter.preset;
+    const summary = shouldRun ? runDiagnostics({ ...options, preset }) : null;
+    if (summary) {
+      summary.scope = starter.scope;
+      summary.guide = starter;
+    }
+    const markdown = [
+      '# CD Workbench',
+      '',
+      '- Scope: ' + starter.scope,
+      '- Confidence: ' + starter.confidence,
+      '- Preset: ' + preset,
+      '',
+      '## First Read',
+      ...starter.firstRead.map(item => '- ' + item),
+      '',
+      '## First Search',
+      ...starter.firstSearch.map(item => '- ' + item),
+      '',
+      '## Steps',
+      ...starter.steps.map(item => '- ' + item),
+      '',
+      '## Commands',
+      ...starter.commands.map(item => '- `' + item + '`'),
+    ].join('\n');
+    return {
+      ...starter,
+      summary,
+      report: summary ? report(summary) : null,
+      markdown: options.format === 'markdown' ? markdown : markdown,
+    };
+  }
+
+  function coach(text = '', format = 'object') {
+    const wb = workbench(text);
+    const plan = {
+      scope: wb.scope,
+      read: wb.firstRead,
+      search: wb.firstSearch,
+      touch: wb.steps,
+      verify: [
+        'AppDiagnostics.runDiagnostics({ preset: "' + wb.preset + '", log: true })',
+        'AppDiagnostics.afterEdit("' + wb.scope + '")',
+      ],
+      trim: prunePlan().suggestions.slice(0, 3),
+    };
+    if (format !== 'markdown') return plan;
+    return [
+      '# CD Coach',
+      '',
+      '- Scope: ' + plan.scope,
+      '',
+      '## Read',
+      ...plan.read.map(item => '- ' + item),
+      '',
+      '## Search',
+      ...plan.search.map(item => '- ' + item),
+      '',
+      '## Touch',
+      ...plan.touch.map(item => '- ' + item),
+      '',
+      '## Verify',
+      ...plan.verify.map(item => '- `' + item + '`'),
+      '',
+      '## Trim',
+      ...plan.trim.map(item => '- ' + item.target + ': ' + item.action),
+    ].join('\n');
+  }
+
+  function recommend(text = '') {
+    const input = String(text || '');
+    const lower = input.toLowerCase();
+    const routed = route(input);
+    const budgetStatus = budget();
+    let helper = 'workbench';
+    if (/after|done|verify|check|確認|検証|終わ|変更後/.test(lower)) helper = 'afterEdit';
+    else if (/how|plan|guide|coach|進め|整理|手順/.test(lower)) helper = 'coach';
+    else if (/handoff|resume|引き継|再開|圧縮/.test(lower)) helper = 'handoff';
+    else if (/budget|prune|trim|増えすぎ|畳む|軽く/.test(lower)) helper = 'prunePlan';
+    else if (/map|inventory|一覧|棚卸/.test(lower)) helper = 'map';
+    const command = helper === 'afterEdit'
+      ? 'AppDiagnostics.afterEdit("' + routed.scope + '")'
+      : helper === 'coach'
+      ? 'AppDiagnostics.coach("' + input + '", "markdown")'
+      : helper === 'handoff'
+      ? 'AppDiagnostics.handoff("' + input + '")'
+      : helper === 'prunePlan'
+      ? 'AppDiagnostics.prunePlan("markdown")'
+      : helper === 'map'
+      ? 'AppDiagnostics.map("markdown")'
+      : 'AppDiagnostics.workbench("' + input + '")';
+    const why = {
+      afterEdit: 'request looks like post-change verification',
+      coach: 'request asks for process or steps',
+      handoff: 'request looks like resume or context transfer',
+      prunePlan: 'request is about keeping diagnostics light',
+      map: 'request asks for an overview',
+      workbench: 'default one-stop workspace for a scoped task',
+    }[helper];
+    return {
+      helper,
+      command,
+      scope: routed.scope,
+      why,
+      budgetOk: budgetStatus.ok,
+      budgetWarnings: budgetStatus.warnings,
+      route: routed,
+    };
+  }
+
+  function protocol(format = 'object') {
+    const data = {
+      primary: 'recommend',
+      start: 'workbench',
+      during: 'coach',
+      after: 'afterEdit',
+      resume: 'handoff',
+      keepLight: ['budget', 'prunePlan', 'inventory'],
+      rule: 'Prefer existing helpers before adding new public AppDiagnostics methods.',
+      command: 'AppDiagnostics.recommend(requestText)',
+    };
+    if (format !== 'markdown') return data;
+    return [
+      '# CD Diagnostics Protocol',
+      '',
+      '- Primary: ' + data.primary,
+      '- Start: ' + data.start,
+      '- During: ' + data.during,
+      '- After: ' + data.after,
+      '- Resume: ' + data.resume,
+      '- Keep light: ' + data.keepLight.join(', '),
+      '- Rule: ' + data.rule,
+      '- Command: `' + data.command + '`',
+    ].join('\n');
+  }
+
+  function handoff(text = '') {
+    const wb = workbench(text);
+    return [
+      'CD handoff: ' + wb.scope + ' scope, preset ' + wb.preset + ', confidence ' + wb.confidence + '.',
+      'Intent: ' + wb.input,
+      'Read first: ' + wb.firstRead.join(' | '),
+      'Search first: ' + wb.firstSearch.join(' | '),
+      'Steps: ' + wb.steps.join(' / '),
+      'After edit: AppDiagnostics.afterEdit("' + wb.scope + '")',
+    ].join('\n');
+  }
+
+  function inventory(format = 'object') {
+    const publicApi = [
+      'runDiagnostics',
+      'runSmokeChecks',
+      'explain',
+      'report',
+      'guide',
+      'map',
+      'route',
+      'start',
+      'workbench',
+      'coach',
+      'recommend',
+      'protocol',
+      'handoff',
+      'inventory',
+      'budget',
+      'prunePlan',
+      'brief',
+      'afterEdit',
+      'suggestNextSteps',
+      'checkUiPublicApi',
+      'checkUiHandlersFromDom',
+      'checkStorage',
+      'checkInvariants',
+      'checkSourceGuards',
+      'checkZoneBoundaries',
+      'checkDiagnosticsSelfTests',
+      'runInteractionChecks',
+      'logSmokeChecks',
+    ];
+    const data = {
+      presets: Object.fromEntries(Object.entries(PRESETS).map(([name, checks]) => [name, checks.length])),
+      scopes: Object.keys(CHANGE_SCOPES),
+      checks: Object.keys(CHECK_LABELS),
+      publicApi,
+      fixtureCount: 17,
+      scopeCount: Object.keys(CHANGE_SCOPES).length,
+      publicApiCount: publicApi.length,
+      budgets: { ...DIAGNOSTIC_BUDGETS },
+    };
+    if (format !== 'markdown') return data;
+    return [
+      '# CD Diagnostics Inventory',
+      '',
+      '- Presets: ' + Object.keys(data.presets).join(', '),
+      '- Scopes: ' + data.scopes.join(', '),
+      '- Checks: ' + data.checks.join(', '),
+      '- Public API count: ' + data.publicApiCount,
+      '- Fixture count: ' + data.fixtureCount,
+      '- Budgets: api ' + data.publicApiCount + '/' + data.budgets.maxPublicApi + ', scopes ' + data.scopeCount + '/' + data.budgets.maxScopes,
+    ].join('\n');
+  }
+
+  function budget(format = 'object') {
+    const data = inventory();
+    const warnings = [];
+    if (data.publicApiCount > DIAGNOSTIC_BUDGETS.maxPublicApi) warnings.push('public API count ' + data.publicApiCount + ' exceeds ' + DIAGNOSTIC_BUDGETS.maxPublicApi);
+    if (data.scopeCount > DIAGNOSTIC_BUDGETS.maxScopes) warnings.push('scope count ' + data.scopeCount + ' exceeds ' + DIAGNOSTIC_BUDGETS.maxScopes);
+    if (data.checks.length > DIAGNOSTIC_BUDGETS.maxChecks) warnings.push('check count ' + data.checks.length + ' exceeds ' + DIAGNOSTIC_BUDGETS.maxChecks);
+    if (data.fixtureCount > DIAGNOSTIC_BUDGETS.maxFixtures) warnings.push('fixture count ' + data.fixtureCount + ' exceeds ' + DIAGNOSTIC_BUDGETS.maxFixtures);
+    const result = { ok: warnings.length === 0, warnings, inventory: data };
+    if (format !== 'markdown') return result;
+    return [
+      '# CD Diagnostics Budget',
+      '',
+      '- Status: ' + (result.ok ? 'OK' : 'WARN'),
+      '- Public API: ' + data.publicApiCount + '/' + DIAGNOSTIC_BUDGETS.maxPublicApi,
+      '- Scopes: ' + data.scopeCount + '/' + DIAGNOSTIC_BUDGETS.maxScopes,
+      '- Checks: ' + data.checks.length + '/' + DIAGNOSTIC_BUDGETS.maxChecks,
+      '- Fixtures: ' + data.fixtureCount + '/' + DIAGNOSTIC_BUDGETS.maxFixtures,
+      '',
+      ...(warnings.length ? warnings.map(item => '- ' + item) : ['- No budget warnings']),
+    ].join('\n');
+  }
+
+  function prunePlan(format = 'object') {
+    const status = budget();
+    const data = status.inventory;
+    const suggestions = [
+      { target: 'public API', action: 'Prefer one-stop helpers like workbench(), start(), and afterEdit() before adding more exports.' },
+      { target: 'scopes', action: 'Merge new scopes into edit/config/state/calculation/render/storage/diagnostics unless the workflow is truly distinct.' },
+      { target: 'fixtures', action: 'Add self-test fixtures only for new routing or reporting behavior, not every helper branch.' },
+    ];
+    if (status.warnings.length) {
+      suggestions.unshift({ target: 'budget warnings', action: status.warnings.join(' / ') });
+    }
+    const result = { ok: status.ok, suggestions, budget: status };
+    if (format !== 'markdown') return result;
+    return [
+      '# CD Diagnostics Prune Plan',
+      '',
+      '- Budget: ' + (status.ok ? 'OK' : 'WARN'),
+      '',
+      ...suggestions.map(item => '- ' + item.target + ': ' + item.action),
+    ].join('\n');
+  }
+
+  function brief(scope = 'edit') {
+    const plan = guide(scope);
+    return [
+      'scope=' + plan.scope,
+      'preset=' + plan.preset,
+      'keywords=' + plan.keywords.slice(0, 6).join(' | '),
+      'zones=' + plan.zones.join(' | '),
+      'anchors=' + plan.anchors.join(' | '),
+      'queries=' + plan.queries.join(' | '),
+    ].join('\n');
+  }
+
+  function afterEdit(scope = 'edit', options = {}) {
+    const plan = guide(scope);
+    const summary = runDiagnostics({ ...options, preset: options.preset || plan.preset });
+    summary.scope = plan.scope;
+    summary.guide = plan;
+    return {
+      guide: plan,
+      summary,
+      report: report(summary),
+    };
+  }
+
+  function report(summary = null) {
+    const result = summary || runDiagnostics({ preset: 'edit' });
+    const metrics = result.metrics || {};
+    const lines = [
+      '# CD Diagnostics Report',
+      '',
+      '- Status: ' + (result.ok ? 'OK' : 'NG'),
+      '- Preset: ' + result.preset,
+      '- Checks: ' + result.selectedChecks.join(', '),
+      '- Failures: ' + (result.failures?.length || 0),
+      '- Warnings: ' + (result.warnings?.length || 0),
+      '- Budget: ' + (result.budget?.ok === false ? 'WARN' : 'OK'),
+      '- Next command: AppDiagnostics.afterEdit("' + (result.scope || result.guide?.scope || 'edit') + '")',
+      '',
+      '## Failures',
+      ...bulletLines(result.failures, 'None'),
+      '',
+      '## Warnings',
+      ...bulletLines(result.warnings, 'None'),
+      '',
+      '## Next Steps',
+      ...bulletLines(result.nextSteps, 'Keep the next edit small'),
+      '',
+      '## Metrics',
+      '- Public UI: ' + (metrics.publicUi || 0),
+      '- DOM handlers: ' + (metrics.domHandlers || 0),
+      '- Regression cases: ' + (metrics.regressionCases || 0),
+      '- Diagnostics self-tests: ' + (metrics.diagnosticsSelfCases || 0),
+      '- Storage keys checked: ' + (metrics.storageKeys || 0),
+      '- Boundary public handler functions: ' + (metrics.boundaryPublicHandlerFunctions || 0),
+      '- Boundary public handler lines: ' + (metrics.boundaryPublicHandlerLines || 0),
+    ];
+    return lines.join('\n');
+  }
+
+  function logSmokeChecks(summary) {
+    if (typeof console === 'undefined') return;
+    console.log('[CD diagnostics]', summary.ok ? 'OK' : 'FAILED', summary);
+    if (console.table) {
+      console.table([
+        { check: CHECK_LABELS.ui, ok: summary.ui.ok, detail: summary.ui.skipped ? 'skipped' : (summary.ui.missing.join(', ') || '-') },
+        { check: CHECK_LABELS.domHandlers, ok: summary.domHandlers.ok, detail: summary.domHandlers.skipped ? 'skipped' : (summary.domHandlers.missing.join(', ') || '-') },
+        { check: CHECK_LABELS.boundary, ok: summary.boundary.ok, detail: summary.boundary.skipped ? 'skipped' : (summary.boundary.failures.join(', ') || summary.boundary.warnings.join(', ') || '-') },
+        { check: CHECK_LABELS.regression, ok: summary.regression.ok, detail: summary.regression.skipped ? 'skipped' : ((summary.regression.count || 0) + ' cases') },
+        { check: CHECK_LABELS.invariants, ok: summary.invariants.ok, detail: summary.invariants.skipped ? 'skipped' : (summary.invariants.failures.join(', ') || '-') },
+        { check: CHECK_LABELS.self, ok: summary.self.ok, detail: summary.self.skipped ? 'skipped' : ((summary.self.count || 0) + ' cases') },
+        { check: CHECK_LABELS.sourceGuards, ok: summary.sourceGuards.ok, detail: summary.sourceGuards.skipped ? 'skipped' : (summary.sourceGuards.failures.join(', ') || '-') },
+        { check: CHECK_LABELS.interaction, ok: summary.interaction.ok, detail: summary.interaction.skipped ? 'skipped' : (summary.interaction.ok ? 'passed' : summary.interaction.failures.join(', ')) },
+        { check: CHECK_LABELS.storage, ok: summary.storage.ok, detail: summary.storage.skipped ? 'skipped' : (summary.storage.duplicateIds.length + ' duplicate groups') },
+      ]);
+    }
+    if (console.info) console.info(explain(summary));
+  }
+
+  function runDiagnostics(options = {}) {
+    const preset = normalizePreset(options.preset || options.mode || 'full');
+    const selectedChecks = PRESETS[preset];
+    const savedState = AppShared.clonePlain(AppState.state);
+    const summary = {
+      preset,
+      selectedChecks,
+      ui: skippedCheck('ui'),
+      domHandlers: skippedCheck('domHandlers'),
+      sourceGuards: skippedCheck('sourceGuards'),
+      boundary: skippedCheck('boundary'),
+      invariants: skippedCheck('invariants'),
+      self: skippedCheck('self'),
+      regression: skippedCheck('regression'),
+      interaction: skippedCheck('interaction'),
+      storage: skippedCheck('storage'),
+    };
+    try {
+      if (selectedChecks.includes('ui')) summary.ui = runCheck('ui', checkUiPublicApi);
+      if (selectedChecks.includes('domHandlers')) summary.domHandlers = runCheck('domHandlers', checkUiHandlersFromDom);
+      if (selectedChecks.includes('sourceGuards')) summary.sourceGuards = runCheck('sourceGuards', () => checkSourceGuards(options.source || CD_SOURCE_TEXT));
+      if (selectedChecks.includes('boundary')) summary.boundary = runCheck('boundary', () => checkZoneBoundaries(options.source || CD_SOURCE_TEXT));
+      if (selectedChecks.includes('invariants')) summary.invariants = runCheck('invariants', checkInvariants);
+      if (selectedChecks.includes('self')) summary.self = runCheck('self', checkDiagnosticsSelfTests);
+      if (selectedChecks.includes('regression')) summary.regression = runCheck('regression', Calculation.runRegressionTests);
+      if (selectedChecks.includes('interaction')) summary.interaction = runCheck('interaction', runInteractionChecks);
+      if (selectedChecks.includes('storage')) summary.storage = runCheck('storage', checkStorage);
+    } finally {
+      restoreState(savedState);
+      UI.init();
+    }
+    summary.ok = selectedChecks.every(name => summary[name]?.ok);
+    summary.failures = collectFailures(summary);
+    summary.warnings = collectWarnings(summary);
+    summary.budget = budget();
+    summary.budget.warnings.forEach(message => {
+      summary.warnings.push({ check: 'budget', label: 'Diagnostics budget', message });
+    });
+    summary.metrics = buildMetrics(summary);
+    summary.nextSteps = suggestNextSteps(summary);
+    summary.uiExports = summary.ui.required || 0;
+    summary.interactionChecks = summary.interaction.ok && !summary.interaction.skipped;
+    summary.explanation = explain(summary);
+    if (options.log) logSmokeChecks(summary);
+    return summary;
+  }
+
+  function runSmokeChecks(options = {}) {
+    return runDiagnostics({ ...options, preset: options.preset || options.mode || 'full' });
+  }
+
+  return ({
+    runDiagnostics,
+    runSmokeChecks,
+    explain,
+    report,
+    guide,
+    map,
+    route,
+    start,
+    workbench,
+    coach,
+    recommend,
+    protocol,
+    handoff,
+    inventory,
+    budget,
+    prunePlan,
+    brief,
+    afterEdit,
+    suggestNextSteps,
+    checkUiPublicApi,
+    checkUiHandlersFromDom,
+    checkStorage,
+    checkInvariants,
+    checkSourceGuards,
+    checkZoneBoundaries,
+    checkDiagnosticsSelfTests,
+    runInteractionChecks,
+    logSmokeChecks,
+  });
+})();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => {
@@ -5062,7 +6479,9 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   });
 }
 
+/* Growability note: inline onclick="UI.xxx()" resolves through this browser global. */
 window.UI = UI;
+window.AppDiagnostics = AppDiagnostics;
 UI.init();
 </script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
