@@ -1,13 +1,16 @@
-const CACHE_NAME = 'coil-tools-pwa-v2';
+const CACHE_NAME = 'coil-tools-pwa-v5';
 const APP_ASSETS = [
   './',
   './index.html',
   './winding-calibrator.html',
   './coil-designer.html',
+  './coil-calibrator.html',
+  './watchtower.html',
   './ect-designer.html',
   './manifest.webmanifest',
   './manifest-wc.webmanifest',
   './manifest-cd.webmanifest',
+  './manifest-cc.webmanifest',
   './manifest-ectd.webmanifest',
   './icons/icon.svg',
   './icons/icon-180.png',
@@ -21,6 +24,10 @@ const APP_ASSETS = [
   './icons/icon-cd-180.png',
   './icons/icon-cd-192.png',
   './icons/icon-cd-512.png',
+  './icons/icon-cc.svg',
+  './icons/icon-cc-180.png',
+  './icons/icon-cc-192.png',
+  './icons/icon-cc-512.png',
   './icons/icon-ectd.svg',
   './icons/icon-ectd-180.png',
   './icons/icon-ectd-192.png',

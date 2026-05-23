@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COIL TOOLS WATCHTOWER</title>
+<style>
+:root {
+  --bg:#0d1117;
+  --surface:#161b22;
+  --border:#30363d;
+  --accent:#58a6ff;
+  --ok:#3fb950;
+  --warn:#e3b341;
+  --bad:#f78166;
+  --text:#e6edf3;
+  --muted:#8b949e;
+}
+* { box-sizing:border-box; }
+body {
+  min-height:100vh;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Consolas, "Courier New", monospace;
+}
+.wrap {
+  max-width:920px;
+  margin:0 auto;
+  padding:16px;
+}
+.head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+h1 {
+  margin:0;
+  color:var(--accent);
+  font-size:18px;
+  letter-spacing:.8px;
+}
+button {
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:var(--surface);
+  color:var(--text);
+  padding:8px 12px;
+  font-weight:800;
+  cursor:pointer;
+}
+button:hover { border-color:var(--accent); color:var(--accent); }
+.summary {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+  gap:8px;
+  margin-bottom:10px;
+}
+.tile {
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+  padding:9px 10px;
+  color:var(--muted);
+  font-size:12px;
+}
+.tile strong {
+  display:block;
+  margin-bottom:4px;
+  color:var(--text);
+  font-size:13px;
+}
+.tile.ok strong { color:var(--ok); }
+.tile.warn strong { color:var(--warn); }
+.tile.bad strong { color:var(--bad); }
+.status {
+  margin-bottom:10px;
+  color:var(--muted);
+  font-size:12px;
+}
+.status.ok { color:var(--ok); }
+.status.warn { color:var(--warn); }
+.status.bad { color:var(--bad); }
+pre {
+  min-height:300px;
+  margin:0;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--muted);
+  padding:12px;
+  overflow:auto;
+  white-space:pre-wrap;
+  font-size:12px;
+  line-height:1.5;
+}
+iframe {
+  position:absolute;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>COIL TOOLS WATCHTOWER</h1>
+    <button type="button" id="run">RUN</button>
+  </div>
+  <div class="status" id="status">waiting</div>
+  <div class="summary" id="summary"></div>
+  <pre id="output"></pre>
+</div>
+<iframe id="target"></iframe>
+<script>
+'use strict';
+const target = document.getElementById('target');
+const statusEl = document.getElementById('status');
+const summaryEl = document.getElementById('summary');
+const output = document.getElementById('output');
+
+const APPS = Object.freeze([
+  Object.freeze({ id: 'WC', title: 'WINDING CALIBRATOR', url: './winding-calibrator.html', kind: 'wc' }),
+  Object.freeze({ id: 'CD', title: 'COIL DESIGNER', url: './coil-designer.html', kind: 'cd' }),
+  Object.freeze({ id: 'CC', title: 'COIL CALIBRATOR', url: './coil-calibrator.html', kind: 'cc' }),
+  Object.freeze({ id: 'ECT-D', title: 'ECT DESIGNER', url: './ect-designer.html', kind: 'basic' }),
+]);
+
+function setStatus(text, level = 'ok') {
+  statusEl.textContent = text;
+  statusEl.className = 'status ' + level;
+}
+
+function waitForFrame(url) {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      target.removeEventListener('load', onLoad);
+      reject(new Error('timeout loading ' + url));
+    }, 6000);
+    function onLoad() {
+      window.clearTimeout(timeout);
+      target.removeEventListener('load', onLoad);
+      resolve(target.contentWindow);
+    }
+    target.addEventListener('load', onLoad);
+    target.src = url;
+  });
+}
+
+function runBasic(app, win) {
+  const doc = win.document;
+  const hasTitle = doc.title && doc.title.toUpperCase().includes(app.id.replace('-D', ''));
+  const hasBody = !!doc.body && doc.body.textContent.trim().length > 0;
+  return {
+    level: hasTitle && hasBody ? 'ok' : 'bad',
+    report: [
+      app.id + ' basic check: ' + (hasTitle && hasBody ? 'OK' : 'FAILED'),
+      'title: ' + doc.title,
+      'bodyText: ' + (hasBody ? 'present' : 'missing'),
+    ].join('\n'),
+  };
+}
+
+function normalizeDiagnosticResult(app, value) {
+  if (!value) return { level: 'bad', report: app.id + ' diagnostics unavailable' };
+  if (typeof value === 'string') return { level: /FAILED|failure|Status:\s*NG/i.test(value) ? 'warn' : 'ok', report: value };
+  if (typeof value.ok === 'boolean') {
+    return { level: value.ok ? 'ok' : 'warn', report: value.report || JSON.stringify(value, null, 2) };
+  }
+  return { level: 'ok', report: JSON.stringify(value, null, 2) };
+}
+
+function runAppDiagnostics(app, win) {
+  if (app.kind === 'cc') {
+    const result = win.CC_TEST_HARNESS?.run();
+    if (!result) return { level: 'bad', report: 'CC harness unavailable' };
+    return {
+      level: result.ok ? 'ok' : 'bad',
+      report: result.report
+        + '\n\nspecs:\n' + JSON.stringify(result.specs.results, null, 2)
+        + '\n\nsiege:\n' + JSON.stringify(result.siege.results, null, 2),
+    };
+  }
+
+  if (app.kind === 'wc') {
+    const diagnostics = win.WcDiagnostics || win.AppDiagnostics;
+    const result = diagnostics?.runDiagnostics
+      ? diagnostics.runDiagnostics({ preset: 'quick', log: false })
+      : null;
+    const report = diagnostics?.report && result ? diagnostics.report(result) : result;
+    return normalizeDiagnosticResult(app, report || result);
+  }
+
+  if (app.kind === 'cd') {
+    const diagnostics = win.AppDiagnostics;
+    const result = diagnostics?.runSmokeChecks
+      ? diagnostics.runSmokeChecks({ preset: 'edit', log: false })
+      : diagnostics?.runDiagnostics
+        ? diagnostics.runDiagnostics({ preset: 'edit', log: false })
+        : null;
+    const report = diagnostics?.report && result ? diagnostics.report(result) : result;
+    return normalizeDiagnosticResult(app, report || result);
+  }
+
+  return runBasic(app, win);
+}
+
+function renderSummary(results) {
+  summaryEl.innerHTML = results.map(result =>
+    '<div class="tile ' + result.level + '">' +
+    '<strong>' + result.app.id + ' ' + result.level.toUpperCase() + '</strong>' +
+    '<span>' + result.app.title + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+async function runHarness() {
+  setStatus('running', 'ok');
+  summaryEl.innerHTML = '';
+  output.textContent = '';
+  const results = [];
+  for (const app of APPS) {
+    try {
+      const win = await waitForFrame(app.url);
+      const result = runAppDiagnostics(app, win);
+      results.push({ app, ...result });
+    } catch (error) {
+      results.push({ app, level: 'bad', report: error.stack || String(error) });
+    }
+    renderSummary(results);
+  }
+
+  const hasFailure = results.some(result => result.level === 'bad');
+  const hasWarning = results.some(result => result.level === 'warn');
+  setStatus(hasFailure ? 'FAILED' : hasWarning ? 'WARN' : 'OK', hasFailure ? 'bad' : hasWarning ? 'warn' : 'ok');
+  output.textContent = results.map(result =>
+    '# ' + result.app.id + ' ' + result.level.toUpperCase() + '\n' + result.report
+  ).join('\n\n---\n\n');
+}
+
+function runHarnessSyncFallback() {
+  try {
+    runHarness();
+  } catch (error) {
+    setStatus('FAILED: ' + error.message, 'bad');
+    output.textContent = error.stack || String(error);
+  }
+}
+
+document.getElementById('run').addEventListener('click', runHarnessSyncFallback);
+window.addEventListener('load', runHarnessSyncFallback);
+</script>
+</body>
+</html>

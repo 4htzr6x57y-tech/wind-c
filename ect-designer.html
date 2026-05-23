@@ -88,11 +88,18 @@ body {
   border-radius: 6px; overflow: hidden; transition: border-color .2s;
 }
 .input-row:focus-within { border-color: var(--accent); }
-.input-row input {
+.input-row input,
+.input-row select {
   flex: 1; background: none; border: none; outline: none;
   color: var(--text); font-size: 15px; font-weight: 600;
   padding: 8px 9px; font-family: 'Rajdhani', sans-serif;
 }
+.input-row select {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  appearance: none;
+}
+.input-row select option { background: var(--surface); color: var(--text); }
 .input-row input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 .input-row input[type="number"]::-webkit-outer-spin-button,
 .input-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -113,6 +120,13 @@ body {
 }
 .calc-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(56,139,253,.4); }
 .calc-btn:active { transform: translateY(0); }
+.action-row { display: flex; gap: 8px; align-items: center; }
+.action-row .calc-btn { margin: 0; }
+.action-row .calc-btn.secondary {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
 
 /* ===== 結果カード ===== */
 .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
@@ -218,6 +232,34 @@ body {
 .result-line:last-child { border-bottom: none; }
 .result-line span:first-child { color: var(--muted); }
 .result-line strong { color: var(--text); text-align: right; }
+.live-preview {
+  margin-top: 8px;
+  padding: 8px 9px;
+  border: 1px solid rgba(227,179,65,.45);
+  border-radius: 6px;
+  background: rgba(227,179,65,.08);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+.live-preview strong { color: var(--accent); }
+.preview-separator {
+  display: block;
+  margin: 6px 0;
+  border-top: 1px solid rgba(139,148,158,.28);
+}
+.preview-group-label {
+  display: block;
+  margin: 2px 0 7px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .4px;
+}
+.text-good { color: var(--accent2); font-weight: 700; }
+.text-warn { color: var(--gold); font-weight: 700; }
+.text-bad { color: var(--accent3); font-weight: 700; }
+.text-muted { color: var(--muted); }
 .next-box { margin-top: 10px; padding: 11px; border: 1px solid rgba(63,185,80,.35); border-radius: 8px; background: rgba(63,185,80,.07); }
 .next-title { color: var(--accent2); font-weight: 700; font-size: 12px; margin-bottom: 6px; }
 
@@ -315,9 +357,11 @@ body {
   .input-group.full { grid-column: 1 / -1; }
   .input-label { font-size: 9px; }
   .input-row { border-radius: 5px; }
-  .input-row input { padding: 5px 6px; font-size: 13px; min-width: 0; }
+  .input-row input, .input-row select { padding: 5px 6px; font-size: 13px; min-width: 0; }
+  .input-row select { font-size: 11px; }
   .input-unit { padding: 0 6px; font-size: 9px; }
   .calc-btn { padding: 9px; margin-bottom: 8px; border-radius: 6px; font-size: 12px; letter-spacing: .6px; }
+  .action-row { flex-direction: column; align-items: stretch; gap: 6px; }
   .result-card { padding: 7px; border-radius: 6px; }
   .result-label { font-size: 8px; margin-bottom: 2px; }
   .result-value { font-size: 16px; line-height: 1.15; }
@@ -389,6 +433,7 @@ body {
 <div class="tabs">
   <div class="tab active" onclick="UI.switchTab('nav')"><span class="tab-icon">🔍</span>探傷ナビ</div>
   <div class="tab" onclick="UI.switchTab('ferrite')"><span class="tab-icon">🧲</span>フェライト</div>
+  <div class="tab" onclick="UI.switchTab('cable')"><span class="tab-icon">L</span>ケーブル</div>
 </div>
 
 <div id="tab-nav" class="content active">
@@ -533,6 +578,28 @@ body {
     </div>
   </div>
   <div id="f-list"></div>
+</div>
+
+<div id="tab-cable" class="content">
+  <div class="section">
+    <div class="section-title">ケーブル選定</div>
+    <div class="info-box"><strong>初期設計用の簡易評価です。</strong> 探傷ナビの直近結果がある場合は、構成・周波数・推奨ケーブルを初期反映します。</div>
+    <div class="input-grid">
+      <div class="input-group"><div class="input-label">コイル構成</div><div class="input-row"><select id="cable-config"></select></div></div>
+      <div class="input-group"><div class="input-label">使用周波数</div><div class="input-row"><input type="number" id="cable-freq" value="100" step="10" min="0.001"><span class="input-unit">kHz</span></div></div>
+      <div class="input-group"><div class="input-label">ケーブル長</div><div class="input-row"><input type="number" id="cable-length" value="1.0" step="0.1" min="0.1"><span class="input-unit">m</span></div></div>
+      <div class="input-group"><div class="input-label">使用環境</div><div class="input-row"><select id="cable-env"><option value="normal">通常</option><option value="oil">耐油</option><option value="heat">耐熱</option><option value="flex">高屈曲</option><option value="noise">高ノイズ</option></select></div></div>
+      <div class="input-group full"><div class="input-label">計測器側入力インピーダンス / 負荷目安</div><div class="input-row"><select id="cable-load"><option value="standard">標準</option><option value="highZ">高インピーダンス</option><option value="lowZ">低インピーダンス</option></select></div></div>
+    </div>
+    <div class="action-row" style="margin-top:12px">
+      <button class="calc-btn secondary" type="button" onclick="UI.reflectCableFromNav()">探傷ナビ結果から反映</button>
+      <button class="calc-btn" type="button" onclick="UI.calculateCable()">ケーブル選定を計算</button>
+    </div>
+    <div id="cableErrorArea" class="warn-box" style="display:none"></div>
+  </div>
+  <section class="section" id="cableResultArea" style="display:none"><div class="section-title">ケーブル選定結果</div><div id="cableResults"></div></section>
+  <section class="section" id="cableReasonSection" style="display:none"><div class="section-title">理由</div><div id="cableReasons"></div></section>
+  <section class="section" id="cableNoticeSection" style="display:none"><div class="section-title">注意事項</div><div id="cableNotices"></div></section>
 </div>
 
 <script>
@@ -682,7 +749,53 @@ const UI = (() => {
     { id: 'dualExcitationDiff', name: '励磁2個＋差動検出コイル', differential: true, excitation: true, dualExcitation: true, crossCapable: true },
   ];
 
-  const TAB_IDS = ['nav', 'ferrite'];
+  const CABLE_CONFIGS = [
+    { value: 'single', label: '単独検出', sourceId: 'single', differential: false, excitation: false, dual: false },
+    { value: 'differential', label: '差動', sourceId: 'differential', differential: true, excitation: false, dual: false },
+    { value: 'excitationDetect', label: '励磁＋検出', sourceId: 'separate', differential: false, excitation: true, dual: false },
+    { value: 'excitationDifferential', label: '励磁＋差動', sourceId: 'separateDiff', differential: true, excitation: true, dual: false },
+    { value: 'dualExcitationDetect', label: '2励磁＋検出', sourceId: 'dualExcitation', differential: false, excitation: true, dual: true },
+    { value: 'dualExcitationDifferential', label: '2励磁＋差動', sourceId: 'dualExcitationDiff', differential: true, excitation: true, dual: true },
+  ];
+
+  const CABLE = {
+    capacitancePfPerM: {
+      coaxial: 100,
+      twistedPairShield: 70,
+      multiCoreShield: 120,
+      twistedPairCompositeMultiCore: 80,
+    },
+    structureLabels: {
+      coaxial: '同軸',
+      twistedPairShield: 'ツイストペア＋シールド',
+      multiCoreShield: 'マルチコアシールド',
+      twistedPairCompositeMultiCore: 'ツイストペア複合マルチコア',
+    },
+    defaultLengthM: 1.0,
+    capacitanceImpactFormula: {
+      freqBaseKHz: 1000,
+      capBasePf: 100,
+      multiplier: 10,
+    },
+    maxRecommendedLengthM: {
+      default: 5,
+      highFrequency: 1,
+      midHighFrequency: 2,
+      midFrequency: 3,
+    },
+    highNoiseLengthFactor: 0.8,
+  };
+
+  const CABLE_THRESHOLDS = {
+    lowImpactPercent: 10,
+    cautionImpactPercent: 30,
+    highFrequencyKHz: 1000,
+    midHighFrequencyKHz: 500,
+    midFrequencyKHz: 100,
+    longCableM: 2,
+  };
+
+  const TAB_IDS = ['nav', 'ferrite', 'cable'];
   const setText = (id, val, isHtml = false) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -719,6 +832,267 @@ const UI = (() => {
     if (kHz >= 1) return { v: Math.round(kHz).toString(), u: 'kHz' };
     return { v: (kHz * 1000).toFixed(0), u: 'Hz' };
   }
+
+  function fmt(value, digits = 2) {
+    return Number.isFinite(value) ? Number(value).toFixed(digits).replace(/\.?0+$/, '') : '—';
+  }
+
+  function cableListHtml(items) {
+    return '<ul class="bullet-list">' + items.map(item => '<li>' + item + '</li>').join('') + '</ul>';
+  }
+
+  function cableConfigFromResult(result = EctState.get().result) {
+    const sourceId = result?.configResult?.best?.id || result?.json?.config;
+    return CABLE_CONFIGS.find(item => item.sourceId === sourceId)?.value || 'single';
+  }
+
+  function cableRecommendedFromResult(result = EctState.get().result) {
+    return result?.json?.recommendedCable || result?.configResult?.json?.recommendedCable || result?.configResult?.recommendedCable || '';
+  }
+
+  function cableFrequencyFromResult(result = EctState.get().result) {
+    return Number(result?.json?.inspectionCondition?.frequency_kHz || result?.json?.frequency_kHz || result?.fOpt_kHz || 100);
+  }
+
+  function getCableStructureKey(labelOrKey) {
+    const labels = CABLE.structureLabels;
+    const byLabel = Object.fromEntries(Object.entries(labels).map(([key, label]) => [label, key]));
+    return Object.prototype.hasOwnProperty.call(CABLE.capacitancePfPerM, labelOrKey)
+      ? labelOrKey
+      : byLabel[labelOrKey];
+  }
+
+  function getCableStructureLabel(labelOrKey) {
+    const key = getCableStructureKey(labelOrKey);
+    return CABLE.structureLabels[key] || labelOrKey;
+  }
+
+  function getCableCapacitance(labelOrKey) {
+    const key = getCableStructureKey(labelOrKey);
+    return CABLE.capacitancePfPerM[key] || CABLE.capacitancePfPerM.coaxial;
+  }
+
+  function cableConfigInfo(configValue) {
+    const cfg = CABLE_CONFIGS.find(item => item.value === configValue) || CABLE_CONFIGS[0];
+    const map = {
+      single: { cores: '2芯 + シールド', coreCount: 2, note: '検出2芯' },
+      differential: { cores: '4芯（2ペア） + シールド', coreCount: 4, note: '差動A/Bを2ペア' },
+      excitationDetect: { cores: '4芯 + シールド', coreCount: 4, note: '励磁2芯 + 検出2芯' },
+      excitationDifferential: { cores: '6芯 + シールド', coreCount: 6, note: '励磁2芯 + 差動検出4芯' },
+      dualExcitationDetect: { cores: '6芯 + シールド', coreCount: 6, note: '励磁1 2芯 + 励磁2 2芯 + 検出2芯' },
+      dualExcitationDifferential: { cores: '8芯 + シールド', coreCount: 8, note: '励磁1 2芯 + 励磁2 2芯 + 差動検出4芯' },
+    };
+    return { ...cfg, ...(map[configValue] || map.single) };
+  }
+
+  function maxCableLength(freq_kHz, env) {
+    let max = CABLE.maxRecommendedLengthM.default;
+    if (freq_kHz >= CABLE_THRESHOLDS.highFrequencyKHz) max = CABLE.maxRecommendedLengthM.highFrequency;
+    else if (freq_kHz >= CABLE_THRESHOLDS.midHighFrequencyKHz) max = CABLE.maxRecommendedLengthM.midHighFrequency;
+    else if (freq_kHz >= CABLE_THRESHOLDS.midFrequencyKHz) max = CABLE.maxRecommendedLengthM.midFrequency;
+    if (env === 'noise') max *= CABLE.highNoiseLengthFactor;
+    return max;
+  }
+
+  function chooseCableStructure(info, freq_kHz, length_m, env) {
+    if (env === 'noise') return CABLE.structureLabels.twistedPairCompositeMultiCore;
+    if (info.dual || (info.differential && info.excitation)) return CABLE.structureLabels.twistedPairCompositeMultiCore;
+    if (info.differential) return CABLE.structureLabels.twistedPairShield;
+    if (info.excitation) return CABLE.structureLabels.twistedPairCompositeMultiCore;
+    if (freq_kHz >= CABLE_THRESHOLDS.highFrequencyKHz && length_m <= CABLE.defaultLengthM) return CABLE.structureLabels.coaxial;
+    if (freq_kHz >= CABLE_THRESHOLDS.highFrequencyKHz) return CABLE.structureLabels.twistedPairShield;
+    if (length_m <= 1.5 && env === 'normal') return CABLE.structureLabels.multiCoreShield;
+    return CABLE.structureLabels.twistedPairShield;
+  }
+
+  function chooseCableAwg(info, freq_kHz, length_m, env) {
+    if (length_m >= 3 || info.excitation) return 'AWG26';
+    if (env === 'flex') return 'AWG28〜30';
+    if (freq_kHz >= CABLE_THRESHOLDS.highFrequencyKHz) return 'AWG28';
+    return 'AWG28';
+  }
+
+  function cableCandidates(structure, env, info) {
+    const items = [];
+    const structureKey = getCableStructureKey(structure);
+    if (structureKey === 'coaxial') items.push('モガミ 2929', '相当低容量同軸');
+    if (structureKey === 'twistedPairShield') items.push('モガミ 2929', '協和ハーモネット KRTSW 系', '相当品');
+    if (structureKey === 'multiCoreShield') items.push('モガミ 2930', 'タツタ PCPVV-SW 系', '相当品');
+    if (structureKey === 'twistedPairCompositeMultiCore') items.push('モガミ 2930', '協和ハーモネット KRTSW 系', 'タツタ PCPVV-SW 系', '相当品');
+    if (env === 'oil') items.push('耐油シース相当品');
+    if (env === 'heat') items.push('耐熱シース相当品');
+    if (env === 'flex') items.push('高屈曲ロボットケーブル相当品');
+    if (info.coreCount >= 6 && !items.includes('モガミ 2930')) items.unshift('モガミ 2930');
+    return [...new Set(items)].join(' / ');
+  }
+
+  function capJudge(percent) {
+    if (percent <= CABLE_THRESHOLDS.lowImpactPercent) return '影響小';
+    if (percent <= CABLE_THRESHOLDS.cautionImpactPercent) return '注意';
+    return '要注意';
+  }
+
+  function readCableParams(overrides = {}) {
+    return {
+      config: document.getElementById('cable-config')?.value || cableConfigFromResult(),
+      freq_kHz: Number(document.getElementById('cable-freq')?.value || cableFrequencyFromResult()),
+      length_m: Number(document.getElementById('cable-length')?.value || CABLE.defaultLengthM),
+      env: document.getElementById('cable-env')?.value || 'normal',
+      load: document.getElementById('cable-load')?.value || 'standard',
+      recommendedCable: cableRecommendedFromResult(),
+      ...overrides,
+    };
+  }
+
+  function calculateCableSelection(params) {
+    const info = cableConfigInfo(params.config);
+    const freq_kHz = Number(params.freq_kHz);
+    const length_m = Number(params.length_m);
+    const env = params.env || 'normal';
+    const load = params.load || 'standard';
+    if (!Number.isFinite(freq_kHz) || freq_kHz <= 0) throw Error('使用周波数は0より大きい値を入力してください。');
+    if (!Number.isFinite(length_m) || length_m <= 0) throw Error('ケーブル長さは0より大きい値を入力してください。');
+
+    const structure = getCableStructureLabel(chooseCableStructure(info, freq_kHz, length_m, env));
+    const totalCap = getCableCapacitance(structure) * length_m;
+    const formula = CABLE.capacitanceImpactFormula;
+    const capImpactPercent = Math.max(0, Math.min(100, (freq_kHz / formula.freqBaseKHz) * (totalCap / formula.capBasePf) * formula.multiplier));
+    const maxLength = maxCableLength(freq_kHz, env);
+    const recommendedCable = params.recommendedCable || '';
+    const envLabels = { normal: '通常', oil: '耐油', heat: '耐熱', flex: '高屈曲', noise: '高ノイズ' };
+    const loadLabels = { standard: '標準', highZ: '高インピーダンス', lowZ: '低インピーダンス' };
+    const ground = env === 'noise'
+      ? '基本は計測器側1点接地。高ノイズ時のみ両側接地またはコンデンサ接地を実機確認。'
+      : '計測器側1点接地';
+    const reasons = [
+      info.label + 'は ' + info.note + ' のため、必要芯数は ' + info.cores + ' を目安にします。',
+      info.differential ? '差動A/Bの容量バランスを優先し、ペア構造とシールドを推奨します。' : '差動なしのため、検出線はノイズ影響を受けやすい前提で評価します。',
+      info.excitation ? '励磁線と検出線は別ペアにして、誘導結合と信号漏れを抑えます。' : '励磁線が無い構成なので、検出線のシールド基準を明確にします。',
+      (envLabels[env] || env) + '環境、' + (loadLabels[load] || load) + '負荷として簡易評価しました。',
+    ];
+    if (recommendedCable) reasons.push('探傷ナビ推奨: ' + recommendedCable + ' を初期候補に含めて確認してください。');
+    if (freq_kHz >= CABLE_THRESHOLDS.highFrequencyKHz) reasons.push('1000kHz以上のため、短尺・低容量タイプを優先します。');
+    if (length_m >= CABLE_THRESHOLDS.longCableM) reasons.push('2m以上のため、静電容量の影響を強めに見ます。');
+
+    const notices = [
+      '差動A/Bは同じケーブル長、同じペア構造で容量バランスを合わせてください。',
+      '励磁線と検出線は可能な限り別ペアに分けてください。',
+      '樹脂筐体ではシールド基準点を計測器側へ寄せてください。',
+      '長尺ケーブルでは容量増加で高周波特性が落ちます。',
+      '最終確認は実機・LCRメータ・ノイズ確認で行ってください。',
+    ];
+    if (!info.differential) notices.push('差動なしの検出線はノイズに弱いため、配線経路とシールド接地を慎重に確認してください。');
+    if (length_m > maxLength) notices.push('入力ケーブル長が最大推奨長を超えています。短縮または低容量ケーブルを検討してください。');
+    if (capImpactPercent > CABLE_THRESHOLDS.cautionImpactPercent) notices.push('静電容量影響が大きいため、周波数低下・短尺化・低容量ケーブルを検討してください。');
+
+    return {
+      configLabel: info.label,
+      awg: chooseCableAwg(info, freq_kHz, length_m, env),
+      cores: info.cores,
+      structure,
+      candidates: cableCandidates(structure, env, info),
+      capImpactPercent,
+      capJudge: capJudge(capImpactPercent),
+      totalCap,
+      maxLength,
+      ground,
+      reasons,
+      notices,
+    };
+  }
+
+  function clearCableError() {
+    const el = document.getElementById('cableErrorArea');
+    if (!el) return;
+    el.innerHTML = '';
+    el.style.display = 'none';
+  }
+
+  function showCableError(message) {
+    const el = document.getElementById('cableErrorArea');
+    if (!el) return;
+    el.innerHTML = '<strong>入力エラー:</strong> ' + message;
+    el.style.display = 'block';
+  }
+
+  function previewLine(label, value, className = '') {
+    return '<span>' + label + '：<strong class="' + className + '">' + value + '</strong></span>';
+  }
+
+  function previewSeparator() {
+    return '<span class="preview-separator"></span>';
+  }
+
+  function previewHtml(title, lines) {
+    return '<span class="preview-group-label">' + title + '</span>' + lines.join('<br>');
+  }
+
+  function renderCableControls() {
+    const configEl = document.getElementById('cable-config');
+    if (configEl) {
+      const current = configEl.value || cableConfigFromResult();
+      configEl.innerHTML = CABLE_CONFIGS.map(option =>
+        '<option value="' + option.value + '"' + (current === option.value ? ' selected' : '') + '>' + option.label + '</option>'
+      ).join('');
+    }
+    const freqEl = document.getElementById('cable-freq');
+    if (freqEl && (!freqEl.value || freqEl.value === '100')) freqEl.value = fmt(cableFrequencyFromResult(), 3);
+    const envEl = document.getElementById('cable-env');
+    if (envEl && EctState.get().nav.config.noise === 'high' && envEl.value === 'normal') envEl.value = 'noise';
+  }
+
+  function reflectCableFromNav() {
+    const result = EctState.get().result;
+    if (!result) {
+      showCableError('先に探傷ナビで条件を計算すると、構成・周波数を反映できます。');
+      return;
+    }
+    renderCableControls();
+    const configEl = document.getElementById('cable-config');
+    const freqEl = document.getElementById('cable-freq');
+    const envEl = document.getElementById('cable-env');
+    if (configEl) configEl.value = cableConfigFromResult(result);
+    if (freqEl) freqEl.value = fmt(cableFrequencyFromResult(result), 3);
+    if (envEl) envEl.value = EctState.get().nav.config.noise === 'high' ? 'noise' : envEl.value;
+    clearCableError();
+  }
+
+  function renderCableResult(result) {
+    clearCableError();
+    setVisible('cableResultArea', true);
+    setVisible('cableReasonSection', true);
+    setVisible('cableNoticeSection', true);
+    const impactClass = result.capImpactPercent >= CABLE_THRESHOLDS.cautionImpactPercent
+      ? 'text-bad'
+      : result.capImpactPercent > CABLE_THRESHOLDS.lowImpactPercent ? 'text-warn' : 'text-good';
+    const lengthClass = result.maxLength < 1.5 ? 'text-warn' : 'text-good';
+    const lines = [
+      previewLine('推奨AWG', result.awg),
+      previewLine('必要芯数', result.cores),
+      previewLine('推奨構造', result.structure),
+      previewLine('型番候補', result.candidates, 'text-muted'),
+      previewSeparator(),
+      previewLine('静電容量影響', fmt(result.capImpactPercent, 1) + ' %', impactClass),
+      previewLine('容量判定', result.capJudge, impactClass),
+      previewLine('総容量目安', fmt(result.totalCap, 0) + ' pF', 'text-muted'),
+      previewLine('最大推奨長', fmt(result.maxLength, 1) + ' m', lengthClass),
+      previewSeparator(),
+      previewLine('シールド接地', result.ground, 'text-muted'),
+    ];
+    setText('cableResults', '<div class="live-preview">' + previewHtml('ケーブル選定プレビュー', lines) + '</div>', true);
+    setText('cableReasons', cableListHtml(result.reasons), true);
+    setText('cableNotices', '<div class="warn-box">' + result.notices.map(item => '- ' + item).join('<br>') + '</div>', true);
+  }
+
+  function calculateCable() {
+    try {
+      const result = calculateCableSelection(readCableParams());
+      renderCableResult(result);
+    } catch (error) {
+      showCableError(error.message || 'ケーブル選定を計算できませんでした。');
+    }
+  }
+
   const fmtFStr = kHz => kHz >= 1000 ? (kHz / 1000) + 'MHz' : kHz + 'kHz';
   function toHzFromKHz(kHz) {
     const v = Number(kHz);
@@ -1288,6 +1662,7 @@ const UI = (() => {
     });
     document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
     document.getElementById('tab-' + id)?.classList.add('active');
+    if (id === 'cable') renderCableControls();
   }
 
   function renderFerriteCards(list) {
@@ -1581,6 +1956,16 @@ const UI = (() => {
     setText('cfg-diff-reasons', listHtml(configResult.diffSpacing.reasons), true);
     setText('cfg-next-items', listHtml(configResult.nextItems), true);
     setText('cfg-json', formatCoilJSON(configResult.json));
+    EctState.setResult({
+      freqs,
+      physicalFreqs,
+      mat,
+      depth_mm,
+      skinCu_mm,
+      fOpt_kHz,
+      configResult,
+      json: configResult.json,
+    });
 
     const resultEl = document.getElementById('nav-result');
     if (resultEl) {
@@ -1621,12 +2006,13 @@ const UI = (() => {
 
   function init() {
     renderFerrite();
+    renderCableControls();
     updateUseModeUI(EctState.get().nav.config.mode);
   }
 
   return Object.freeze({
     switchTab, navSelMag, navSelSat, navSelConfig, navCalc,
-    toggleConfigResult, copyCoilJSON, fFilter, init
+    toggleConfigResult, copyCoilJSON, fFilter, reflectCableFromNav, calculateCable, init
   });
 })();
 

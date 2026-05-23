@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1117">
+<title>COIL CALIBRATOR</title>
+<link rel="manifest" href="./manifest-cc.webmanifest">
+<link rel="icon" href="./icons/icon-cc.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-cc-180.png">
+<style>
+:root {
+  --bg:#0d1117;
+  --surface:#161b22;
+  --surface2:#1c2333;
+  --surface3:#202a3a;
+  --surface-soft:#121923;
+  --border:#30363d;
+  --border-strong:#445166;
+  --accent:#58a6ff;
+  --accent2:#3fb950;
+  --gold:#e3b341;
+  --danger:#f78166;
+  --text:#e6edf3;
+  --muted:#8b949e;
+  --input-bg:#0d1117;
+}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html { scrollbar-gutter:stable; }
+body {
+  min-height:100vh;
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Noto Sans JP', sans-serif;
+  font-size:14px;
+}
+.header {
+  position:sticky;
+  top:0;
+  z-index:10;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 16px;
+  background:linear-gradient(135deg, #1a2744 0%, #0d1117 100%);
+  border-bottom:1px solid var(--border);
+}
+.header-icon { color:var(--gold); font-size:20px; }
+.header h1 {
+  color:var(--accent);
+  font-family:'Rajdhani', sans-serif;
+  font-size:18px;
+  letter-spacing:1px;
+}
+.header-sub {
+  margin-left:auto;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.45;
+  text-align:right;
+}
+.app {
+  max-width:860px;
+  margin:0 auto;
+  padding:14px;
+}
+.section {
+  margin-bottom:12px;
+  padding:13px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+}
+.section-title {
+  display:flex; align-items:center; gap:7px;
+  margin-bottom:11px;
+  color:var(--accent);
+  font-family:'Rajdhani', sans-serif;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.step-badge {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:21px;
+  height:21px;
+  border-radius:50%;
+  background:var(--accent);
+  color:#fff;
+  font-size:11px;
+}
+.compact-help {
+  margin:-2px 0 8px;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.45;
+}
+.compact-help-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:-2px 0 8px;
+}
+.compact-help-row .compact-help {
+  margin:0;
+}
+.input-grid {
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:10px;
+}
+.input-group {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+  border:1px solid rgba(68,81,102,.72);
+  border-radius:8px;
+  background:var(--surface-soft);
+  padding:9px;
+}
+.input-label {
+  color:var(--text);
+  font-size:11px;
+  font-weight:700;
+  line-height:1.35;
+}
+.input-row {
+  display:flex; align-items:center;
+  background:var(--input-bg);
+  border:1px solid var(--border-strong);
+  border-radius:6px;
+  overflow:hidden;
+}
+.input-row:focus-within { border-color:var(--accent); }
+.input-row input {
+  flex:1;
+  min-width:0;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--text);
+  padding:8px 9px;
+  font-family:'Rajdhani', 'Noto Sans JP', sans-serif;
+  font-size:15px;
+  font-weight:600;
+}
+.input-row input[type="number"] { -moz-appearance:textfield; appearance:textfield; }
+.input-row input[type="number"]::-webkit-outer-spin-button,
+.input-row input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.input-unit {
+  align-self:stretch;
+  display:flex; align-items:center;
+  padding:0 9px;
+  border-left:1px solid var(--border);
+  background:var(--surface3);
+  color:var(--accent);
+  font-size:10px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.mode-toggle-btn {
+  flex:0 0 auto;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--surface2);
+  color:var(--accent);
+  padding:4px 10px;
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.mode-toggle-btn.l-mode {
+  color:var(--gold);
+  border-color:rgba(227,179,65,.45);
+  background:rgba(227,179,65,.08);
+}
+.calc-btn {
+  width:100%;
+  margin-bottom:12px;
+  padding:12px;
+  border:0;
+  border-radius:8px;
+  background:linear-gradient(135deg, #1f6feb, #388bfd);
+  color:white;
+  font-family:'Rajdhani', sans-serif;
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:1px;
+  cursor:pointer;
+  box-shadow:0 2px 10px rgba(56,139,253,.3);
+}
+.calc-btn:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(56,139,253,.4); }
+.calc-btn:active {
+  background:linear-gradient(135deg, #f59e0b, #e3b341);
+  box-shadow:0 0 0 3px rgba(227,179,65,.20), 0 0 22px rgba(245,158,11,.55);
+  transform:translateY(1px) scale(.99);
+}
+.action-row {
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.action-row .calc-btn {
+  margin:0;
+}
+.secondary-btn {
+  width:100%;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface2);
+  color:var(--text);
+  padding:10px;
+  font-family:'Rajdhani', sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.8px;
+  cursor:pointer;
+}
+.secondary-btn:hover {
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.tool-row {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:8px;
+  margin-top:8px;
+}
+.status-line {
+  min-height:18px;
+  margin-top:7px;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.5;
+}
+.info-box,
+.warn-box {
+  border-radius:6px;
+  padding:9px 11px;
+  font-size:11px;
+  line-height:1.65;
+  margin-bottom:11px;
+}
+.info-box {
+  border:1px solid rgba(88,166,255,.25);
+  background:rgba(88,166,255,.08);
+  color:var(--muted);
+}
+.info-box strong { color:var(--accent); }
+.warn-box {
+  border:1px solid rgba(247,129,102,.3);
+  background:rgba(247,129,102,.08);
+  color:var(--danger);
+}
+.tuner-entry-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr minmax(130px, .8fr) minmax(120px, .8fr);
+  gap:8px;
+}
+.tuner-quick-result {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:8px;
+  border:1px solid rgba(227,179,65,.45);
+  border-radius:7px;
+  background:rgba(227,179,65,.08);
+  color:var(--muted);
+  padding:7px 10px;
+  font-size:11px;
+  line-height:1.35;
+}
+.tuner-quick-result strong {
+  color:var(--gold);
+  font-family:'Rajdhani', sans-serif;
+  font-size:16px;
+}
+.tuner-canvas-wrap {
+  position:relative;
+  margin-top:12px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#05080d;
+  overflow:hidden;
+}
+#targetZTunerCanvas {
+  display:block;
+  width:100%;
+  height:320px;
+}
+.tuner-chart-popover {
+  position:absolute;
+  z-index:2;
+  min-width:112px;
+  padding:7px 9px;
+  border:1px solid rgba(63,185,80,.55);
+  border-radius:7px;
+  background:rgba(5,8,13,.94);
+  box-shadow:0 8px 20px rgba(0,0,0,.32);
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.45;
+  pointer-events:none;
+  transform:translate(-50%, calc(-100% - 10px));
+}
+.tuner-chart-popover.hidden { display:none; }
+.tuner-chart-popover strong {
+  color:var(--text);
+  font-size:12px;
+}
+.tuner-point-list {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+}
+.tuner-point-item {
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:8px;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:var(--surface-soft);
+  padding:7px 8px;
+  color:var(--muted);
+  font-size:11px;
+}
+.tuner-point-main {
+  color:var(--text);
+  font-weight:700;
+}
+.tuner-delete-btn {
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:var(--surface2);
+  color:var(--danger);
+  padding:5px 8px;
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+}
+.compact-result-list {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px 14px;
+  margin:10px 0 0;
+  padding:8px 10px 8px 24px;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:var(--surface-soft);
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.45;
+}
+.compact-result-list li {
+  min-width:138px;
+  padding-right:4px;
+}
+.compact-result-list strong {
+  color:var(--text);
+  font-weight:800;
+}
+.tuner-warning-list {
+  margin-top:10px;
+}
+.diagnostics-panel {
+  position:fixed;
+  right:12px;
+  bottom:12px;
+  z-index:20;
+  width:min(520px, calc(100vw - 24px));
+  max-height:min(70vh, 520px);
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#05080d;
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+  color:var(--text);
+  overflow:hidden;
+}
+.diagnostics-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:9px 10px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface2);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.6px;
+}
+.diagnostics-actions {
+  display:flex;
+  gap:6px;
+}
+.diagnostics-actions button {
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:var(--surface-soft);
+  color:var(--text);
+  padding:5px 8px;
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.diagnostics-output {
+  margin:0;
+  padding:10px;
+  max-height:430px;
+  overflow:auto;
+  color:var(--muted);
+  font:11px/1.5 Consolas, "Courier New", monospace;
+  white-space:pre-wrap;
+}
+.hidden { display:none !important; }
+@media (max-width:640px) {
+  .app { padding:10px; }
+  .header-sub { display:none; }
+  .section { padding:8px; margin-bottom:8px; border-radius:6px; }
+  .section-title { margin-bottom:7px; gap:5px; font-size:11px; letter-spacing:.5px; }
+  .step-badge { width:18px; height:18px; font-size:10px; }
+  .input-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
+  .input-group { gap:4px; padding:7px; border-radius:7px; }
+  .input-label { font-size:10px; }
+  .input-row input { padding:5px 6px; font-size:13px; }
+  .input-unit { padding:0 6px; font-size:9px; }
+  .calc-btn { margin-bottom:8px; padding:9px; border-radius:6px; font-size:12px; }
+  .secondary-btn { padding:8px 6px; border-radius:6px; font-size:11px; }
+  .tool-row { gap:6px; }
+  .action-row { flex-direction:column; align-items:stretch; gap:6px; }
+  .tuner-entry-grid {
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+  }
+  .tuner-entry-grid .calc-btn { min-height:34px; padding:8px 6px; }
+  .tuner-canvas-wrap { margin-top:8px; }
+  .tuner-quick-result { margin-top:7px; padding:6px 8px; font-size:10px; }
+  .tuner-quick-result strong { font-size:15px; }
+  .tuner-point-item { grid-template-columns:1fr auto; }
+  #targetZTunerCanvas { height:220px; }
+  .info-box, .warn-box { padding:7px 8px; font-size:10px; line-height:1.45; margin-bottom:8px; }
+  .diagnostics-panel { right:8px; bottom:8px; width:calc(100vw - 16px); max-height:72vh; }
+  .diagnostics-output { max-height:calc(72vh - 42px); font-size:10px; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <span class="header-icon" id="ccHeaderIcon">CC</span>
+  <h1>COIL CALIBRATOR</h1>
+  <span class="header-sub">MEASURED INVERSE MODE<br>target turns helper</span>
+</div>
+
+<main class="app">
+  <section class="section">
+    <div class="section-title"><span class="step-badge">1</span>実測逆算</div>
+    <div class="compact-help-row">
+      <div class="compact-help" id="measuredModeHelp">試し巻きと実測値から、目標値に近い巻数を推定します。</div>
+      <button type="button" class="mode-toggle-btn" id="measuredModeToggle" onclick="UI.toggleMeasuredMode()">Z</button>
+    </div>
+    <div class="input-grid">
+      <div class="input-group"><div class="input-label">測定周波数</div><div class="input-row"><input type="number" id="m-f" min="0.001" step="1"><span class="input-unit">kHz</span></div></div>
+      <div class="input-group"><div class="input-label" id="m-zt-label">目標 Z</div><div class="input-row"><input type="number" id="m-zt" min="0" step="0.1"><span class="input-unit" id="m-zt-unit">Ω</span></div></div>
+      <div class="input-group"><div class="input-label">試し巻き数 N1</div><div class="input-row"><input type="number" id="m-n1" min="0" step="1"><span class="input-unit">T</span></div></div>
+      <div class="input-group"><div class="input-label" id="m-z1-label">実測 Z1</div><div class="input-row"><input type="number" id="m-z1" min="0" step="0.1"><span class="input-unit" id="m-z1-unit">Ω</span></div></div>
+    </div>
+    <div class="action-row">
+      <button class="calc-btn" type="button" onclick="UI.calcMeasured()">実測から逆算</button>
+    </div>
+    <div id="measuredErrorArea" class="hidden"></div>
+    <div id="measuredResults" class="hidden"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-title"><span class="step-badge" id="targetTunerBadge">Z</span><span id="targetTunerTitle">TARGET Z TUNER</span></div>
+    <div class="compact-help" id="targetTunerHelp">複数の実測点を追加すると、補間と外挿で目標巻数を推定します。</div>
+    <div class="tuner-entry-grid" style="margin-top:8px">
+      <div class="input-group"><div class="input-label">巻数 N</div><div class="input-row"><input type="number" id="tz-entry-n" min="0" step="1"><span class="input-unit">T</span></div></div>
+      <div class="input-group"><div class="input-label" id="tz-entry-z-label">実測Z</div><div class="input-row"><input type="number" id="tz-entry-z" min="0" step="0.1"><span class="input-unit" id="tz-entry-z-unit">Ω</span></div></div>
+      <button type="button" class="calc-btn" onclick="UI.addTargetZTunerPoint()">点を追加</button>
+      <button type="button" class="calc-btn" onclick="UI.clearTargetZTuner()">クリア</button>
+    </div>
+    <div class="tool-row">
+      <button type="button" class="secondary-btn" onclick="UI.exportTunerPoints()">EXPORT</button>
+      <button type="button" class="secondary-btn" onclick="UI.openTunerImport()">IMPORT</button>
+    </div>
+    <input type="file" id="tunerImportFile" class="hidden" accept="application/json,.json">
+    <div class="status-line" id="tunerTransferStatus"></div>
+    <div class="tuner-quick-result" id="targetZTunerQuick">点を追加すると推定巻数を表示します。</div>
+    <div class="tuner-canvas-wrap">
+      <canvas id="targetZTunerCanvas"></canvas>
+      <div class="tuner-chart-popover hidden" id="targetZTunerPopover"></div>
+    </div>
+    <div class="tuner-output" id="targetZTunerOutput"></div>
+    <div class="tuner-warning-list" id="targetZTunerWarnings"></div>
+    <div class="tuner-point-list" id="targetZTunerRows"></div>
+  </section>
+</main>
+
+<aside class="diagnostics-panel hidden" id="diagnosticsPanel" aria-hidden="true">
+  <div class="diagnostics-head">
+    <span>CC DIAGNOSTICS</span>
+    <div class="diagnostics-actions">
+      <button type="button" onclick="UI.refreshDiagnostics()">RUN</button>
+      <button type="button" onclick="UI.recoverDiagnostics()">RECOVER</button>
+      <button type="button" onclick="UI.toggleDiagnostics()">CLOSE</button>
+    </div>
+  </div>
+  <pre class="diagnostics-output" id="diagnosticsOutput"></pre>
+</aside>
+
+<script>
+'use strict';
+const CC_SOURCE_TEXT = document.currentScript?.textContent || '';
+
+/*
+  CONFIG zone
+  Static app constants, DOM ids, defaults, and public API contract.
+*/
+const CONFIG = Object.freeze({
+  storageKey: 'coilCalibrator.state.v3',
+  legacyStorageKeys: Object.freeze(['coilCalibrator.state.v1', 'coilCalibrator.state.v2']),
+  modes: Object.freeze(['z', 'l']),
+  defaults: Object.freeze({
+    mode: 'z',
+    inputs: Object.freeze({
+      'm-n1': '',
+      'm-z1': '',
+      'm-f': '',
+      'm-zt': '',
+      'tz-entry-n': '',
+      'tz-entry-z': '',
+    }),
+    tunerPoints: Object.freeze([]),
+  }),
+  limits: Object.freeze({
+    maxTurns: 1000000,
+    maxMeasuredValue: 1000000000,
+    maxFrequencyHz: 10000000000,
+    maxTunerPoints: 200,
+  }),
+  ids: Object.freeze({
+    measuredResults: 'measuredResults',
+    measuredErrorArea: 'measuredErrorArea',
+    targetRows: 'targetZTunerRows',
+    targetOutput: 'targetZTunerOutput',
+    targetWarnings: 'targetZTunerWarnings',
+    targetQuick: 'targetZTunerQuick',
+    targetCanvas: 'targetZTunerCanvas',
+    tunerImportFile: 'tunerImportFile',
+    tunerTransferStatus: 'tunerTransferStatus',
+    diagnosticsPanel: 'diagnosticsPanel',
+    diagnosticsOutput: 'diagnosticsOutput',
+    headerIcon: 'ccHeaderIcon',
+  }),
+  persistedInputIds: Object.freeze(['m-n1', 'm-z1', 'm-f', 'm-zt', 'tz-entry-n', 'tz-entry-z']),
+  inputConstraints: Object.freeze({
+    'm-n1': Object.freeze({ min: 0, max: 1000000, step: 1 }),
+    'm-z1': Object.freeze({ min: 0, max: 1000000000, step: 0.1 }),
+    'm-f': Object.freeze({ min: 0.001, max: 10000000, step: 1 }),
+    'm-zt': Object.freeze({ min: 0, max: 1000000000, step: 0.1 }),
+    'tz-entry-n': Object.freeze({ min: 0, max: 1000000, step: 1 }),
+    'tz-entry-z': Object.freeze({ min: 0, max: 1000000000, step: 0.1 }),
+  }),
+});
+
+const UI_PUBLIC_API = Object.freeze([
+  'init',
+  'toggleMeasuredMode',
+  'calcMeasured',
+  'addTargetZTunerPoint',
+  'deleteTargetZTunerPoint',
+  'clearTargetZTuner',
+  'exportTunerPoints',
+  'openTunerImport',
+  'importTunerPoints',
+  'toggleDiagnostics',
+  'refreshDiagnostics',
+  'recoverDiagnostics',
+]);
+
+const MEASURED_FIELD_LABELS = Object.freeze({
+  n1: '基準巻数',
+  v1: Object.freeze({ z: '実測Z1', l: '実測L1' }),
+  vt: Object.freeze({ z: '目標Z', l: '目標L' }),
+  fHz: '周波数',
+});
+
+/*
+  Shared helpers
+  Small pure utilities used across zones.
+*/
+const $ = id => document.getElementById(id);
+
+function format(value, digits = 2, fallback = '-') {
+  return Number.isFinite(value) ? Number(value).toFixed(digits).replace(/\.?0+$/, '') : fallback;
+}
+
+function formatInt(value, fallback = '-') {
+  return Number.isFinite(value) ? String(Math.round(value)) : fallback;
+}
+
+function asFiniteNumber(value, fallback = null) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function hasPositiveFinite(value) {
+  return Number.isFinite(value) && value > 0;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/*
+  Validation zone
+  Normalizes external input before it reaches state or formulas.
+*/
+const Validation = (() => {
+  function normalizeMode(mode) {
+    const normalized = String(mode || '').toLowerCase();
+    return CONFIG.modes.includes(normalized) ? normalized : CONFIG.defaults.mode;
+  }
+
+  function positiveNumber(value) {
+    const number = Number(value);
+    return number > 0 && Number.isFinite(number) ? number : null;
+  }
+
+  function boundedPositiveNumber(value, max) {
+    const number = positiveNumber(value);
+    return number !== null && number <= max ? number : null;
+  }
+
+  function sanitizeInputValue(value, id = '') {
+    const text = String(value ?? '').trim();
+    if (text === '') return '';
+    if (text.length > 32) return '';
+    if (!/^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i.test(text)) return '';
+    const number = Number(text);
+    if (!Number.isFinite(number)) return '';
+    const constraints = CONFIG.inputConstraints[id];
+    if (constraints && (number < constraints.min || number > constraints.max)) return '';
+    return text;
+  }
+
+  function sanitizeSavedAt(value) {
+    if (typeof value !== 'string') return null;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : null;
+  }
+
+  function normalizeInputMap(inputs) {
+    const source = inputs && typeof inputs === 'object' ? inputs : {};
+    return Object.fromEntries(CONFIG.persistedInputIds.map(id => [id, sanitizeInputValue(source[id], id)]));
+  }
+
+  function normalizeTunerPoints(points) {
+    return (Array.isArray(points) ? points : [])
+      .slice(0, CONFIG.limits.maxTunerPoints)
+      .map(point => ({
+        n: boundedPositiveNumber(point?.n, CONFIG.limits.maxTurns),
+        z: boundedPositiveNumber(point?.z, CONFIG.limits.maxMeasuredValue),
+      }))
+      .filter(point => point.n !== null && point.z !== null);
+  }
+
+  function validateMeasuredParams(params) {
+    const mode = normalizeMode(params?.mode);
+    const values = {
+      n1: boundedPositiveNumber(params?.n1, CONFIG.limits.maxTurns),
+      v1: boundedPositiveNumber(params?.v1, CONFIG.limits.maxMeasuredValue),
+      vt: boundedPositiveNumber(params?.vt, CONFIG.limits.maxMeasuredValue),
+      fHz: boundedPositiveNumber(params?.fHz, CONFIG.limits.maxFrequencyHz),
+      mode,
+    };
+    const errors = [];
+    if (values.n1 === null) errors.push(MEASURED_FIELD_LABELS.n1);
+    if (values.v1 === null) errors.push(MEASURED_FIELD_LABELS.v1[mode]);
+    if (values.vt === null) errors.push(MEASURED_FIELD_LABELS.vt[mode]);
+    if (values.fHz === null) errors.push(MEASURED_FIELD_LABELS.fHz);
+    return { ok: errors.length === 0, errors, values };
+  }
+
+  function validateTunerPoint(point) {
+    const normalized = {
+      n: boundedPositiveNumber(point?.n, CONFIG.limits.maxTurns),
+      z: boundedPositiveNumber(point?.z, CONFIG.limits.maxMeasuredValue),
+    };
+    const errors = [];
+    if (normalized.n === null) errors.push('巻数');
+    if (normalized.z === null) errors.push('実測値');
+    return { ok: errors.length === 0, errors, point: normalized };
+  }
+
+  function analyzeTunerSet(points, target) {
+    const normalized = normalizeTunerPoints(points);
+    const warnings = [];
+    if (normalized.length < 2) return { warnings, isExtrapolated: false, duplicateValues: [], isNonMonotonic: false };
+
+    const values = normalized.map(point => point.z);
+    const duplicateValues = [...new Set(values.filter((value, index) => values.indexOf(value) !== index))];
+    if (duplicateValues.length) warnings.push('同じ実測値の点があります。推定が不安定になる場合があります。');
+
+    const byTurns = [...normalized].sort((a, b) => a.n - b.n);
+    const isNonMonotonic = byTurns.some((point, index) => index > 0 && point.z < byTurns[index - 1].z);
+    if (isNonMonotonic) warnings.push('巻数順に実測値が単調増加していません。複数の推定候補があり得ます。');
+
+    const sortedValues = [...values].sort((a, b) => a - b);
+    const isExtrapolated = hasPositiveFinite(target) && (target < sortedValues[0] || target > sortedValues[sortedValues.length - 1]);
+    if (isExtrapolated) warnings.push('目標値が実測範囲の外にあります。外挿推定です。');
+
+    return { warnings, isExtrapolated, duplicateValues, isNonMonotonic };
+  }
+
+  return {
+    normalizeMode,
+    positiveNumber,
+    boundedPositiveNumber,
+    sanitizeInputValue,
+    sanitizeSavedAt,
+    normalizeInputMap,
+    normalizeTunerPoints,
+    validateMeasuredParams,
+    validateTunerPoint,
+    analyzeTunerSet,
+  };
+})();
+
+/*
+  State zone
+  Owns mutable app state and keeps DOM/state writes predictable.
+*/
+const AppState = (() => {
+  const state = {
+    mode: CONFIG.defaults.mode,
+    tunerPoints: [],
+  };
+
+  function getMode() {
+    return state.mode;
+  }
+
+  function setMode(mode) {
+    state.mode = Validation.normalizeMode(mode);
+  }
+
+  function toggleMode() {
+    setMode(state.mode === 'z' ? 'l' : 'z');
+    return state.mode;
+  }
+
+  function getTunerPoints() {
+    return state.tunerPoints.map(point => ({ ...point }));
+  }
+
+  function setTunerPoints(points) {
+    state.tunerPoints = Validation.normalizeTunerPoints(points);
+  }
+
+  function addTunerPoint(point) {
+    const result = Validation.validateTunerPoint(point);
+    if (!result.ok) return false;
+    if (state.tunerPoints.length >= CONFIG.limits.maxTunerPoints) return false;
+    state.tunerPoints.push(result.point);
+    return true;
+  }
+
+  function deleteTunerPoint(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= state.tunerPoints.length) return false;
+    state.tunerPoints.splice(index, 1);
+    return true;
+  }
+
+  function clearTunerPoints() {
+    state.tunerPoints = [];
+  }
+
+  function snapshot() {
+    return {
+      mode: state.mode,
+      tunerPoints: getTunerPoints(),
+    };
+  }
+
+  return {
+    getMode,
+    setMode,
+    toggleMode,
+    getTunerPoints,
+    setTunerPoints,
+    addTunerPoint,
+    deleteTunerPoint,
+    clearTunerPoints,
+    snapshot,
+  };
+})();
+
+/*
+  Storage zone
+  Draft persistence only. Never changes calculations.
+*/
+const Storage = (() => {
+  function legacyDraftCount() {
+    return CONFIG.legacyStorageKeys.filter(key => {
+      try {
+        return localStorage.getItem(key) !== null;
+      } catch (_) {
+        return false;
+      }
+    }).length;
+  }
+
+  function clearLegacyDrafts() {
+    CONFIG.legacyStorageKeys.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (_) {}
+    });
+  }
+
+  function available() {
+    try {
+      const probeKey = CONFIG.storageKey + '.probe';
+      localStorage.setItem(probeKey, '1');
+      localStorage.removeItem(probeKey);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function read() {
+    try {
+      const payload = JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null');
+      return normalizePayload(payload);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function normalizePayload(payload) {
+    if (!payload || typeof payload !== 'object') return null;
+    if (payload.version !== 3 && payload.version !== undefined) return null;
+    return {
+      version: 3,
+      savedAt: Validation.sanitizeSavedAt(payload.savedAt),
+      mode: Validation.normalizeMode(payload.mode),
+      inputs: Validation.normalizeInputMap(payload.inputs),
+      tunerPoints: Validation.normalizeTunerPoints(payload.tunerPoints),
+    };
+  }
+
+  function collectInputs() {
+    return Validation.normalizeInputMap(Object.fromEntries(CONFIG.persistedInputIds.map(id => [id, $(id)?.value ?? ''])));
+  }
+
+  function write() {
+    try {
+      localStorage.setItem(CONFIG.storageKey, JSON.stringify({
+        version: 3,
+        savedAt: new Date().toISOString(),
+        mode: AppState.getMode(),
+        inputs: collectInputs(),
+        tunerPoints: AppState.getTunerPoints(),
+      }));
+    } catch (_) {}
+  }
+
+  function clearCurrentDraft() {
+    try {
+      localStorage.removeItem(CONFIG.storageKey);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function clearAllDrafts() {
+    clearLegacyDrafts();
+    return clearCurrentDraft();
+  }
+
+  function restore() {
+    clearLegacyDrafts();
+    const payload = read();
+    if (!payload) return false;
+    AppState.setMode(payload.mode);
+    AppState.setTunerPoints(payload.tunerPoints);
+    const inputs = payload.inputs || {};
+    CONFIG.persistedInputIds.forEach(id => {
+      const el = $(id);
+      if (el && Object.prototype.hasOwnProperty.call(inputs, id)) el.value = inputs[id];
+    });
+    return true;
+  }
+
+  function health() {
+    const payload = read();
+    return {
+      available: available(),
+      hasDraft: !!payload,
+      savedAt: payload?.savedAt || null,
+      mode: payload?.mode || null,
+      pointCount: Array.isArray(payload?.tunerPoints) ? payload.tunerPoints.length : 0,
+      legacyDraftCount: legacyDraftCount(),
+    };
+  }
+
+  return { read, write, restore, health, normalizePayload, collectInputs, clearLegacyDrafts, clearCurrentDraft, clearAllDrafts };
+})();
+
+/*
+  Transfer zone
+  Portable JSON snapshots for measured inputs and tuner points.
+*/
+const Transfer = (() => {
+  function snapshot() {
+    return {
+      app: 'coil-calibrator',
+      version: 3,
+      exportedAt: new Date().toISOString(),
+      mode: AppState.getMode(),
+      inputs: Storage.collectInputs(),
+      tunerPoints: AppState.getTunerPoints(),
+    };
+  }
+
+  function normalizeImportPayload(payload) {
+    if (payload?.app && payload.app !== 'coil-calibrator') return null;
+    const normalized = Storage.normalizePayload(payload);
+    if (!normalized) return null;
+    return normalized;
+  }
+
+  function applyPayload(payload) {
+    const normalized = normalizeImportPayload(payload);
+    if (!normalized) return false;
+    AppState.setMode(normalized.mode);
+    AppState.setTunerPoints(normalized.tunerPoints);
+    Object.entries(normalized.inputs || {}).forEach(([id, value]) => {
+      const el = $(id);
+      if (el) el.value = value;
+    });
+    return true;
+  }
+
+  function encode(payload = snapshot()) {
+    return JSON.stringify(payload, null, 2);
+  }
+
+  function decode(text) {
+    try {
+      return normalizeImportPayload(JSON.parse(String(text || '')));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  return { snapshot, normalizeImportPayload, applyPayload, encode, decode };
+})();
+
+/*
+  Calculation zone
+  Pure formulas. Keep DOM reads and HTML writes out.
+*/
+const Calculation = (() => {
+  function calcMeasuredInverse(N1, V1, Vt, f_Hz, mode = 'z') {
+    const { ok, values } = Validation.validateMeasuredParams({ n1: N1, v1: V1, vt: Vt, fHz: f_Hz, mode: String(mode || 'z').toLowerCase() });
+    if (!ok) return null;
+
+    const { n1, v1, vt, fHz, mode: normalizedMode } = values;
+    const Nraw = n1 * Math.sqrt(vt / v1);
+    if (!hasPositiveFinite(Nraw)) return null;
+
+    const omega = 2 * Math.PI * fHz;
+    const isL = normalizedMode === 'l';
+    const L1_uH = isL ? v1 : (v1 / omega) * 1e6;
+    const Lt_uH = isL ? vt : (vt / omega) * 1e6;
+    const Nt = Math.round(Nraw);
+    const Vv = v1 * (Nt / n1) ** 2;
+    const Zv = isL ? omega * Vv / 1e6 : Vv;
+    const Lv_uH = isL ? Vv : (Vv / omega) * 1e6;
+    const err = Math.abs(Vv - vt) / vt * 100;
+    return { Nt, Vv, Zv, Lv_uH, err, L1_uH, Lt_uH };
+  }
+
+  function estimateFromPoints(points, target) {
+    if (!hasPositiveFinite(target)) return null;
+    const sorted = Validation.normalizeTunerPoints(points).sort((a, b) => a.z - b.z);
+    if (!sorted.length) return null;
+    const exactMatches = sorted.filter(point => point.z === target);
+    if (exactMatches.length) {
+      return exactMatches.reduce((sum, point) => sum + point.n, 0) / exactMatches.length;
+    }
+
+    for (let i = 1; i < sorted.length; i += 1) {
+      if (target >= sorted[i - 1].z && target <= sorted[i].z) {
+        const ratio = (target - sorted[i - 1].z) / (sorted[i].z - sorted[i - 1].z || 1);
+        return sorted[i - 1].n + (sorted[i].n - sorted[i - 1].n) * ratio;
+      }
+    }
+
+    const nearest = sorted.reduce((best, item) => {
+      return !best || Math.abs(item.z - target) < Math.abs(best.z - target) ? item : best;
+    }, null);
+    return nearest ? nearest.n * Math.sqrt(target / nearest.z) : null;
+  }
+
+  return { calcMeasuredInverse, estimateFromPoints };
+})();
+
+/*
+  Spec catalog zone
+  Small executable examples that pin the expected math behavior.
+*/
+const SpecCatalog = (() => {
+  const cases = Object.freeze([
+    Object.freeze({
+      name: 'z inverse doubles turns',
+      run: () => Calculation.calcMeasuredInverse(50, 25, 100, 100000, 'z')?.Nt,
+      expect: value => value === 100,
+    }),
+    Object.freeze({
+      name: 'l inverse keeps target inductance',
+      run: () => Calculation.calcMeasuredInverse(50, 10, 40, 100000, 'l')?.Lv_uH,
+      expect: value => Math.round(value) === 40,
+    }),
+    Object.freeze({
+      name: 'interpolation stays between measured turns',
+      run: () => Calculation.estimateFromPoints([{ n: 50, z: 25 }, { n: 100, z: 100 }], 50),
+      expect: value => Number.isFinite(value) && value > 50 && value < 100,
+    }),
+    Object.freeze({
+      name: 'duplicate exact target averages turns',
+      run: () => Calculation.estimateFromPoints([{ n: 50, z: 25 }, { n: 60, z: 25 }], 25),
+      expect: value => value === 55,
+    }),
+    Object.freeze({
+      name: 'invalid inverse returns null',
+      run: () => Calculation.calcMeasuredInverse(0, 25, 100, 100000, 'z'),
+      expect: value => value === null,
+    }),
+    Object.freeze({
+      name: 'extrapolation follows square-root turn law',
+      run: () => Calculation.estimateFromPoints([{ n: 50, z: 25 }], 100),
+      expect: value => value === 100,
+    }),
+  ]);
+
+  function run() {
+    const results = cases.map(test => {
+      const value = test.run();
+      return { name: test.name, ok: test.expect(value), value };
+    });
+    return { ok: results.every(result => result.ok), results };
+  }
+
+  return { cases, run };
+})();
+
+/*
+  Siege test zone
+  Hostile payload checks for import, validation, and state limits.
+*/
+const SiegeTests = (() => {
+  function densePoints(count) {
+    return Array.from({ length: count }, (_, index) => ({
+      n: index + 1,
+      z: (index + 1) * 2,
+    }));
+  }
+
+  const cases = Object.freeze([
+    Object.freeze({
+      name: 'oversized tuner import is capped',
+      run: () => Transfer.decode(JSON.stringify({
+        app: 'coil-calibrator',
+        version: 3,
+        tunerPoints: densePoints(CONFIG.limits.maxTunerPoints + 75),
+      }))?.tunerPoints.length,
+      expect: value => value === CONFIG.limits.maxTunerPoints,
+    }),
+    Object.freeze({
+      name: 'hostile app id is rejected',
+      run: () => Transfer.decode(JSON.stringify({ app: 'other-tool', version: 3, tunerPoints: densePoints(2) })),
+      expect: value => value === null,
+    }),
+    Object.freeze({
+      name: 'mixed invalid tuner points are stripped',
+      run: () => Transfer.decode(JSON.stringify({
+        app: 'coil-calibrator',
+        version: 3,
+        tunerPoints: [
+          { n: 10, z: 20 },
+          { n: -1, z: 20 },
+          { n: 20, z: Number.POSITIVE_INFINITY },
+          { n: 'bad', z: 10 },
+        ],
+      }))?.tunerPoints.length,
+      expect: value => value === 1,
+    }),
+    Object.freeze({
+      name: 'script-like saved inputs are erased',
+      run: () => Transfer.decode(JSON.stringify({
+        app: 'coil-calibrator',
+        version: 3,
+        inputs: { 'm-n1': '<script>', 'm-z1': '25', 'm-f': '100' },
+      }))?.inputs,
+      expect: value => value?.['m-n1'] === '' && value?.['m-z1'] === '25',
+    }),
+    Object.freeze({
+      name: 'extreme numeric text is rejected',
+      run: () => Transfer.decode(JSON.stringify({
+        app: 'coil-calibrator',
+        version: 3,
+        inputs: { 'm-n1': '1e999', 'm-f': '10000001', 'm-zt': '1000000001' },
+      }))?.inputs,
+      expect: value => value?.['m-n1'] === '' && value?.['m-f'] === '' && value?.['m-zt'] === '',
+    }),
+    Object.freeze({
+      name: 'state survives failed transfer apply',
+      run: () => {
+        const before = AppState.snapshot();
+        const applied = Transfer.applyPayload({ app: 'other-tool', version: 3, tunerPoints: densePoints(1) });
+        const after = AppState.snapshot();
+        return { applied, unchanged: before.mode === after.mode && before.tunerPoints.length === after.tunerPoints.length };
+      },
+      expect: value => value.applied === false && value.unchanged,
+    }),
+    Object.freeze({
+      name: 'non-monotonic measured points are warned',
+      run: () => Validation.analyzeTunerSet([{ n: 10, z: 30 }, { n: 20, z: 20 }, { n: 30, z: 40 }], 25),
+      expect: value => value.isNonMonotonic && value.warnings.some(message => message.includes('単調増加')),
+    }),
+  ]);
+
+  function run() {
+    const results = cases.map(test => {
+      const value = test.run();
+      return { name: test.name, ok: test.expect(value), value };
+    });
+    return { ok: results.every(result => result.ok), results };
+  }
+
+  return { cases, run };
+})();
+
+/*
+  Render zone
+  Owns DOM reads/writes, visible errors, graph drawing, and event binding.
+*/
+const Render = (() => {
+  let inputsBound = false;
+  let diagnosticsTriggersBound = false;
+  let headerClickTimes = [];
+
+  function setHtml(id, html) {
+    const el = $(id);
+    if (el) el.innerHTML = html;
+  }
+
+  function setText(id, text) {
+    const el = $(id);
+    if (el) el.textContent = text;
+  }
+
+  function showError(message, id) {
+    const el = $(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.innerHTML = '<div class="warn-box">' + escapeHtml(message) + '</div>';
+  }
+
+  function clearError(id) {
+    const el = $(id);
+    if (!el) return;
+    el.classList.add('hidden');
+    el.innerHTML = '';
+  }
+
+  function diagnosticsText() {
+    const boot = window.CC_BOOT_OK ? 'OK' : 'FAILED';
+    const lastError = RuntimeSafety.lastError();
+    const lastErrorText = lastError
+      ? ['lastError: ' + lastError.context, 'message: ' + lastError.message, 'at: ' + lastError.at].join('\n')
+      : 'lastError: none';
+    return [
+      AppDiagnostics.report({ log: false }),
+      'boot: ' + boot,
+      'mode: ' + AppState.getMode(),
+      'points: ' + AppState.getTunerPoints().length,
+      lastErrorText,
+    ].join('\n');
+  }
+
+  function refreshDiagnostics() {
+    const output = $(CONFIG.ids.diagnosticsOutput);
+    if (output) output.textContent = diagnosticsText();
+  }
+
+  function recoverDiagnostics() {
+    const cleared = Storage.clearAllDrafts();
+    RuntimeSafety.clear();
+    clearError(CONFIG.ids.measuredErrorArea);
+    refreshDiagnostics();
+    const output = $(CONFIG.ids.diagnosticsOutput);
+    if (output) {
+      output.textContent += '\nrecovery: ' + (cleared ? 'saved drafts cleared' : 'saved draft clear failed');
+    }
+    return cleared;
+  }
+
+  function showTransferStatus(message) {
+    setText(CONFIG.ids.tunerTransferStatus, message);
+  }
+
+  function setDiagnosticsVisible(visible) {
+    const panel = $(CONFIG.ids.diagnosticsPanel);
+    if (!panel) return false;
+    panel.classList.toggle('hidden', !visible);
+    panel.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    if (visible) refreshDiagnostics();
+    return visible;
+  }
+
+  function toggleDiagnostics() {
+    const panel = $(CONFIG.ids.diagnosticsPanel);
+    return setDiagnosticsVisible(panel?.classList.contains('hidden') ?? true);
+  }
+
+  function readMeasuredParams() {
+    return {
+      n1: asFiniteNumber($('m-n1')?.value),
+      v1: asFiniteNumber($('m-z1')?.value),
+      vt: asFiniteNumber($('m-zt')?.value),
+      fHz: asFiniteNumber($('m-f')?.value) * 1000,
+      mode: AppState.getMode(),
+    };
+  }
+
+  function readTunerPoint() {
+    return {
+      n: asFiniteNumber($('tz-entry-n')?.value),
+      z: asFiniteNumber($('tz-entry-z')?.value),
+    };
+  }
+
+  function renderMode() {
+    const isL = AppState.getMode() === 'l';
+    $('measuredModeToggle').textContent = isL ? 'L' : 'Z';
+    $('measuredModeToggle').classList.toggle('l-mode', isL);
+    $('m-z1-label').textContent = isL ? '実測 L1' : '実測 Z1';
+    $('m-z1-unit').textContent = isL ? 'uH' : 'Ω';
+    $('m-zt-label').textContent = isL ? '目標 L' : '目標 Z';
+    $('m-zt-unit').textContent = isL ? 'uH' : 'Ω';
+    $('targetTunerBadge').textContent = isL ? 'L' : 'Z';
+    $('targetTunerTitle').textContent = isL ? 'TARGET L TUNER' : 'TARGET Z TUNER';
+    $('tz-entry-z-label').textContent = isL ? '実測L' : '実測Z';
+    $('tz-entry-z-unit').textContent = isL ? 'uH' : 'Ω';
+  }
+
+  function renderMeasuredResult(inverse, mode = 'z') {
+    const isL = mode === 'l';
+    clearError(CONFIG.ids.measuredErrorArea);
+    $(CONFIG.ids.measuredResults)?.classList.remove('hidden');
+    setHtml(CONFIG.ids.measuredResults,
+      '<ul class="compact-result-list">' +
+      '<li>目標巻数: <strong>' + formatInt(inverse.Nt) + ' T</strong></li>' +
+      (isL
+        ? '<li>確認L: <strong>' + format(inverse.Lv_uH, 3) + ' uH</strong></li>'
+        : '<li>確認Z: <strong>' + format(inverse.Zv, 1) + ' Ω</strong></li>') +
+      (isL ? '<li>確認Z換算: <strong>' + format(inverse.Zv, 1) + ' Ω</strong></li>' : '') +
+      '<li>実測L1: <strong>' + format(inverse.L1_uH, 3) + ' uH</strong></li>' +
+      '<li>目標L: <strong>' + format(inverse.Lt_uH, 3) + ' uH</strong></li>' +
+      '</ul>'
+    );
+  }
+
+  function chartBounds(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(rect.width, 1);
+    const h = Math.max(rect.height, 1);
+    return { w, h, pad: 34 };
+  }
+
+  function drawTargetChart() {
+    const canvas = $(CONFIG.ids.targetCanvas);
+    if (!canvas) return;
+    const { w, h, pad } = chartBounds(canvas);
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.floor(w * ratio));
+    canvas.height = Math.max(1, Math.floor(h * ratio));
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#05080d';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(pad, 16, w - pad - 12, h - pad - 16);
+
+    const points = AppState.getTunerPoints().sort((a, b) => a.n - b.n);
+    if (!points.length) return;
+    const maxN = Math.max(...points.map(p => p.n), asFiniteNumber($('m-n1')?.value, 0)) * 1.15;
+    const maxZ = Math.max(...points.map(p => p.z), asFiniteNumber($('m-zt')?.value, 0)) * 1.15;
+    if (!(maxN > 0) || !(maxZ > 0)) return;
+
+    const x = n => pad + (n / maxN) * (w - pad - 22);
+    const y = z => h - pad - (z / maxZ) * (h - pad - 26);
+    ctx.strokeStyle = '#58a6ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    points.forEach((point, index) => {
+      const px = x(point.n);
+      const py = y(point.z);
+      if (index) ctx.lineTo(px, py);
+      else ctx.moveTo(px, py);
+    });
+    ctx.stroke();
+    points.forEach(point => {
+      ctx.beginPath();
+      ctx.fillStyle = '#e3b341';
+      ctx.arc(x(point.n), y(point.z), 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    const target = asFiniteNumber($('m-zt')?.value);
+    if (target > 0) {
+      ctx.strokeStyle = '#3fb950';
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(pad, y(target));
+      ctx.lineTo(w - 12, y(target));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  function renderTargetZTuner() {
+    const points = AppState.getTunerPoints();
+    setHtml(CONFIG.ids.targetRows, points.map((point, index) =>
+      '<div class="tuner-point-item"><div class="tuner-point-main">' + format(point.n, 1) + 'T / ' + format(point.z, 3) + '</div>' +
+      '<button class="tuner-delete-btn" type="button" onclick="UI.deleteTargetZTunerPoint(' + index + ')">削除</button></div>'
+    ).join(''));
+
+    drawTargetChart();
+    if (points.length < 2) {
+      setHtml(CONFIG.ids.targetOutput, '');
+      setHtml(CONFIG.ids.targetWarnings, '');
+      setHtml(CONFIG.ids.targetQuick, '点を追加すると推定巻数を表示します。');
+      return;
+    }
+
+    const target = asFiniteNumber($('m-zt')?.value);
+    const analysis = Validation.analyzeTunerSet(points, target);
+    if (!(target > 0)) {
+      setHtml(CONFIG.ids.targetOutput, '');
+      setHtml(CONFIG.ids.targetWarnings, '<div class="warn-box">目標値を0より大きい値で入力してください。</div>');
+      setHtml(CONFIG.ids.targetQuick, '目標値を入力すると推定巻数を表示します。');
+      return;
+    }
+
+    const estimated = Calculation.estimateFromPoints(points, target);
+    if (!Number.isFinite(estimated)) return;
+    setHtml(CONFIG.ids.targetQuick, '<strong>' + format(estimated, 1) + ' T</strong>');
+    setHtml(CONFIG.ids.targetOutput, '<div class="info-box">目標値からの推定巻数: <strong>' + format(estimated, 1) + ' T</strong></div>');
+    setHtml(CONFIG.ids.targetWarnings, analysis.warnings.map(message => '<div class="warn-box">' + escapeHtml(message) + '</div>').join(''));
+  }
+
+  function bindInputs() {
+    if (inputsBound) return false;
+    CONFIG.persistedInputIds.forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        Storage.write();
+        if (['m-zt', 'm-f'].includes(id)) renderTargetZTuner();
+      });
+    });
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+      input.addEventListener('wheel', event => {
+        if (document.activeElement === input) {
+          event.preventDefault();
+          input.blur();
+        }
+      }, { passive: false });
+    });
+    $(CONFIG.ids.tunerImportFile)?.addEventListener('change', event => {
+      const file = event.target.files?.[0];
+      if (file) UI.importTunerPoints(file);
+      event.target.value = '';
+    });
+    inputsBound = true;
+    return true;
+  }
+
+  function applyInputConstraints() {
+    Object.entries(CONFIG.inputConstraints).forEach(([id, constraints]) => {
+      const el = $(id);
+      if (!el) return;
+      el.min = String(constraints.min);
+      el.max = String(constraints.max);
+      el.step = String(constraints.step);
+      el.inputMode = 'decimal';
+    });
+  }
+
+  function bindDiagnosticsTriggers() {
+    if (diagnosticsTriggersBound) return false;
+    window.addEventListener('keydown', event => {
+      if (event.ctrlKey && event.altKey && String(event.key).toLowerCase() === 'd') {
+        event.preventDefault();
+        toggleDiagnostics();
+      }
+    });
+
+    $(CONFIG.ids.headerIcon)?.addEventListener('click', () => {
+      const now = Date.now();
+      headerClickTimes = [...headerClickTimes, now].filter(time => now - time < 900);
+      if (headerClickTimes.length >= 3) {
+        headerClickTimes = [];
+        toggleDiagnostics();
+      }
+    });
+    diagnosticsTriggersBound = true;
+    return true;
+  }
+
+  function init() {
+    applyInputConstraints();
+    Object.entries(CONFIG.defaults.inputs).forEach(([id, value]) => {
+      const el = $(id);
+      if (el && el.value === '') el.value = value;
+    });
+    Storage.restore();
+    renderMode();
+    renderTargetZTuner();
+    bindInputs();
+    bindDiagnosticsTriggers();
+  }
+
+  return {
+    init,
+    renderMode,
+    readMeasuredParams,
+    readTunerPoint,
+    renderMeasuredResult,
+    renderTargetZTuner,
+    drawTargetChart,
+    showError,
+    clearError,
+    showTransferStatus,
+    bindInputs,
+    applyInputConstraints,
+    refreshDiagnostics,
+    recoverDiagnostics,
+    toggleDiagnostics,
+    bindDiagnosticsTriggers,
+  };
+})();
+
+/*
+  Runtime safety zone
+  Keeps public UI actions from leaving the app in a broken half-state.
+*/
+const RuntimeSafety = (() => {
+  function record(error, context = 'unknown', options = {}) {
+    const message = error instanceof Error ? error.message : String(error);
+    const payload = {
+      context,
+      message,
+      stack: error instanceof Error ? error.stack : '',
+      at: new Date().toISOString(),
+    };
+    window.CC_LAST_ERROR = payload;
+    if (!options.silent) {
+      console.error('[CC runtime]', context, error);
+      Render.showError('処理中に問題が出ました。入力値を確認して、必要なら再読み込みしてください。', CONFIG.ids.measuredErrorArea);
+    }
+    return payload;
+  }
+
+  function guard(context, task, options = {}) {
+    try {
+      return task();
+    } catch (error) {
+      record(error, context, options);
+      return null;
+    }
+  }
+
+  function lastError() {
+    return window.CC_LAST_ERROR || null;
+  }
+
+  function clear() {
+    window.CC_LAST_ERROR = null;
+  }
+
+  return { guard, record, lastError, clear };
+})();
+
+/*
+  Public UI API zone
+  All inline onclick handlers must map here and in UI_PUBLIC_API.
+*/
+const UI = (() => {
+  function init() {
+    Render.init();
+  }
+
+  function toggleMeasuredMode() {
+    AppState.toggleMode();
+    Render.renderMode();
+    Render.clearError(CONFIG.ids.measuredErrorArea);
+    Render.renderTargetZTuner();
+    Storage.write();
+  }
+
+  function calcMeasured() {
+    const params = Render.readMeasuredParams();
+    const validation = Validation.validateMeasuredParams(params);
+    if (!validation.ok) {
+      Render.showError(validation.errors.join('・') + 'を0より大きい値で入力してください。', CONFIG.ids.measuredErrorArea);
+      $(CONFIG.ids.measuredResults)?.classList.add('hidden');
+      return;
+    }
+    const { n1, v1, vt, fHz, mode } = validation.values;
+    const inverse = Calculation.calcMeasuredInverse(n1, v1, vt, fHz, mode);
+    if (!inverse) {
+      Render.showError('実測逆算の入力値を確認してください。', CONFIG.ids.measuredErrorArea);
+      $(CONFIG.ids.measuredResults)?.classList.add('hidden');
+      return;
+    }
+    Render.renderMeasuredResult(inverse, mode);
+    Storage.write();
+  }
+
+  function addTargetZTunerPoint() {
+    const point = Render.readTunerPoint();
+    const validation = Validation.validateTunerPoint(point);
+    if (!validation.ok) {
+      Render.drawTargetChart();
+      const warning = '<div class="warn-box">' + validation.errors.join('・') + 'を0より大きい値で入力してください。</div>';
+      const warningsEl = $(CONFIG.ids.targetWarnings);
+      if (warningsEl) warningsEl.innerHTML = warning;
+      return;
+    }
+    if (!AppState.addTunerPoint(validation.point)) {
+      Render.drawTargetChart();
+      const warningsEl = $(CONFIG.ids.targetWarnings);
+      if (warningsEl) warningsEl.innerHTML = '<div class="warn-box">登録できる点は最大' + CONFIG.limits.maxTunerPoints + '件です。</div>';
+      return;
+    }
+    Render.renderTargetZTuner();
+    Storage.write();
+  }
+
+  function deleteTargetZTunerPoint(index) {
+    AppState.deleteTunerPoint(Number(index));
+    Render.renderTargetZTuner();
+    Storage.write();
+  }
+
+  function clearTargetZTuner() {
+    AppState.clearTunerPoints();
+    Render.renderTargetZTuner();
+    Render.showTransferStatus('測定点をクリアしました。');
+    Storage.write();
+  }
+
+  function exportTunerPoints() {
+    const payload = Transfer.snapshot();
+    const blob = new Blob([Transfer.encode(payload)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'coil-calibrator-points-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    Render.showTransferStatus(payload.tunerPoints.length + '件の測定点を書き出しました。');
+  }
+
+  function openTunerImport() {
+    $(CONFIG.ids.tunerImportFile)?.click();
+  }
+
+  function importTunerPoints(file) {
+    if (!file) {
+      Render.showTransferStatus('読み込むJSONを選択してください。');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => RuntimeSafety.guard('UI.importTunerPoints.load', () => {
+      const payload = Transfer.decode(reader.result);
+      if (!payload || !Transfer.applyPayload(payload)) {
+        Render.showTransferStatus('JSONを読み込めませんでした。');
+        return;
+      }
+      Render.renderMode();
+      Render.renderTargetZTuner();
+      Render.clearError(CONFIG.ids.measuredErrorArea);
+      Storage.write();
+      Render.showTransferStatus(payload.tunerPoints.length + '件の測定点を読み込みました。');
+    });
+    reader.onerror = () => RuntimeSafety.guard('UI.importTunerPoints.error', () => {
+      Render.showTransferStatus('JSONを読み込めませんでした。');
+    });
+    reader.readAsText(file);
+  }
+
+  function toggleDiagnostics() {
+    Render.toggleDiagnostics();
+  }
+
+  function refreshDiagnostics() {
+    Render.refreshDiagnostics();
+  }
+
+  function recoverDiagnostics() {
+    Render.recoverDiagnostics();
+  }
+
+  const api = {
+    init,
+    toggleMeasuredMode,
+    calcMeasured,
+    addTargetZTunerPoint,
+    deleteTargetZTunerPoint,
+    clearTargetZTuner,
+    exportTunerPoints,
+    openTunerImport,
+    importTunerPoints,
+    toggleDiagnostics,
+    refreshDiagnostics,
+    recoverDiagnostics,
+  };
+
+  return Object.freeze(Object.fromEntries(
+    Object.entries(api).map(([name, fn]) => [name, (...args) => RuntimeSafety.guard('UI.' + name, () => fn(...args))])
+  ));
+})();
+
+/*
+  Diagnostics zone
+  Console-only self checks for edit-time confidence.
+*/
+const AppDiagnostics = (() => {
+  const REQUIRED_ZONES = Object.freeze([
+    'CONFIG zone',
+    'Shared helpers',
+    'Validation zone',
+    'State zone',
+    'Storage zone',
+    'Transfer zone',
+    'Calculation zone',
+    'Spec catalog zone',
+    'Siege test zone',
+    'Render zone',
+    'Runtime safety zone',
+    'Public UI API zone',
+    'Diagnostics zone',
+  ]);
+
+  function check(condition, message, failures) {
+    if (!condition) failures.push(message);
+  }
+
+  function checkPublicApi() {
+    const failures = [];
+    UI_PUBLIC_API.forEach(name => check(typeof UI[name] === 'function', 'Missing UI.' + name, failures));
+    document.querySelectorAll('[onclick]').forEach(el => {
+      const handler = String(el.getAttribute('onclick') || '').match(/^UI\.([A-Za-z0-9_]+)\(/)?.[1];
+      if (handler) check(UI_PUBLIC_API.includes(handler), 'onclick handler not public: ' + handler, failures);
+    });
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkCalculation() {
+    const failures = [];
+    const specs = SpecCatalog.run();
+    specs.results.forEach(result => check(result.ok, 'Spec failed: ' + result.name, failures));
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkValidation() {
+    const failures = [];
+    const measured = Validation.validateMeasuredParams({ n1: '50', v1: '25', vt: '100', fHz: '100000', mode: 'x' });
+    check(measured.ok && measured.values.mode === 'z', 'Measured params should normalize mode', failures);
+    const point = Validation.validateTunerPoint({ n: '10', z: '-1' });
+    check(!point.ok && point.errors.includes('実測値'), 'Invalid tuner point should report measured value', failures);
+    const analysis = Validation.analyzeTunerSet([{ n: 50, z: 25 }, { n: 100, z: 100 }], 150);
+    check(analysis.isExtrapolated, 'Tuner analysis should detect extrapolation', failures);
+    const nonMonotonic = Validation.analyzeTunerSet([{ n: 10, z: 30 }, { n: 20, z: 20 }, { n: 30, z: 40 }], 25);
+    check(nonMonotonic.isNonMonotonic, 'Tuner analysis should detect non-monotonic measured values', failures);
+    const inputs = Validation.normalizeInputMap({ 'm-n1': '<script>', 'm-z1': '2.5e1', 'm-f': ' 100 ' });
+    check(inputs['m-n1'] === '' && inputs['m-z1'] === '2.5e1' && inputs['m-f'] === '100', 'Input map should sanitize stored values', failures);
+    check(Validation.boundedPositiveNumber('1e999', CONFIG.limits.maxMeasuredValue) === null, 'Overflow input should be rejected', failures);
+    check(Validation.normalizeInputMap({ 'm-n1': '1000001', 'm-f': '10000001' })['m-n1'] === '', 'Input map should enforce turn field max', failures);
+    check(Validation.normalizeInputMap({ 'm-n1': '1000001', 'm-f': '10000001' })['m-f'] === '', 'Input map should enforce frequency field max', failures);
+    check(Validation.validateMeasuredParams({ n1: '1000001', v1: 25, vt: 100, fHz: 100000, mode: 'z' }).ok === false, 'Measured params should enforce turn limit', failures);
+    const manyPoints = Array.from({ length: CONFIG.limits.maxTunerPoints + 10 }, (_, index) => ({ n: index + 1, z: index + 1 }));
+    check(Validation.normalizeTunerPoints(manyPoints).length === CONFIG.limits.maxTunerPoints, 'Tuner points should be capped', failures);
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkDom() {
+    const failures = [];
+    [
+      'm-n1', 'm-z1', 'm-f', 'm-zt', 'tz-entry-n', 'tz-entry-z',
+      'measuredModeToggle', CONFIG.ids.targetCanvas, CONFIG.ids.targetQuick,
+      CONFIG.ids.measuredResults, CONFIG.ids.measuredErrorArea,
+      CONFIG.ids.diagnosticsPanel, CONFIG.ids.diagnosticsOutput, CONFIG.ids.headerIcon,
+      CONFIG.ids.tunerImportFile, CONFIG.ids.tunerTransferStatus,
+    ].forEach(id => check(!!$(id), 'Missing DOM id: ' + id, failures));
+    const ids = [...CC_SOURCE_TEXT.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
+    const duplicated = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+    check(duplicated.length === 0, 'Duplicate DOM id: ' + duplicated.join(', '), failures);
+    Object.entries(CONFIG.inputConstraints).forEach(([id, constraints]) => {
+      const el = $(id);
+      check(el?.getAttribute('max') === String(constraints.max), 'Input max mismatch: ' + id, failures);
+      check(el?.getAttribute('min') === String(constraints.min), 'Input min mismatch: ' + id, failures);
+      check(el?.getAttribute('step') === String(constraints.step), 'Input step mismatch: ' + id, failures);
+    });
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkRenderGuards() {
+    const failures = [];
+    check(Render.bindInputs() === false, 'Input binding should be idempotent after init', failures);
+    check(Render.bindDiagnosticsTriggers() === false, 'Diagnostics triggers should be idempotent after init', failures);
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkRuntimeSafety() {
+    const failures = [];
+    const previousError = RuntimeSafety.lastError();
+    const result = RuntimeSafety.guard('diagnostics.expectedFailure', () => {
+      throw new Error('expected diagnostic failure');
+    }, { silent: true });
+    check(result === null, 'Runtime guard should return null after caught error', failures);
+    check(RuntimeSafety.lastError()?.context === 'diagnostics.expectedFailure', 'Runtime guard should store last error context', failures);
+    window.CC_LAST_ERROR = previousError;
+    RuntimeSafety.clear();
+    check(RuntimeSafety.lastError() === null, 'Runtime clear should remove last error', failures);
+    window.CC_LAST_ERROR = previousError;
+    Render.clearError(CONFIG.ids.measuredErrorArea);
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkSourceGuards(source = CC_SOURCE_TEXT) {
+    const failures = [];
+    const mojibakeMarkers = [
+      String.fromCharCode(0x7e5d, 0xff9d),
+      String.fromCharCode(0x7e3a),
+      String.fromCharCode(0x8708),
+      String.fromCharCode(0x87b3),
+      String.fromCharCode(0xfffd),
+    ];
+    REQUIRED_ZONES.forEach(zone => check(source.includes(zone), 'Missing source zone: ' + zone, failures));
+    UI_PUBLIC_API.forEach(name => check(source.includes(name), 'Missing public API source marker: ' + name, failures));
+    check(source.includes('window.UI = UI'), 'UI must be exposed for inline handlers', failures);
+    check(source.includes('CONFIG.persistedInputIds'), 'Persisted input list must stay centralized', failures);
+    check(source.includes('CONFIG.inputConstraints'), 'Input constraints must stay centralized', failures);
+    check(source.includes('SpecCatalog.run'), 'Calculation specs must stay executable', failures);
+    check(source.includes('window.CC_TEST_HARNESS'), 'Test harness must stay exposed', failures);
+    check(source.includes('RuntimeSafety.guard'), 'Public UI actions must be runtime guarded', failures);
+    check(source.includes('diagnosticsPanel'), 'Diagnostics panel must remain addressable', failures);
+    check(source.includes('recoverDiagnostics'), 'Diagnostics recovery action must remain available', failures);
+    check(!mojibakeMarkers.some(marker => source.includes(marker)), 'Source contains suspicious mojibake marker', failures);
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkStorage() {
+    const failures = [];
+    const health = Storage.health();
+    check(health.available, 'localStorage is not writable', failures);
+    const normalized = Storage.normalizePayload({
+      version: 3,
+      mode: 'L',
+      savedAt: 'not a date',
+      inputs: { 'm-n1': '<bad>', 'm-z1': '25', 'm-f': '100', 'm-zt': '100000000000000000000000000000000000000' },
+      tunerPoints: [{ n: '10', z: '20' }, { n: '-1', z: '30' }],
+    });
+    check(normalized?.mode === 'l', 'Stored payload should normalize mode', failures);
+    check(normalized?.savedAt === null, 'Stored payload should reject invalid savedAt', failures);
+    check(normalized?.inputs?.['m-n1'] === '' && normalized?.inputs?.['m-z1'] === '25', 'Stored payload should sanitize inputs', failures);
+    check(normalized?.tunerPoints?.length === 1, 'Stored payload should sanitize tuner points', failures);
+    check(Storage.normalizePayload({ version: 2 }) === null, 'Legacy payload should be rejected', failures);
+    return { ok: failures.length === 0, failures, health };
+  }
+
+  function checkTransfer() {
+    const failures = [];
+    const previousMode = AppState.getMode();
+    const previousPoints = AppState.getTunerPoints();
+    const previousInputs = Validation.normalizeInputMap(Object.fromEntries(CONFIG.persistedInputIds.map(id => [id, $(id)?.value ?? ''])));
+    try {
+      const sample = {
+        version: 3,
+        mode: 'l',
+        inputs: { 'm-n1': '50', 'm-z1': '10', 'm-f': '100', 'm-zt': '40', 'tz-entry-n': '75', 'tz-entry-z': '22' },
+        tunerPoints: [{ n: '50', z: '10' }, { n: '100', z: '40' }],
+      };
+      const encoded = Transfer.encode(sample);
+      const decoded = Transfer.decode(encoded);
+      check(decoded?.mode === 'l', 'Transfer decode should normalize mode', failures);
+      check(decoded?.tunerPoints?.length === 2, 'Transfer decode should keep valid tuner points', failures);
+      check(Transfer.applyPayload(sample), 'Transfer apply should accept valid payload', failures);
+      check(AppState.getMode() === 'l' && AppState.getTunerPoints().length === 2, 'Transfer apply should update state', failures);
+      check(Transfer.decode('{') === null, 'Transfer decode should reject invalid JSON', failures);
+      check(Transfer.decode(JSON.stringify({ app: 'other-tool', version: 3 })) === null, 'Transfer decode should reject foreign app payload', failures);
+    } finally {
+      AppState.setMode(previousMode);
+      AppState.setTunerPoints(previousPoints);
+      Object.entries(previousInputs).forEach(([id, value]) => {
+        const el = $(id);
+        if (el) el.value = value;
+      });
+      Render.renderMode();
+      Render.renderTargetZTuner();
+    }
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkSiegeTests() {
+    const failures = [];
+    const results = SiegeTests.run();
+    results.results.forEach(result => check(result.ok, 'Siege test failed: ' + result.name, failures));
+    return { ok: failures.length === 0, failures, results };
+  }
+
+  function checkState() {
+    const failures = [];
+    const previous = AppState.getTunerPoints();
+    try {
+      AppState.clearTunerPoints();
+      for (let i = 0; i < CONFIG.limits.maxTunerPoints; i += 1) {
+        check(AppState.addTunerPoint({ n: i + 1, z: i + 1 }), 'State should accept tuner point within cap', failures);
+      }
+      check(AppState.addTunerPoint({ n: 999999, z: 999999 }) === false, 'State should reject tuner point beyond cap', failures);
+      check(AppState.getTunerPoints().length === CONFIG.limits.maxTunerPoints, 'State tuner points should stay capped', failures);
+    } finally {
+      AppState.setTunerPoints(previous);
+    }
+    return { ok: failures.length === 0, failures };
+  }
+
+  function runSmokeChecks(options = {}) {
+    const results = {
+      publicApi: checkPublicApi(),
+      validation: checkValidation(),
+      calculation: checkCalculation(),
+      dom: checkDom(),
+      renderGuards: checkRenderGuards(),
+      runtimeSafety: checkRuntimeSafety(),
+      sourceGuards: checkSourceGuards(),
+      storage: checkStorage(),
+      transfer: checkTransfer(),
+      siege: checkSiegeTests(),
+      stateGuards: checkState(),
+      state: AppState.snapshot(),
+    };
+    results.ok = results.publicApi.ok && results.validation.ok && results.calculation.ok && results.dom.ok && results.renderGuards.ok && results.runtimeSafety.ok && results.sourceGuards.ok && results.storage.ok && results.transfer.ok && results.siege.ok && results.stateGuards.ok;
+    if (options.log !== false) console.log('[CC diagnostics]', results.ok ? 'OK' : 'FAILED', results);
+    return results;
+  }
+
+  function report(options = {}) {
+    const results = runSmokeChecks({ log: options.log });
+    return [
+      'CC diagnostics: ' + (results.ok ? 'OK' : 'FAILED'),
+      'publicApi: ' + (results.publicApi.ok ? 'OK' : results.publicApi.failures.join(', ')),
+      'validation: ' + (results.validation.ok ? 'OK' : results.validation.failures.join(', ')),
+      'calculation: ' + (results.calculation.ok ? 'OK' : results.calculation.failures.join(', ')),
+      'dom: ' + (results.dom.ok ? 'OK' : results.dom.failures.join(', ')),
+      'renderGuards: ' + (results.renderGuards.ok ? 'OK' : results.renderGuards.failures.join(', ')),
+      'runtimeSafety: ' + (results.runtimeSafety.ok ? 'OK' : results.runtimeSafety.failures.join(', ')),
+      'sourceGuards: ' + (results.sourceGuards.ok ? 'OK' : results.sourceGuards.failures.join(', ')),
+      'storage: ' + (results.storage.ok ? 'OK' : results.storage.failures.join(', ')),
+      'transfer: ' + (results.transfer.ok ? 'OK' : results.transfer.failures.join(', ')),
+      'siege: ' + (results.siege.ok ? 'OK' : results.siege.failures.join(', ')),
+      'stateGuards: ' + (results.stateGuards.ok ? 'OK' : results.stateGuards.failures.join(', ')),
+      'storageHealth: draft=' + results.storage.health.hasDraft + ', legacy=' + results.storage.health.legacyDraftCount + ', points=' + results.storage.health.pointCount,
+    ].join('\n');
+  }
+
+  return { runSmokeChecks, report, checkPublicApi, checkValidation, checkCalculation, checkDom, checkRenderGuards, checkRuntimeSafety, checkSourceGuards, checkStorage, checkTransfer, checkSiegeTests, checkState };
+})();
+
+/*
+  Test harness zone
+  Stable browser-facing hooks for local and external smoke runners.
+*/
+const TestHarness = (() => {
+  function run() {
+    const diagnostics = AppDiagnostics.runSmokeChecks({ log: false });
+    return {
+      ok: diagnostics.ok,
+      report: AppDiagnostics.report({ log: false }),
+      specs: SpecCatalog.run(),
+      siege: SiegeTests.run(),
+      state: AppState.snapshot(),
+      storage: Storage.health(),
+    };
+  }
+
+  function sampleExport() {
+    return Transfer.encode(Transfer.snapshot());
+  }
+
+  return { run, sampleExport };
+})();
+
+window.UI = UI;
+window.AppDiagnostics = AppDiagnostics;
+window.CC_TEST_HARNESS = TestHarness;
+window.addEventListener('resize', Render.drawTargetChart);
+try {
+  UI.init();
+  window.CC_BOOT_OK = true;
+} catch (error) {
+  window.CC_BOOT_OK = false;
+  console.error('[CC boot]', error);
+  const errorArea = $(CONFIG.ids.measuredErrorArea);
+  if (errorArea) {
+    errorArea.classList.remove('hidden');
+    errorArea.innerHTML = '<div class="warn-box">起動時チェックで問題が出ました。再読み込みしてください。</div>';
+  }
+}
+</script>
+</body>
+</html>

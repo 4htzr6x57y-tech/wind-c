@@ -1,9 +1,9 @@
 {
   "id": "./winding-calibrator.html",
-  "name": "WINDING CALIBRATOR",
-  "short_name": "WC",
-  "description": "Winding calibration data logger and analyzer.",
-  "start_url": "./winding-calibrator.html",
+  "name": "COIL TOOLS",
+  "short_name": "CoilTools",
+  "description": "Coil design, ECT design, and winding calibration tools.",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0d1117",

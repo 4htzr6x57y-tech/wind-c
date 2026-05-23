@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -564,7 +564,6 @@ body {
   }
 }
 .calc-btn:disabled { transform:none; }
-#tab-cable .calc-btn:hover { transform:none; }
 .calc-btn.loading {
   opacity:.7;
   cursor:wait;
@@ -628,7 +627,6 @@ body {
   flex-direction:column;
 }
 #designSpecSection { order:1; }
-#cableReflectSection { order:4; }
 #noticeSection { order:5; }
 details.section > summary.section-title {
   cursor:pointer;
@@ -1102,8 +1100,6 @@ details.section[open] > summary.section-title::after { content:'▲'; }
 
 <nav class="tabs" aria-label="COIL DESIGNER tabs">
   <button class="tab active" id="tabBtn-coil" type="button" onclick="UI.switchMainTab('coil')"><span class="tab-icon">C</span>コイル設計</button>
-  <button class="tab" id="tabBtn-cable" type="button" onclick="UI.switchMainTab('cable')"><span class="tab-icon">L</span>ケーブル選定</button>
-  <button class="tab" id="tabBtn-measured" type="button" onclick="UI.switchMainTab('measured')"><span class="tab-icon">Z</span>実測逆算</button>
 </nav>
 
 <main class="app">
@@ -1118,7 +1114,7 @@ details.section[open] > summary.section-title::after { content:'▲'; }
     <div class="design-subpanel active" id="designSubtab-config">
       <details class="section" id="ectJsonSection">
         <summary class="section-title" style="margin-bottom:0"><span class="step-badge">ECT</span>ECT JSON読み込み</summary>
-        <div class="section-note" style="margin-top:10px">ECT DESIGNERのJSONを貼り付けると、構成・差動距離・ケーブル推奨を反映します。</div>
+        <div class="section-note" style="margin-top:10px">ECT DESIGNERのJSONを貼り付けると、構成・差動距離・探傷条件を反映します。</div>
         <textarea class="textarea-input" id="ectJsonInput" placeholder='{"mode":"flaw","needDifferential":true,"needExcitation":false}'></textarea>
         <div class="action-row" style="margin-top:8px">
           <button class="calc-btn" type="button" onclick="UI.loadEctJson()">読み込み</button>
@@ -1180,11 +1176,6 @@ details.section[open] > summary.section-title::after { content:'▲'; }
           <div id="designSpecResults"></div>
         </div>
 
-        <div class="section" id="cableReflectSection">
-          <div class="section-title">ケーブルへの反映</div>
-          <button class="calc-btn secondary" type="button" onclick="UI.reflectCableFromDesign()">現在のコイル設計からケーブル選定へ反映</button>
-        </div>
-
         <div class="section" id="noticeSection">
           <div class="section-title">注意メッセージ</div>
           <div id="noticeResults"></div>
@@ -1193,65 +1184,6 @@ details.section[open] > summary.section-title::after { content:'▲'; }
     </div>
 
     <div id="errorArea" class="hidden"></div>
-  </div>
-
-  <div id="tab-measured" class="tab-panel">
-    <section class="section">
-      <div class="compact-help-row">
-        <div class="compact-help" id="measuredModeHelp">試し巻きと実測値から目標巻数を推定します。</div>
-        <button type="button" class="mode-toggle-btn" id="measuredModeToggle" onclick="UI.toggleMeasuredMode()">Z</button>
-      </div>
-      <div class="input-grid">
-        <div class="input-group"><div class="input-label">試し巻き数 N1</div><div class="input-row"><input type="number" id="m-n1" value="50"><span class="input-unit">T</span></div></div>
-        <div class="input-group"><div class="input-label" id="m-z1-label">実測 Z1</div><div class="input-row"><input type="number" id="m-z1" value="25"><span class="input-unit" id="m-z1-unit">Ω</span></div></div>
-        <div class="input-group"><div class="input-label">測定周波数</div><div class="input-row"><input type="number" id="m-f" value="100"><span class="input-unit">kHz</span></div></div>
-        <div class="input-group"><div class="input-label" id="m-zt-label">目標 Z</div><div class="input-row"><input type="number" id="m-zt" value="100"><span class="input-unit" id="m-zt-unit">Ω</span></div></div>
-      </div>
-      <button class="calc-btn" style="margin-top:12px" type="button" onclick="UI.calcMeasured()">実測から逆算</button>
-      <div id="measuredErrorArea" class="hidden"></div>
-      <div id="measuredResults" class="hidden"></div>
-    </section>
-
-    <section class="section">
-      <div class="section-title"><span class="step-badge" id="targetTunerBadge">Z</span><span id="targetTunerTitle">TARGET Z TUNER</span> <small id="targetTunerSubtitle">目標Zチューナー</small></div>
-      <div class="compact-help" id="targetTunerHelp">実測点を追加すると、グラフから目標巻数を推定します。</div>
-      <div class="tuner-entry-grid" style="margin-top:8px">
-        <div class="input-group"><div class="input-label">巻数 N</div><div class="input-row"><input type="number" id="tz-entry-n" min="0" step="1"><span class="input-unit">T</span></div></div>
-        <div class="input-group"><div class="input-label" id="tz-entry-z-label">実測Z</div><div class="input-row"><input type="number" id="tz-entry-z" min="0" step="0.1"><span class="input-unit" id="tz-entry-z-unit">Ω</span></div></div>
-        <button type="button" class="calc-btn" style="margin:0" onclick="UI.addTargetZTunerPoint()">点を追加</button>
-        <button type="button" class="calc-btn secondary" style="margin:0" onclick="UI.clearTargetZTuner()">クリア</button>
-      </div>
-      <div class="tuner-quick-result" id="targetZTunerQuick">点を追加すると推定巻数を表示します。</div>
-      <div class="tuner-canvas-wrap">
-        <canvas id="targetZTunerCanvas"></canvas>
-        <div class="tuner-chart-popover hidden" id="targetZTunerPopover"></div>
-      </div>
-      <div class="tuner-output" id="targetZTunerOutput"></div>
-      <div class="tuner-warning-list" id="targetZTunerWarnings"></div>
-      <div class="tuner-point-list" id="targetZTunerRows"></div>
-    </section>
-  </div>
-
-  <div id="tab-cable" class="tab-panel">
-    <section class="section">
-      <div class="section-title">ケーブル選定</div>
-      <div class="info-box"><strong>初期設計用の簡易評価です。</strong> 最終仕様は実機ノイズ、LCRメータ、使用環境で確認してください。</div>
-      <div class="input-grid">
-        <div class="input-group"><div class="input-label">コイル構成</div><div class="input-row"><select id="cable-config"></select></div></div>
-        <div class="input-group"><div class="input-label">使用周波数</div><div class="input-row"><input type="number" id="cable-freq" value="100" step="10" min="0.001"><span class="input-unit">kHz</span></div></div>
-        <div class="input-group"><div class="input-label">ケーブル長</div><div class="input-row"><input type="number" id="cable-length" value="1.0" step="0.1" min="0.1"><span class="input-unit">m</span></div></div>
-        <div class="input-group"><div class="input-label">使用環境</div><div class="input-row"><select id="cable-env"><option value="normal">通常</option><option value="oil">耐油</option><option value="heat">耐熱</option><option value="flex">高屈曲</option><option value="noise">高ノイズ</option></select></div></div>
-        <div class="input-group full"><div class="input-label">計測器側入力インピーダンス / 負荷目安</div><div class="input-row"><select id="cable-load"><option value="standard">標準</option><option value="highZ">高インピーダンス</option><option value="lowZ">低インピーダンス</option></select></div></div>
-      </div>
-      <div class="action-row" style="margin-top:12px">
-        <button class="calc-btn secondary" type="button" onclick="UI.reflectCableFromDesign()">現在のコイル設計から反映</button>
-        <button class="calc-btn" type="button" onclick="UI.calculateCable()">ケーブル選定を計算</button>
-      </div>
-      <div id="cableErrorArea" class="hidden"></div>
-    </section>
-    <section class="section hidden" id="cableResultArea"><div class="section-title">ケーブル選定結果</div><div id="cableResults"></div></section>
-    <section class="section hidden" id="cableReasonSection"><div class="section-title">理由</div><div id="cableReasons"></div></section>
-    <section class="section hidden" id="cableNoticeSection"><div class="section-title">注意事項</div><div id="cableNotices"></div></section>
   </div>
 </main>
 
@@ -1345,34 +1277,6 @@ const CONFIG = {
     mu0: 4 * Math.PI * 1e-7,
     copperConductivity: 5.8e7,
   },
-  /* ケーブル選定用定数 */
-  cable: {
-    capacitancePfPerM: {
-      coaxial: 100,
-      twistedPairShield: 70,
-      multiCoreShield: 120,
-      twistedPairCompositeMultiCore: 80,
-    },
-    structureLabels: {
-      coaxial: '同軸',
-      twistedPairShield: 'ツイストペア＋シールド',
-      multiCoreShield: 'マルチコアシールド',
-      twistedPairCompositeMultiCore: 'ツイストペア複合マルチコア',
-    },
-    defaultLengthM: 1.0,
-    capacitanceImpactFormula: {
-      freqBaseKHz: 1000,
-      capBasePf: 100,
-      multiplier: 10,
-    },
-    maxRecommendedLengthM: {
-      default: 5,
-      highFrequency: 1,
-      midHighFrequency: 2,
-      midFrequency: 3,
-    },
-    highNoiseLengthFactor: 0.8,
-  },
   /* フェライト補正 */
   ferrite: {
     factors: {
@@ -1419,14 +1323,6 @@ const CONFIG = {
   },
   /* 判定しきい値 */
   thresholds: {
-    cable: {
-      lowImpactPercent: 10,
-      cautionImpactPercent: 30,
-      highFrequencyKHz: 1000,
-      midHighFrequencyKHz: 500,
-      midFrequencyKHz: 100,
-      longCableM: 2,
-    },
     differential: {
       surfaceDepthMm: 0.1,
       shallowDepthMm: 1.0,
@@ -1437,7 +1333,6 @@ const CONFIG = {
   /* 初期値 */
   defaults: {
     frequencyKHz: 100,
-    cableLengthM: 1.0,
     measuredTurns: 50,
     measuredZ: 25,
     measuredTargetZ: 100,
@@ -1535,18 +1430,10 @@ const UI_PUBLIC_API = Object.freeze([
   'updateRolePreviewFromInput',
   'loadEctJson',
   'clearEctJson',
-  'reflectCableFromDesign',
-  'calculateCable',
-  'calcMeasured',
   'exportDesignSpecPdf',
   'exportDesignSpecImage',
   'switchMainTab',
   'switchDesignSubTab',
-  'toggleMeasuredMode',
-  'addTargetZTunerPoint',
-  'deleteTargetZTunerPoint',
-  'clearTargetZTuner',
-  'copyMeasuredToTuner',
   'openStep1Modal',
   'openStep2Modal',
   'closeModal',
@@ -1967,29 +1854,10 @@ const Coil = (() => {
     return { Nt, usedLayers: requiredLayers, calcLayers, coilH, coilW, gap_mm, fill_pct, fits: Nt <= maxTurns };
   }
 
-  function calcMeasuredInverse(N1, V1, Vt, f_Hz, mode = 'z') {
-    if (N1 <= 0 || V1 <= 0 || Vt <= 0 || f_Hz <= 0) return null;
-    const normalizedMode = String(mode || 'z').toLowerCase();
-    if (!['z', 'l'].includes(normalizedMode)) return null;
-    const Nraw = N1 * Math.sqrt(Vt / V1);
-    if (!isFinite(Nraw) || Nraw <= 0) return null;
-    const omega = 2 * Math.PI * f_Hz;
-    const isL = normalizedMode === 'l';
-    const L1_uH = isL ? V1 : (V1 / omega) * 1e6;
-    const Lt_uH = isL ? Vt : (Vt / omega) * 1e6;
-    const Nt = Math.round(Nraw);
-    const Vv = V1 * (Nt / N1) ** 2;
-    const Zv = isL ? omega * Vv / 1e6 : Vv;
-    const Lv_uH = isL ? Vv : (Vv / omega) * 1e6;
-    const err = Math.abs(Vv - Vt) / Vt * 100;
-    return { Nt, Vv, Zv, Lv_uH, err, L1_uH, Lt_uH };
-  }
-
   return ({
     nagaokaK, inductanceCyl_H, inductanceRect_H, impedance_ohm,
     buildLayerTurns,
     calcCylForward, calcCylInverse, calcRectForward, calcRectInverse,
-    calcMeasuredInverse,
   });
 })();
 
@@ -2888,14 +2756,7 @@ const ECTBridge = (() => {
       }
     }
 
-    const recommendedCable = firstPresent([rec, design, data], ['recommendedCable', 'cable']);
-    if (recommendedCable) {
-      AppState.state.ectImport = { ...(AppState.state.ectImport || {}), recommendedCable: String(recommendedCable), raw: data };
-      applied.push('ケーブル初期推奨: ' + recommendedCable);
-    } else {
-      AppState.state.ectImport = { ...(AppState.state.ectImport || {}), raw: data };
-      skipped.push('recommendedCable: JSON内にありません');
-    }
+    AppState.state.ectImport = { ...(AppState.state.ectImport || {}), raw: data };
 
     if (ferriteText) {
       AppState.setInputValue('ectFerriteMemo', String(ferriteText));
@@ -2917,172 +2778,6 @@ const ECTBridge = (() => {
 })();
 
 /*
-  CableSelection zone
-  Owns cable recommendation rules derived from design state and ECT hints.
-  Return reasons/notices for Render; avoid direct DOM writes here.
-*/
-const CableSelection = (() => {
-  const CAP_PF_PER_M = CONFIG.cable.capacitancePfPerM;
-  const STRUCTURE_LABELS = CONFIG.cable.structureLabels;
-  const STRUCTURE_KEY_BY_LABEL = Object.fromEntries(
-    Object.entries(STRUCTURE_LABELS).map(([key, label]) => [label, key])
-  );
-
-  const ENV_LABELS = {
-    normal: '通常',
-    oil: '耐油',
-    heat: '耐熱',
-    flex: '高屈曲',
-    noise: '高ノイズ',
-  };
-
-  const LOAD_LABELS = {
-    standard: '標準',
-    highZ: '高インピーダンス',
-    lowZ: '低インピーダンス',
-  };
-
-  function clamp(value, low, high) {
-    return Math.min(high, Math.max(low, value));
-  }
-
-  function getCableStructureKey(labelOrKey) {
-    return Object.prototype.hasOwnProperty.call(CAP_PF_PER_M, labelOrKey)
-      ? labelOrKey
-      : STRUCTURE_KEY_BY_LABEL[labelOrKey];
-  }
-
-  function getCableStructureLabel(labelOrKey) {
-    const key = getCableStructureKey(labelOrKey);
-    return STRUCTURE_LABELS[key] || labelOrKey;
-  }
-
-  function getCableCapacitance(labelOrKey) {
-    const key = getCableStructureKey(labelOrKey);
-    return CAP_PF_PER_M[key] || CAP_PF_PER_M.coaxial;
-  }
-
-  function configInfo(configValue) {
-    const cfg = CONFIG.coilConfigs.find(item => item.value === configValue) || CONFIG.coilConfigs[0];
-    const map = {
-      single: { cores: '2芯 + シールド', coreCount: 2, note: '検出2芯' },
-      differential: { cores: '4芯（2ペア） + シールド', coreCount: 4, note: '差動A/Bを2ペア' },
-      excitationDetect: { cores: '4芯 + シールド', coreCount: 4, note: '励磁2芯 + 検出2芯' },
-      excitationDifferential: { cores: '6芯 + シールド', coreCount: 6, note: '励磁2芯 + 差動検出4芯' },
-      dualExcitationDetect: { cores: '6芯 + シールド', coreCount: 6, note: '励磁1 2芯 + 励磁2 2芯 + 検出2芯' },
-      dualExcitationDifferential: { cores: '8芯 + シールド', coreCount: 8, note: '励磁1 2芯 + 励磁2 2芯 + 差動検出4芯' },
-    };
-    return { ...cfg, ...(map[configValue] || map.single) };
-  }
-
-  function maxCableLength(freq_kHz, env) {
-    let max = CONFIG.cable.maxRecommendedLengthM.default;
-    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz) max = CONFIG.cable.maxRecommendedLengthM.highFrequency;
-    else if (freq_kHz >= CONFIG.thresholds.cable.midHighFrequencyKHz) max = CONFIG.cable.maxRecommendedLengthM.midHighFrequency;
-    else if (freq_kHz >= CONFIG.thresholds.cable.midFrequencyKHz) max = CONFIG.cable.maxRecommendedLengthM.midFrequency;
-    if (env === 'noise') max *= CONFIG.cable.highNoiseLengthFactor;
-    return max;
-  }
-
-  function chooseStructure(info, freq_kHz, length_m, env) {
-    if (env === 'noise') return STRUCTURE_LABELS.twistedPairCompositeMultiCore;
-    if (info.dual || (info.differential && info.excitation)) return STRUCTURE_LABELS.twistedPairCompositeMultiCore;
-    if (info.differential) return STRUCTURE_LABELS.twistedPairShield;
-    if (info.excitation) return STRUCTURE_LABELS.twistedPairCompositeMultiCore;
-    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz && length_m <= CONFIG.cable.defaultLengthM) return STRUCTURE_LABELS.coaxial;
-    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz) return STRUCTURE_LABELS.twistedPairShield;
-    if (length_m <= 1.5 && env === 'normal') return STRUCTURE_LABELS.multiCoreShield;
-    return STRUCTURE_LABELS.twistedPairShield;
-  }
-
-  function chooseAwg(info, freq_kHz, length_m, env) {
-    if (length_m >= 3 || info.excitation) return 'AWG26';
-    if (env === 'flex') return 'AWG28〜30';
-    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz) return 'AWG28';
-    return 'AWG28';
-  }
-
-  function candidates(structure, env, info) {
-    const items = [];
-    const structureKey = getCableStructureKey(structure);
-    if (structureKey === 'coaxial') items.push('モガミ 2929', '相当低容量同軸');
-    if (structureKey === 'twistedPairShield') items.push('モガミ 2929', '協和ハーモネット KRTSW 系', '相当品');
-    if (structureKey === 'multiCoreShield') items.push('モガミ 2930', 'タツタ PCPVV-SW 系', '相当品');
-    if (structureKey === 'twistedPairCompositeMultiCore') items.push('モガミ 2930', '協和ハーモネット KRTSW 系', 'タツタ PCPVV-SW 系', '相当品');
-    if (env === 'oil') items.push('耐油シース相当品');
-    if (env === 'heat') items.push('耐熱シース相当品');
-    if (env === 'flex') items.push('高屈曲ロボットケーブル相当品');
-    if (info.coreCount >= 6 && !items.includes('モガミ 2930')) items.unshift('モガミ 2930');
-    return [...new Set(items)].join(' / ');
-  }
-
-  function capJudge(percent) {
-    if (percent <= CONFIG.thresholds.cable.lowImpactPercent) return '影響小';
-    if (percent <= CONFIG.thresholds.cable.cautionImpactPercent) return '注意';
-    return '要注意';
-  }
-
-  function calculate(params) {
-    const configValue = params.config || AppState.state.config;
-    const info = configInfo(configValue);
-    const freq_kHz = Number(params.freq_kHz);
-    const length_m = Number(params.length_m);
-    const env = params.env || 'normal';
-    const load = params.load || 'standard';
-    if (!Number.isFinite(freq_kHz) || freq_kHz <= 0) throw Error('使用周波数は0より大きい値を入力してください。');
-    if (!Number.isFinite(length_m) || length_m <= 0) throw Error('ケーブル長さは0より大きい値を入力してください。');
-
-    const structure = getCableStructureLabel(chooseStructure(info, freq_kHz, length_m, env));
-    const baseCap = getCableCapacitance(structure);
-    const totalCap = baseCap * length_m;
-    const capFormula = CONFIG.cable.capacitanceImpactFormula;
-    const capImpactPercent = clamp((freq_kHz / capFormula.freqBaseKHz) * (totalCap / capFormula.capBasePf) * capFormula.multiplier, 0, 100);
-    const maxLength = maxCableLength(freq_kHz, env);
-    const recommendedCable = AppState.state.ectImport?.recommendedCable || '';
-    const ground = env === 'noise'
-      ? '基本は計測器側1点接地。高ノイズ時のみ両側接地またはコンデンサ接地を実機確認。'
-      : '計測器側1点接地';
-    const reasons = [
-      info.label + 'は ' + info.note + ' のため、必要芯数は ' + info.cores + ' を目安にします。',
-      info.differential ? '差動A/Bの容量バランスを優先し、ペア構造とシールドを推奨します。' : '差動なしのため、検出線はノイズ影響を受けやすい前提で評価します。',
-      info.excitation ? '励磁線と検出線は別ペアにして、誘導結合と信号漏れを抑えます。' : '励磁線が無い構成なので、検出線のシールド基準を明確にします。',
-      ENV_LABELS[env] + '環境、' + LOAD_LABELS[load] + '負荷として簡易評価しました。',
-    ];
-    if (recommendedCable) reasons.push('ECT DESIGNER推奨: ' + recommendedCable + ' を初期候補に含めて確認してください。');
-    if (freq_kHz >= CONFIG.thresholds.cable.highFrequencyKHz) reasons.push('1000kHz以上のため、短尺・低容量タイプを優先します。');
-    if (length_m >= CONFIG.thresholds.cable.longCableM) reasons.push('2m以上のため、静電容量の影響を強めに見ます。');
-
-    const notices = [
-      '差動A/Bは同じケーブル長、同じペア構造で容量バランスを合わせてください。',
-      '励磁線と検出線は可能な限り別ペアに分けてください。',
-      '樹脂筐体ではシールド基準点を計測器側へ寄せてください。',
-      '長尺ケーブルでは容量増加で高周波特性が落ちます。',
-      '最終確認は実機・LCRメータ・ノイズ確認で行ってください。',
-    ];
-    if (!info.differential) notices.push('差動なしの検出線はノイズに弱いため、配線経路とシールド接地を慎重に確認してください。');
-    if (length_m > maxLength) notices.push('入力ケーブル長が最大推奨長を超えています。短縮または低容量ケーブルを検討してください。');
-    if (capImpactPercent > CONFIG.thresholds.cable.cautionImpactPercent) notices.push('静電容量影響が大きいため、周波数低下・短尺化・低容量ケーブルを検討してください。');
-
-    return {
-      configLabel: info.label,
-      awg: chooseAwg(info, freq_kHz, length_m, env),
-      cores: info.cores,
-      structure,
-      candidates: candidates(structure, env, info),
-      capImpactPercent,
-      capJudge: capJudge(capImpactPercent),
-      totalCap,
-      maxLength,
-      ground,
-      reasons,
-      notices,
-    };
-  }
-
-  return ({ calculate, configInfo, ENV_LABELS, LOAD_LABELS });
-})();
-
-/*
   Render DOM zone
   Owns HTML generation, event-driven rerenders, previews, and visible error messages.
   Keep formulas in Calculation and expose only handlers listed in UI_PUBLIC_API.
@@ -3094,7 +2789,6 @@ const Render = (() => {
   let renderAllScheduled = false;
   let roleInputsScheduled = false;
   let couplingScheduled = false;
-  let cableScheduled = false;
   let probeStyleScheduled = false;
   let resultRenderDirty = true;
   let detectResultDirty = true;
@@ -3926,27 +3620,6 @@ const Render = (() => {
     return items;
   }
 
-  function cableSpecItems() {
-    try {
-      const cable = CableSelection.calculate({
-        config: state.config,
-        freq_kHz: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
-        length_m: Number(getInputValue('cable-length', CONFIG.cable.defaultLengthM)),
-        env: getInputValue('cable-env', 'normal'),
-        load: getInputValue('cable-load', 'standard'),
-      });
-      return [
-        '推奨構造：<strong>' + cable.structure + '</strong>',
-        '推奨AWG：<strong>' + cable.awg + '</strong>',
-        '必要芯数：<strong>' + cable.cores + '</strong>',
-        '最大推奨長：<strong>' + format(cable.maxLength, 1) + 'm</strong>',
-        '接地：<strong>' + cable.ground + '</strong>',
-      ];
-    } catch (error) {
-      return ['ケーブル候補：<strong>ケーブル選定タブで条件を確認してください</strong>'];
-    }
-  }
-
   function hasSpecValue(value) {
     return value !== undefined && value !== null && value !== '' &&
       !(Array.isArray(value) && value.length === 0);
@@ -4139,43 +3812,6 @@ const Render = (() => {
     return '励磁仕様';
   }
 
-  function cableRecommendationSummary() {
-    try {
-      const cable = CableSelection.calculate({
-        config: state.config,
-        freq_kHz: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
-        length_m: Number(getInputValue('cable-length', CONFIG.cable.defaultLengthM)),
-        env: getInputValue('cable-env', 'normal'),
-        load: getInputValue('cable-load', 'standard'),
-      });
-      return cable.structure + ' / ' + cable.cores + ' / ' + cable.awg;
-    } catch (error) {
-      return 'ケーブル選定タブで確認';
-    }
-  }
-
-  function cableFinalItems() {
-    try {
-      const cable = CableSelection.calculate({
-        config: state.config,
-        freq_kHz: readRenderNumber('freq', CONFIG.defaults.frequencyKHz),
-        length_m: Number(getInputValue('cable-length', CONFIG.cable.defaultLengthM)),
-        env: getInputValue('cable-env', 'normal'),
-        load: getInputValue('cable-load', 'standard'),
-      });
-      return [
-        specLine('推奨ケーブル構成', cable.structure),
-        specLine('必要芯数', cable.cores),
-        specLine('推奨AWG', cable.awg),
-        specLine('最大推奨長', format(cable.maxLength, 1) + ' m'),
-        specLine('ケーブル候補', cable.candidates),
-        specListLine('注意点', cable.notices.slice(0, 4)),
-      ];
-    } catch (error) {
-      return [specLine('ケーブル', 'ケーブル条件を確認してください', { tone: 'warn' })];
-    }
-  }
-
   function differentialDistanceFinalItems(result) {
     if (!AppState.isDifferential()) return [specLine('\u5dee\u52d5\u6709\u7121', '\u306a\u3057')];
     if (AppState.isCross()) return [];
@@ -4216,12 +3852,9 @@ const Render = (() => {
     const warnings = [
       '過結合: 励磁距離が近すぎる場合は励磁-検出距離を広げ、直接結合を確認してください。',
       '漏れ磁束: 励磁線と検出線は可能な限り別ペア配線にし、シールド接地を測定器側へ寄せてください。',
-      'Q低下: フェライト・長尺ケーブル・線径過大でQが下がる可能性があります。実測Zと位相を確認してください。',
+      'Q低下: フェライト・長い配線・線径過大でQが下がる可能性があります。実測Zと位相を確認してください。',
     ];
     const freq = readRenderNumber('freq', CONFIG.defaults.frequencyKHz);
-    if (freq >= CONFIG.thresholds.cable.highFrequencyKHz) {
-      warnings.push('高周波注意: 配線容量、治具容量、ケーブル長の影響が大きくなります。短尺・低容量を優先してください。');
-    }
     const estimatedWarnings = safeWarnings(result.estimated);
     const differentialWarnings = safeWarnings(result.differential);
     warnings.push(...estimatedWarnings);
@@ -4266,8 +3899,7 @@ const Render = (() => {
       '周波数：<strong>' + roleFrequencyText() + '</strong>',
       '検出：<strong>' + coilTypeText(state.roles.detect.type) + '</strong>',
       '励磁：<strong>' + (excitationRole ? (AppState.hasDualExcitation() ? '共通×2 / ' : '') + coilTypeText(state.roles[excitationRole].type) : 'なし') + '</strong>',
-      '差動：<strong>' + yesNo(cfg.differential) + '</strong>',
-      '推奨ケーブル：<strong>' + cableRecommendationSummary() + '</strong>'
+      '差動：<strong>' + yesNo(cfg.differential) + '</strong>'
     );
 
     items.push(
@@ -4307,7 +3939,6 @@ const Render = (() => {
     }
 
     items.push(specSubhead('励磁距離'), ...excitationDistanceFinalItems(result));
-    items.push(specSubhead('ケーブル候補'), ...cableFinalItems());
     items.push(specSubhead('注意事項'), ...finalWarningTextItems(result).slice(0, 6));
     setHtml('designSpecResults', '<div class="spec-view">' + specBlock('完成仕様プレビュー', items, { single: true }) + '</div>');
   }
@@ -4465,45 +4096,6 @@ const Render = (() => {
     if (tab === 'result') renderResultTab(lastDesignResult, true);
   }
 
-  function renderMeasuredResult(inverse, mode = 'z') {
-    const isL = mode === 'l';
-    clearError('measuredErrorArea');
-    $('measuredResults')?.classList.remove('hidden');
-    setHtml('measuredResults',
-      '<ul class="compact-result-list">' +
-      '<li>目標巻数: <strong>' + formatInt(inverse.Nt) + ' T</strong></li>' +
-      (isL
-        ? '<li>確認L: <strong>' + format(inverse.Lv_uH, 3) + ' uH</strong></li>'
-        : '<li>確認Z: <strong>' + format(inverse.Zv, 1) + ' Ω</strong></li>') +
-      (isL ? '<li>確認Z換算: <strong>' + format(inverse.Zv, 1) + ' Ω</strong></li>' : '') +
-      '<li>実測L1: <strong>' + format(inverse.L1_uH, 3) + ' uH</strong></li>' +
-      '<li>目標L: <strong>' + format(inverse.Lt_uH, 3) + ' uH</strong></li>' +
-      '</ul>'
-    );
-  }
-
-  function renderCableControls() {
-    const configEl = $('cable-config');
-    if (configEl) {
-      const current = getInputValue('cable-config', state.config);
-      configEl.innerHTML = CONFIG.coilConfigs.map(option =>
-        '<option value="' + option.value + '"' + (current === option.value ? ' selected' : '') + '>' + option.label + '</option>'
-      ).join('');
-      configEl.onchange = () => AppState.setInputValue('cable-config', configEl.value);
-    }
-    const freqEl = $('cable-freq');
-    if (freqEl) {
-      if (!state.inputs['cable-freq']) freqEl.value = getInputValue('freq', CONFIG.defaults.frequencyKHz);
-      freqEl.oninput = () => AppState.setInputValue('cable-freq', freqEl.value);
-    }
-    const lengthEl = $('cable-length');
-    if (lengthEl) lengthEl.oninput = () => AppState.setInputValue('cable-length', lengthEl.value);
-    const envEl = $('cable-env');
-    if (envEl) envEl.onchange = () => AppState.setInputValue('cable-env', envEl.value);
-    const loadEl = $('cable-load');
-    if (loadEl) loadEl.onchange = () => AppState.setInputValue('cable-load', loadEl.value);
-  }
-
   function renderEctImportStatus(result) {
     const target = $('ectJsonStatus');
     if (!target) return;
@@ -4518,33 +4110,6 @@ const Render = (() => {
     target.innerHTML = result.ok
       ? '<strong>読み込み成功</strong><br>反映した項目<br>' + applied + '<br><br>反映できなかった項目<br>' + skipped
       : '<strong>読み込み失敗</strong><br>' + result.message;
-  }
-
-  function renderCableResult(result) {
-    clearError('cableErrorArea');
-    $('cableResultArea')?.classList.remove('hidden');
-    $('cableReasonSection')?.classList.remove('hidden');
-    $('cableNoticeSection')?.classList.remove('hidden');
-    const impactClass = result.capImpactPercent >= CONFIG.thresholds.cable.cautionImpactPercent
-      ? 'text-bad'
-      : result.capImpactPercent > CONFIG.thresholds.cable.lowImpactPercent ? 'text-warn' : 'text-good';
-    const lengthClass = result.maxLength < 1.5 ? 'text-warn' : 'text-good';
-    const lines = [
-      previewLine('推奨AWG', result.awg),
-      previewLine('必要芯数', result.cores),
-      previewLine('推奨構造', result.structure),
-      previewLine('型番候補', result.candidates, 'text-muted'),
-      previewSeparator(),
-      previewLine('静電容量影響', format(result.capImpactPercent, 1) + ' %', impactClass),
-      previewLine('容量判定', result.capJudge, impactClass),
-      previewLine('総容量目安', format(result.totalCap, 0) + ' pF', 'text-muted'),
-      previewLine('最大推奨長', format(result.maxLength, 1) + ' m', lengthClass),
-      previewSeparator(),
-      previewLine('シールド接地', result.ground, 'text-muted'),
-    ];
-    setHtml('cableResults', '<div class="live-preview">' + previewHtml('ケーブル選定プレビュー', lines) + '</div>');
-    setHtml('cableReasons', list(result.reasons));
-    setHtml('cableNotices', '<div class="warn-box">' + result.notices.map(item => '- ' + item).join('<br>') + '</div>');
   }
 
   function previewNumber(id, fallback) {
@@ -5011,15 +4576,6 @@ const Render = (() => {
     });
   }
 
-  function scheduleRenderCable(reason = '') {
-    if (cableScheduled) return;
-    cableScheduled = true;
-    scheduleFrame(() => {
-      cableScheduled = false;
-      renderCableControls();
-    });
-  }
-
   function disableNumberWheel() {
     document.querySelectorAll('input[type="number"]').forEach(input => {
       if (input.dataset.wheelGuard === 'true') return;
@@ -5048,7 +4604,7 @@ const Render = (() => {
         1. Probe/config/type controls: later sections read their current selected state.
         2. Role inputs and details binding: these replace DOM nodes, so handlers must be rebound.
         3. Number-wheel binding: must run after input DOM replacement.
-        4. Role previews, coupling, and cable controls: depend on role inputs existing.
+        4. Role previews and coupling: depend on role inputs existing.
         5. Empty/result visibility: keeps first-load UI from showing stale result cards.
         6. Subtab visibility, errors, and result refresh: last so stale lastDesignResult is rejected.
     */
@@ -5063,7 +4619,6 @@ const Render = (() => {
     disableNumberWheel();
     scheduleRolePreviews(AppState.activeRoles());
     renderCouplingInputs();
-    renderCableControls();
     if (!lastDesignResult) {
       $('resultArea')?.classList.add('hidden');
       $('detectEstimateSection')?.classList.add('hidden');
@@ -5118,7 +4673,6 @@ const Render = (() => {
   }
 
   let measuredMode = 'z';
-  let targetZTunerPoints = [];
 
   /*
     Public UI handlers zone
@@ -5181,11 +4735,10 @@ const Render = (() => {
   }
 
   function switchMainTab(tab) {
-    ['coil', 'cable', 'measured'].forEach(name => {
+    ['coil'].forEach(name => {
       $('tab-' + name)?.classList.toggle('active', name === tab);
       $('tabBtn-' + name)?.classList.toggle('active', name === tab);
     });
-    if (tab === 'cable') renderCableControls();
   }
 
   function switchDesignSubTab(tab) {
@@ -5234,112 +4787,6 @@ const Render = (() => {
     renderAll();
   }
 
-  function reflectCableFromDesign() {
-    AppState.setInputValue('cable-config', state.config);
-    AppState.setInputValue('cable-freq', getInputValue('freq', CONFIG.defaults.frequencyKHz));
-    renderCableControls();
-    switchMainTab('cable');
-  }
-
-  function calculateCable() {
-    try {
-      const result = CableSelection.calculate({
-        config: getInputValue('cable-config', state.config),
-        freq_kHz: Number(getInputValue('cable-freq', CONFIG.defaults.frequencyKHz)),
-        length_m: Number(getInputValue('cable-length', CONFIG.cable.defaultLengthM)),
-        env: getInputValue('cable-env', 'normal'),
-        load: getInputValue('cable-load', 'standard'),
-      });
-      renderCableResult(result);
-    } catch (error) {
-      showError(error.message || 'ケーブル選定を計算できませんでした。', 'cableErrorArea');
-    }
-  }
-
-  function toggleMeasuredMode() {
-    measuredMode = measuredMode === 'z' ? 'l' : 'z';
-    const isL = measuredMode === 'l';
-    if ($('measuredModeToggle')) $('measuredModeToggle').textContent = isL ? 'L' : 'Z';
-    if ($('m-z1-label')) $('m-z1-label').textContent = isL ? '実測 L1' : '実測 Z1';
-    if ($('m-z1-unit')) $('m-z1-unit').textContent = isL ? 'uH' : 'Ω';
-    if ($('m-zt-label')) $('m-zt-label').textContent = isL ? '目標 L' : '目標 Z';
-    if ($('m-zt-unit')) $('m-zt-unit').textContent = isL ? 'uH' : 'Ω';
-  }
-
-  function calcMeasured() {
-    const n1 = Number($('m-n1')?.value);
-    const v1 = Number($('m-z1')?.value);
-    const vt = Number($('m-zt')?.value);
-    const fHz = Number($('m-f')?.value) * 1000;
-    const inverse = Coil.calcMeasuredInverse(n1, v1, vt, fHz, measuredMode);
-    if (!inverse) {
-      showError('実測逆算の入力値を確認してください。', 'measuredErrorArea');
-      return;
-    }
-    renderMeasuredResult(inverse, measuredMode);
-  }
-
-  function renderTargetZTuner() {
-    setHtml('targetZTunerRows', targetZTunerPoints.map((point, index) =>
-      '<div class="tuner-point-item"><div class="tuner-point-main">' + point.n + 'T / ' + point.z + '</div>' +
-      '<button class="tuner-delete-btn" type="button" onclick="UI.deleteTargetZTunerPoint(' + index + ')">削除</button></div>'
-    ).join(''));
-    if (targetZTunerPoints.length < 2) {
-      setHtml('targetZTunerOutput', '');
-      setHtml('targetZTunerWarnings', '');
-      setHtml('targetZTunerQuick', '点を追加すると推定巻数を表示します。');
-      return;
-    }
-    const target = Number($('m-zt')?.value);
-    if (!Number.isFinite(target) || target <= 0) {
-      setHtml('targetZTunerOutput', '');
-      setHtml('targetZTunerWarnings', '<div class="warn-box">目標値を0より大きい値で入力してください。</div>');
-      setHtml('targetZTunerQuick', '目標値を入力すると推定巻数を表示します。');
-      return;
-    }
-    const sorted = [...targetZTunerPoints].sort((a, b) => a.z - b.z);
-    let estimated = null;
-    for (let i = 1; i < sorted.length; i += 1) {
-      if (target >= sorted[i - 1].z && target <= sorted[i].z) {
-        const ratio = (target - sorted[i - 1].z) / (sorted[i].z - sorted[i - 1].z || 1);
-        estimated = sorted[i - 1].n + (sorted[i].n - sorted[i - 1].n) * ratio;
-        break;
-      }
-    }
-    if (!Number.isFinite(estimated)) {
-      const last = sorted[sorted.length - 1];
-      estimated = last.n * Math.sqrt(target / last.z);
-    }
-    setHtml('targetZTunerQuick', '<strong>' + format(estimated, 1) + ' T</strong>');
-    setHtml('targetZTunerOutput', '<div class="info-box">目標値からの推定巻数: <strong>' + format(estimated, 1) + ' T</strong></div>');
-  }
-
-  function addTargetZTunerPoint() {
-    const n = Number($('tz-entry-n')?.value);
-    const z = Number($('tz-entry-z')?.value);
-    if (!Number.isFinite(n) || n <= 0 || !Number.isFinite(z) || z <= 0) {
-      setHtml('targetZTunerWarnings', '<div class="warn-box">巻数と実測値を入力してください。</div>');
-      return;
-    }
-    targetZTunerPoints.push({ n, z });
-    renderTargetZTuner();
-  }
-
-  function deleteTargetZTunerPoint(index) {
-    targetZTunerPoints.splice(index, 1);
-    renderTargetZTuner();
-  }
-
-  function clearTargetZTuner() {
-    targetZTunerPoints = [];
-    renderTargetZTuner();
-  }
-
-  function copyMeasuredToTuner() {
-    if ($('tz-entry-n') && $('m-n1')) $('tz-entry-n').value = $('m-n1').value;
-    if ($('tz-entry-z') && $('m-z1')) $('tz-entry-z').value = $('m-z1').value;
-  }
-
   function exportDesignSpecPdf() {
     window.print();
   }
@@ -5355,12 +4802,11 @@ const Render = (() => {
     UI_PUBLIC_API is the diagnostics source of truth for this returned object.
     HTML/static handlers:
       switchMainTab, switchDesignSubTab, loadEctJson, clearEctJson, openStep1Modal,
-      exportDesignSpecPdf, exportDesignSpecImage, reflectCableFromDesign, toggleMeasuredMode,
-      calcMeasured, addTargetZTunerPoint, clearTargetZTuner, calculateCable, closeModal,
+      exportDesignSpecPdf, exportDesignSpecImage, closeModal,
       backToStep1, finishStep2.
     Rendered handlers:
       pick, pickRole, toggleTurnMode, saveInputValue, pickGlobalFerriteMaterial,
-      updateRolePreviewFromInput, deleteTargetZTunerPoint, copyMeasuredToTuner, openStep2Modal.
+      updateRolePreviewFromInput, openStep2Modal.
   */
   return ({
     format,
@@ -5373,18 +4819,10 @@ const Render = (() => {
     updateRolePreviewFromInput,
     loadEctJson,
     clearEctJson,
-    reflectCableFromDesign,
-    calculateCable,
-    calcMeasured,
     exportDesignSpecPdf,
     exportDesignSpecImage,
     switchMainTab,
     switchDesignSubTab,
-    toggleMeasuredMode,
-    addTargetZTunerPoint,
-    deleteTargetZTunerPoint,
-    clearTargetZTuner,
-    copyMeasuredToTuner,
     openStep1Modal,
     openStep2Modal,
     closeModal,
@@ -5418,7 +4856,7 @@ const CD_SOURCE_TEXT = document.currentScript?.textContent || '';
     AppDiagnostics.prunePlan("markdown");
     AppDiagnostics.coach("render button tab", "markdown");
     AppDiagnostics.brief("render");
-    AppDiagnostics.route("ケーブル選定の表示を直す");
+    AppDiagnostics.route("結果表示を直す");
     AppDiagnostics.map("markdown");
     AppDiagnostics.afterEdit("render");
     AppDiagnostics.runDiagnostics({ preset: "full", log: true });
@@ -5670,7 +5108,6 @@ const AppDiagnostics = (() => {
       'AppState zone',
       'Calculation zone',
       'ECTBridge zone',
-      'CableSelection zone',
       'Render DOM zone',
       'Public UI handlers zone',
       'Diagnostics zone',
@@ -5776,43 +5213,8 @@ const AppDiagnostics = (() => {
     ['config', 'detect', 'excitation', 'result'].forEach(tab => UI.switchDesignSubTab(tab));
     check(document.getElementById('designSubtab-result')?.classList.contains('active'), 'Result tab did not activate');
 
-    ['cable', 'measured', 'coil'].forEach(tab => UI.switchMainTab(tab));
+    ['coil'].forEach(tab => UI.switchMainTab(tab));
     check(document.getElementById('tab-coil')?.classList.contains('active'), 'Main coil tab did not reactivate');
-
-    UI.reflectCableFromDesign();
-    check(document.getElementById('tab-cable')?.classList.contains('active'), 'Cable tab did not activate from reflect');
-    setValue('cable-freq', '100');
-    setValue('cable-length', '1');
-    UI.calculateCable();
-    check(!document.getElementById('cableResultArea')?.classList.contains('hidden'), 'Cable result area did not render');
-    check(document.getElementById('cableResults')?.innerHTML, 'Cable results are empty');
-
-    UI.switchMainTab('measured');
-    const beforeMode = document.getElementById('measuredModeToggle')?.textContent;
-    UI.toggleMeasuredMode();
-    check(document.getElementById('measuredModeToggle')?.textContent !== beforeMode, 'Measured mode did not toggle');
-    UI.toggleMeasuredMode();
-    setValue('m-n1', '50');
-    setValue('m-z1', '25');
-    setValue('m-f', '100');
-    setValue('m-zt', '100');
-    UI.calcMeasured();
-    check(!document.getElementById('measuredResults')?.classList.contains('hidden'), 'Measured result area did not render');
-
-    const nInput = document.getElementById('tz-entry-n');
-    const zInput = document.getElementById('tz-entry-z');
-    const targetInput = document.getElementById('m-zt');
-    if (nInput && zInput && targetInput) {
-      targetInput.value = '';
-      nInput.value = '10';
-      zInput.value = '20';
-      UI.addTargetZTunerPoint();
-      nInput.value = '20';
-      zInput.value = '80';
-      UI.addTargetZTunerPoint();
-      check(document.getElementById('targetZTunerWarnings')?.innerHTML, 'Target Z tuner did not warn for missing target');
-      UI.clearTargetZTuner();
-    }
 
     const ectInput = document.getElementById('ectJsonInput');
     if (ectInput) {
@@ -6487,3 +5889,9 @@ UI.init();
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
+
+
+
+
+
+

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0d1117"/>
+  <rect x="56" y="56" width="400" height="400" rx="72" fill="#161b22" stroke="#30363d" stroke-width="10"/>
+  <path d="M118 266c38-74 80-112 124-112 35 0 59 21 73 63 10 31 25 47 44 47 17 0 33-11 49-34" fill="none" stroke="#58a6ff" stroke-width="28" stroke-linecap="round"/>
+  <path d="M118 330h276" stroke="#3fb950" stroke-width="24" stroke-linecap="round"/>
+  <circle cx="178" cy="200" r="22" fill="#e3b341"/>
+  <circle cx="342" cy="300" r="22" fill="#3fb950"/>
+  <text x="256" y="406" text-anchor="middle" font-family="Arial, sans-serif" font-size="78" font-weight="800" fill="#e6edf3">CC</text>
+</svg>

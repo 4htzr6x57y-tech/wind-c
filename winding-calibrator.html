@@ -975,6 +975,24 @@ tr:last-child td { border-bottom:0; }
 (() => {
   'use strict';
 
+  /*
+    WC growth map
+    1. Keep user records recoverable before changing behavior.
+    2. Prefer small edits inside the narrowest zone below.
+    3. Run WcDiagnostics.workbench(scopeText) before uncertain edits.
+    4. Run WcDiagnostics.afterEdit(scope) after storage, data, import/export, or render edits.
+
+    Zones:
+    - CONFIG zone: constants, field lists, labels, CSV aliases.
+    - AppState zone: records, drafts, render caches, current tab.
+    - Calculation zone: pure-ish record math and quality helpers.
+    - Storage zone: localStorage, IndexedDB, backups, drafts, restore candidates.
+    - Render DOM zone: table, config, preview, and status rendering.
+    - Public UI handlers zone: user actions and event binding.
+    - Diagnostics zone: edit navigation and read-only checks.
+  */
+
+  /* CONFIG zone */
   const STORAGE_KEY = 'windingCalibrator.records.v1';
   const BACKUP_STORAGE_KEY = 'windingCalibrator.records.backup.latest';
   const OLD_BACKUP_STORAGE_KEY = 'windingCalibrator.records.backup.latest.v1';
@@ -1154,6 +1172,8 @@ tr:last-child td { border-bottom:0; }
     Object.fromEntries(Object.entries(csvHeaderAliases).map(([key, value]) => [normalizeCsvHeader(key), value])),
     csvHeaderAliasExtras
   );
+
+  /* AppState zone */
   let records = [];
   let db = null;
   let lastSaveAt = null;
@@ -1178,6 +1198,7 @@ tr:last-child td { border-bottom:0; }
   let currentTab = 'data';
   const MU0 = 4 * Math.PI * 1e-7;
 
+  /* Shared helper zone */
   const $ = id => document.getElementById(id);
   const round = (value, digits = 4) => Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
   const fmt = (value, digits = 4) => Number.isFinite(value) ? String(round(value, digits)) : '-';
@@ -1226,6 +1247,7 @@ tr:last-child td { border-bottom:0; }
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
   }[ch]));
 
+  /* Calculation zone */
   function calculate(record) {
     const wireBase = record.coveredDia || record.wireDia;
     const theoryOneLayerTurns = hasPositiveFinite(record.oneLayerTurns)
@@ -1549,6 +1571,7 @@ tr:last-child td { border-bottom:0; }
     });
   }
 
+  /* Storage zone */
   function setStorageMessage(message, className = '') {
     storageMessage = message;
     storageMessageClass = className;
@@ -2017,6 +2040,7 @@ tr:last-child td { border-bottom:0; }
     };
   }
 
+  /* Render DOM zone */
   function renderSummaryTable(el, rows, firstLabel) {
     if (!rows.length) {
       el.innerHTML = '<div class="empty">データなし</div>';
@@ -2457,6 +2481,7 @@ tr:last-child td { border-bottom:0; }
     return true;
   }
 
+  /* Public UI handlers zone */
   async function addRecord() {
     const rec = readForm();
     const errors = validate(rec);
@@ -3040,6 +3065,1120 @@ tr:last-child td { border-bottom:0; }
     updatePreview();
     bindEvents();
   }
+
+  /*
+    Diagnostics zone
+    Read-only helpers for future edits. These checks report risks and proposals;
+    they do not rewrite saved records, localStorage, IndexedDB, or DOM state.
+  */
+  const WcDiagnostics = (() => {
+    const CHECKS = {
+      edit: ['ui', 'source', 'data', 'self'],
+      quick: ['ui', 'source', 'data', 'calculation', 'self'],
+      storage: ['storage', 'data', 'self'],
+      data: ['data', 'calculation', 'importExport', 'self'],
+      flow: ['ui', 'flow', 'importExport', 'self'],
+      full: ['ui', 'source', 'storage', 'data', 'calculation', 'flow', 'importExport', 'self']
+    };
+    const CHANGE_SCOPES = {
+      edit: {
+        preset: 'quick',
+        keywords: ['edit', 'change', 'touch', 'modify'],
+        zones: ['Narrowest matching zone'],
+        anchors: ['WC growth map', 'WcDiagnostics'],
+        steps: ['Route the request first', 'Keep behavior changes small', 'Run afterEdit for the chosen scope']
+      },
+      config: {
+        preset: 'data',
+        keywords: ['config', 'field', 'label', 'csv', 'alias', 'material', 'coil type'],
+        zones: ['CONFIG zone'],
+        anchors: ['const fields', 'const numericFields', 'const csvHeaderAliases', 'configCode'],
+        steps: ['Keep schema lists aligned', 'Check CSV aliases', 'Verify config output']
+      },
+      storage: {
+        preset: 'storage',
+        keywords: ['save', 'storage', 'backup', 'restore', 'localStorage', 'IndexedDB', 'draft', 'delete'],
+        zones: ['Storage zone'],
+        anchors: ['save', 'loadRecords', 'collectRestoreCandidates', 'restoreRecordsFromList'],
+        steps: ['Never auto-fix user records', 'Verify backup candidates', 'Check duplicate ids and save counts']
+      },
+      data: {
+        preset: 'data',
+        keywords: ['record', 'schema', 'quality', 'warning', 'phase', 'correction', 'calculate'],
+        zones: ['Calculation zone', 'CONFIG zone'],
+        anchors: ['normalizeRecord', 'serializeRecord', 'recordQuality', 'calculate'],
+        steps: ['Normalize through normalizeRecord', 'Keep derived fields serializable', 'Check calculation smoke cases']
+      },
+      render: {
+        preset: 'flow',
+        keywords: ['render', 'table', 'tab', 'filter', 'preview', 'status', 'button', 'ui'],
+        zones: ['Render DOM zone', 'Public UI handlers zone'],
+        anchors: ['renderDataTable', 'renderConfigTab', 'switchTab', 'bindEvents'],
+        steps: ['Check required DOM ids', 'Keep render cache keys in sync', 'Smoke test tab switching']
+      },
+      importExport: {
+        preset: 'data',
+        keywords: ['import', 'export', 'json', 'csv', 'copy', 'paste'],
+        zones: ['Storage zone', 'Public UI handlers zone'],
+        anchors: ['jsonExportText', 'parseRecordsFromJsonText', 'importCsv', 'copyConfig'],
+        steps: ['Round-trip through parsers', 'Keep restore as explicit user action', 'Report warnings instead of rewriting data']
+      },
+      diagnostics: {
+        preset: 'edit',
+        keywords: ['diagnostic', 'check', 'guide', 'workbench', 'budget'],
+        zones: ['Diagnostics zone'],
+        anchors: ['const WcDiagnostics', 'runDiagnostics', 'report'],
+        steps: ['Keep helpers read-only', 'Prefer route/guide over new public methods', 'Run self checks']
+      }
+    };
+    const CHECK_LABELS = {
+      ui: 'DOM and public UI',
+      source: 'Source zones',
+      storage: 'Storage and recovery',
+      data: 'Record data integrity',
+      calculation: 'Calculation smoke',
+      flow: 'User flow hooks',
+      importExport: 'Import/export roundtrip',
+      self: 'Diagnostics self-tests'
+    };
+    const CHECK_PRIORITY = {
+      storage: 1,
+      data: 2,
+      importExport: 3,
+      ui: 4,
+      flow: 4,
+      calculation: 5,
+      source: 6,
+      self: 7
+    };
+    const BUDGETS = {
+      maxPublicApi: 18,
+      maxScopes: 8,
+      maxSelfTests: 20,
+      maxSourceWarnings: 8
+    };
+    const MODE_GUIDANCE = {
+      'protect-data': {
+        read: ['Storage zone', 'snapshot markdown', 'triage report'],
+        avoid: ['save-path edits', 'record rewriting', 'bulk import changes'],
+        verify: 'WcDiagnostics.triage("storage", "markdown")'
+      },
+      'inspect-storage': {
+        read: ['collectRestoreCandidates', 'storageProfile', 'backup counts'],
+        avoid: ['automatic restore', 'implicit dedupe'],
+        verify: 'WcDiagnostics.runDiagnostics({ preset: "storage", log: true })'
+      },
+      'dedupe-records': {
+        read: ['duplicate ids', 'normalizeRecord', 'serializeRecord'],
+        avoid: ['saving before duplicate ids are understood'],
+        verify: 'WcDiagnostics.afterEdit("storage")'
+      },
+      'smoke-ui': {
+        read: ['Render DOM zone', 'Public UI handlers zone', 'flow check'],
+        avoid: ['changing storage while debugging render'],
+        verify: 'WcDiagnostics.runDiagnostics({ preset: "flow", log: true })'
+      },
+      'roundtrip-io': {
+        read: ['parseRecordsFromJsonText', 'parseCsv', 'jsonExportText'],
+        avoid: ['parser shortcuts that skip normalization'],
+        verify: 'WcDiagnostics.runDiagnostics({ preset: "data", log: true })'
+      },
+      'schema-first': {
+        read: ['CONFIG zone', 'normalizeRecord', 'recordQuality'],
+        avoid: ['DOM-first fixes for schema warnings'],
+        verify: 'WcDiagnostics.runDiagnostics({ preset: "data", log: true })'
+      },
+      'normal-edit': {
+        read: ['route result', 'smallest matching zone'],
+        avoid: ['new public helpers unless they remove repeated work'],
+        verify: 'WcDiagnostics.afterEdit(scope)'
+      }
+    };
+
+    function readSource() {
+      return [...document.querySelectorAll('script')].map(script => script.textContent || '').join('\n');
+    }
+
+    function countMatches(text, pattern) {
+      return ((text || '').match(pattern) || []).length;
+    }
+
+    function addFailure(list, message, detail) {
+      list.push(detail ? message + ': ' + detail : message);
+    }
+
+    function duplicateIds(list) {
+      const seen = new Set();
+      const duplicates = new Set();
+      list.forEach(record => {
+        if (!record || !record.id) return;
+        if (seen.has(record.id)) duplicates.add(record.id);
+        seen.add(record.id);
+      });
+      return [...duplicates];
+    }
+
+    function readCurrentStorageLists() {
+      const keys = [
+        STORAGE_KEY,
+        BACKUP_STORAGE_KEY,
+        OLD_BACKUP_STORAGE_KEY,
+        PREVIOUS_BACKUP_STORAGE_KEY,
+        BEFORE_RESTORE_BACKUP_STORAGE_KEY,
+        EDIT_DRAFT_STORAGE_KEY,
+        FORM_DRAFT_STORAGE_KEY
+      ];
+      return keys.map(key => ({
+        key,
+        count: readLocalStorageRecordList(key).length,
+        raw: (() => {
+          try { return localStorage.getItem(key); } catch { return null; }
+        })()
+      }));
+    }
+
+    function riskLevel(weight) {
+      if (weight >= 5) return 'critical';
+      if (weight >= 3) return 'high';
+      if (weight >= 1) return 'watch';
+      return 'ok';
+    }
+
+    function stabilityNotes(storage, data) {
+      const notes = [];
+      if (storage.invalidJsonKeys.length === 0) notes.push('storage-json-readable');
+      if (!storage.countMismatch) notes.push('memory-storage-count-aligned');
+      if (!storage.duplicateIds.length && !data.duplicateIds.length) notes.push('ids-unique');
+      if (!storage.exportBehind) notes.push('backup-fresh-enough');
+      if (data.records === 0 || data.correctionReady <= data.records) notes.push('correction-count-sane');
+      return notes;
+    }
+
+    function storageProfile() {
+      const lists = readCurrentStorageLists();
+      const main = lists.find(item => item.key === STORAGE_KEY);
+      const latest = lists.find(item => item.key === BACKUP_STORAGE_KEY);
+      const nonEmpty = lists.filter(item => item.raw);
+      const invalid = [];
+      nonEmpty.forEach(item => {
+        try { JSON.parse(item.raw); } catch { invalid.push(item.key); }
+      });
+      const duplicateIdsList = duplicateIds(records);
+      const exportBehind = records.length > 0 && lastExportCount() < records.length;
+      const countMismatch = records.length > 0 && main && main.count !== records.length;
+      const riskWeight =
+        invalid.length * 3 +
+        duplicateIdsList.length * 3 +
+        (countMismatch ? 2 : 0) +
+        (exportBehind ? 1 : 0) +
+        (records.length > 0 && !latest?.count ? 1 : 0);
+      const restorePosture = invalid.length || countMismatch
+        ? 'inspect-before-save'
+        : duplicateIdsList.length
+          ? 'dedupe-before-save'
+          : exportBehind
+            ? 'export-recommended'
+            : 'normal';
+      return {
+        memoryRecords: records.length,
+        localMainCount: main?.count || 0,
+        backupLatestCount: latest?.count || 0,
+        nonEmptyStorageKeys: nonEmpty.length,
+        invalidJsonKeys: invalid,
+        duplicateIds: duplicateIdsList,
+        lastSaveOk: !!lastSaveCheck?.ok,
+        lastExportCount: lastExportCount(),
+        exportBehind,
+        countMismatch,
+        riskWeight,
+        riskLevel: riskLevel(riskWeight),
+        restorePosture
+      };
+    }
+
+    function dataProfile() {
+      const quality = records.reduce((acc, record) => {
+        const q = recordQuality(normalizeRecord(record));
+        acc[q.quality] = (acc[q.quality] || 0) + 1;
+        return acc;
+      }, {});
+      const duplicateIdsList = duplicateIds(records);
+      const riskWeight = duplicateIdsList.length * 3 + warningCount();
+      return {
+        records: records.length,
+        correctionReady: correctionReadyCount(),
+        warnings: warningCount(),
+        duplicateIds: duplicateIdsList,
+        quality,
+        fieldCount: fields.length,
+        numericFieldCount: numericFields.size,
+        riskWeight,
+        riskLevel: riskLevel(riskWeight)
+      };
+    }
+
+    function checkUi() {
+      const failures = [];
+      const warnings = [];
+      const requiredIds = [
+        'addBtn', 'clearFormBtn', 'cancelEditBtn', 'exportJsonBtn', 'importJsonBtn',
+        'copyJsonBtn', 'copyConfigBtn', 'dataTable', 'configOutput', 'storageStatus',
+        'dataQualityFilter', 'dataStatusFilter', 'dataFerriteFilter', 'dataFrequencyFilter'
+      ];
+      requiredIds.forEach(id => {
+        if (!$(id)) addFailure(failures, 'missing DOM id', id);
+      });
+      ['data', 'config'].forEach(tab => {
+        if (!document.querySelector('[data-tab="' + tab + '"]')) addFailure(failures, 'missing tab button', tab);
+        if (!document.querySelector('[data-tab-panel="' + tab + '"]')) addFailure(failures, 'missing tab panel', tab);
+      });
+      const handlerCount = countMatches(readSource(), /\.addEventListener\(/g);
+      if (handlerCount > 36) warnings.push('event listener count is ' + handlerCount + '; consider grouping only if edits become noisy');
+      return {
+        ok: failures.length === 0,
+        failures,
+        warnings,
+        metrics: {
+          requiredDomIds: requiredIds.length,
+          tabButtons: document.querySelectorAll('[data-tab]').length,
+          tabPanels: document.querySelectorAll('[data-tab-panel]').length,
+          eventListeners: handlerCount
+        }
+      };
+    }
+
+    function checkSource() {
+      const failures = [];
+      const warnings = [];
+      const source = readSource();
+      [
+        'WC growth map',
+        'CONFIG zone',
+        'AppState zone',
+        'Calculation zone',
+        'Storage zone',
+        'Render DOM zone',
+        'Public UI handlers zone',
+        'Diagnostics zone'
+      ].forEach(marker => {
+        if (!source.includes(marker)) addFailure(failures, 'zone marker missing', marker);
+      });
+      if (!/window\.WcDiagnostics\s*=\s*WcDiagnostics/.test(source)) addFailure(failures, 'window.WcDiagnostics export missing');
+      if (countMatches(source, /localStorage\./g) > 55) warnings.push('localStorage touchpoints are broad; keep future edits near Storage zone');
+      if (countMatches(source, /confirm\(/g) < 2) warnings.push('destructive flow confirmations look fewer than expected');
+      return {
+        ok: failures.length === 0,
+        failures,
+        warnings,
+        metrics: {
+          functionCount: countMatches(source, /\bfunction\s+[A-Za-z0-9_]+\s*\(/g),
+          constCount: countMatches(source, /\bconst\s+[A-Za-z0-9_]+\s*=/g),
+          localStorageTouches: countMatches(source, /localStorage\./g),
+          indexedDbTouches: countMatches(source, /\bindexedDB\b|\bIndexedDB\b/g)
+        }
+      };
+    }
+
+    function checkStorage() {
+      const failures = [];
+      const warnings = [];
+      const proposals = [];
+      let lists = [];
+      let profile = null;
+      try {
+        lists = readCurrentStorageLists();
+        profile = storageProfile();
+      } catch (error) {
+        addFailure(failures, 'storage read failed', error.message || String(error));
+      }
+      const currentDuplicates = duplicateIds(records);
+      if (currentDuplicates.length) {
+        addFailure(failures, 'duplicate ids in memory', currentDuplicates.join(', '));
+        proposals.push('Proposal: keep the first record id and suffix later duplicate ids before the next explicit save.');
+      }
+      lists.forEach(item => {
+        if (!item.raw) return;
+        try {
+          JSON.parse(item.raw);
+        } catch {
+          addFailure(failures, 'invalid JSON in localStorage', item.key);
+          proposals.push('Proposal: inspect backup candidates before deleting or replacing ' + item.key + '.');
+        }
+      });
+      if (records.length && lastSaveCheck && lastSaveCheck.localCount !== null && lastSaveCheck.localCount !== records.length) {
+        warnings.push('localStorage count differs from memory: memory=' + records.length + ', local=' + lastSaveCheck.localCount);
+      }
+      if (profile?.exportBehind) warnings.push('JSON export/copy count is behind current records');
+      if (profile?.countMismatch) warnings.push('storage main count differs from memory snapshot');
+      if (profile?.invalidJsonKeys.length) proposals.push('Proposal: run WcDiagnostics.snapshot("markdown") before choosing a restore source.');
+      if (profile?.restorePosture === 'inspect-before-save') proposals.push('Proposal: inspect restore candidates before the next save.');
+      if (profile?.restorePosture === 'export-recommended') proposals.push('Proposal: export or copy JSON before larger edits.');
+      return {
+        ok: failures.length === 0,
+        failures,
+        warnings,
+        proposals,
+        metrics: {
+          records: records.length,
+          localLists: lists.filter(item => item.raw).length,
+          localMainCount: lists.find(item => item.key === STORAGE_KEY)?.count || 0,
+          backupLatestCount: lists.find(item => item.key === BACKUP_STORAGE_KEY)?.count || 0,
+          duplicateIds: currentDuplicates.length,
+          lastExportCount: lastExportCount(),
+          storageInvalidJsonKeys: profile?.invalidJsonKeys.length || 0,
+          storageNonEmptyKeys: profile?.nonEmptyStorageKeys || 0,
+          storageRiskWeight: profile?.riskWeight || 0,
+          storageRiskLevel: profile?.riskLevel || 'ok'
+        }
+      };
+    }
+
+    function checkData() {
+      const failures = [];
+      const warnings = [];
+      const proposals = [];
+      const requiredFields = ['wireDia', 'totalTurns', 'windingLength', 'frequency', 'measuredZ'];
+      const sample = normalizeRecord({
+        wireDia: '0.2',
+        totalTurns: '100',
+        oneLayerTurns: '50',
+        layers: '2',
+        bobbinShape: 'round',
+        bobbinInnerDia: '4',
+        bobbinOuterDia: '8',
+        windingLength: '10',
+        frequency: '100',
+        measuredZ: '12',
+        phaseDeg: '82',
+        coilType: 'air',
+        ferriteMaterial: 'none',
+        memo: 'diagnostic'
+      });
+      requiredFields.forEach(key => {
+        if (!fields.includes(key)) addFailure(failures, 'required field missing from fields list', key);
+      });
+      numericFields.forEach(key => {
+        if (!fields.includes(key) && key !== 'coveredDia') addFailure(failures, 'numeric field not present in fields list', key);
+      });
+      records.forEach((record, index) => {
+        const normalized = normalizeRecord(record);
+        validate(normalized).forEach(error => {
+          warnings.push('record ' + (record.id || index) + ' validation warning: ' + error);
+        });
+        if (!record.id) addFailure(failures, 'record without id at index', String(index));
+      });
+      const duplicates = duplicateIds(records);
+      if (duplicates.length) {
+        addFailure(failures, 'duplicate record ids', duplicates.join(', '));
+        proposals.push('Proposal: duplicateRecord should generate a fresh id before saving duplicated rows.');
+      }
+      const serialized = serializeRecord(sample);
+      if (!Number.isFinite(serialized.frequency_kHz)) addFailure(failures, 'sample frequency_kHz is not finite');
+      const profile = dataProfile();
+      return {
+        ok: failures.length === 0,
+        failures,
+        warnings,
+        proposals,
+        metrics: {
+          fieldCount: profile.fieldCount,
+          numericFieldCount: profile.numericFieldCount,
+          records: profile.records,
+          correctionReady: profile.correctionReady,
+          warningCount: profile.warnings,
+          dataDuplicateIds: profile.duplicateIds.length,
+          dataRiskWeight: profile.riskWeight,
+          dataRiskLevel: profile.riskLevel
+        }
+      };
+    }
+
+    function checkCalculation() {
+      const failures = [];
+      const warnings = [];
+      const sample = normalizeRecord({
+        wireDia: 0.2,
+        totalTurns: 100,
+        oneLayerTurns: 50,
+        layers: 2,
+        bobbinShape: 'round',
+        bobbinInnerDia: 4,
+        bobbinOuterDia: 8,
+        windingLength: 10,
+        frequency: 100,
+        measuredZ: 12,
+        phaseDeg: 82,
+        coilType: 'air',
+        ferriteMaterial: 'none'
+      });
+      const calc = calculate(sample);
+      const parts = calculateImpedanceParts(sample);
+      if (!(calc.windingFactor > 0.9 && calc.windingFactor < 1.1)) addFailure(failures, 'unexpected sample windingFactor', String(calc.windingFactor));
+      if (!Number.isFinite(parts.rOhm) || !Number.isFinite(parts.xOhm) || !Number.isFinite(parts.lUh)) addFailure(failures, 'sample impedance parts not finite');
+      if (phaseQuality(sample).key !== 'ok') warnings.push('sample phase quality is not ok');
+      return {
+        ok: failures.length === 0,
+        failures,
+        warnings,
+        metrics: {
+          sampleWindingFactor: calc.windingFactor,
+          sampleLUh: parts.lUh
+        }
+      };
+    }
+
+    function checkFlow() {
+      const failures = [];
+      const warnings = [];
+      const previousTab = currentTab;
+      try {
+        switchTab('config');
+        if (currentTab !== 'config') addFailure(failures, 'switchTab did not activate config');
+        if ($('tab-config')?.classList.contains('hidden')) addFailure(failures, 'config panel remains hidden');
+        switchTab('data');
+        if (currentTab !== 'data') addFailure(failures, 'switchTab did not return to data');
+      } finally {
+        switchTab(previousTab || 'data');
+      }
+      if (!$('dataTable')?.textContent && records.length) warnings.push('dataTable text is empty while records exist');
+      return {
+        ok: failures.length === 0,
+        failures,
+        warnings,
+        metrics: {
+          currentTab,
+          dataRows: $('dataTable')?.querySelectorAll('tbody tr').length || 0,
+          filters: ['dataQualityFilter','dataStatusFilter','dataFerriteFilter','dataFrequencyFilter'].filter(id => !!$(id)).length
+        }
+      };
+    }
+
+    function checkImportExport() {
+      const failures = [];
+      const warnings = [];
+      const sample = normalizeRecord({
+        wireDia: 0.25,
+        totalTurns: 80,
+        oneLayerTurns: 40,
+        layers: 2,
+        bobbinShape: 'round',
+        bobbinInnerDia: 5,
+        bobbinOuterDia: 9,
+        windingLength: 12,
+        frequency: 120,
+        measuredZ: 15,
+        phaseDeg: 81,
+        coilType: 'air',
+        ferriteMaterial: 'none'
+      });
+      const payload = JSON.stringify({ records: [serializeRecord(sample)] });
+      const parsed = parseRecordsFromJsonText(payload);
+      if (parsed.length !== 1) addFailure(failures, 'JSON roundtrip record count mismatch');
+      if (!Number.isFinite(parsed[0]?.frequency_kHz)) addFailure(failures, 'JSON roundtrip lost frequency_kHz');
+      const csvRows = parseCsv('wireDia,totalTurns,windingLength,frequency,measuredZ\n0.2,100,10,100,12');
+      if (csvRows.length !== 2 || csvRows[1].length !== 5) addFailure(failures, 'CSV parser smoke mismatch');
+      if (!configCode().includes('CONFIG.windingCorrection')) warnings.push('configCode output missing expected assignment text');
+      return {
+        ok: failures.length === 0,
+        failures,
+        warnings,
+        metrics: {
+          jsonRoundtripRecords: parsed.length,
+          csvRows: csvRows.length,
+          configOutputChars: configCode().length
+        }
+      };
+    }
+
+    function checkSelf() {
+      const failures = [];
+      const tests = [
+        ['route storage', () => route('backup restore localStorage').scope === 'storage'],
+        ['route importExport', () => route('CSV JSON export').scope === 'importExport'],
+        ['guide returns preset', () => guide('data').preset === 'data'],
+        ['snapshot returns records', () => Number.isFinite(snapshot().data.records)],
+        ['snapshot returns mode notes', () => Array.isArray(snapshot().risk.stabilityNotes)],
+        ['coach returns mode', () => typeof coach('storage').mode === 'string'],
+        ['coach returns guidance', () => Array.isArray(coach('storage').guidance.read)],
+        ['recommend returns risk', () => ['ok','watch','high','critical'].includes(recommend('storage').risk)],
+        ['recommend returns guidance', () => Array.isArray(recommend('storage').guidance.avoid)],
+        ['workbench returns resume mode', () => typeof workbench('storage').resume.mode === 'string'],
+        ['handoff returns mode', () => handoff('storage').includes('mode=')],
+        ['afterEdit returns mode', () => typeof afterEdit('diagnostics', { checks:['source'] }).mode === 'string'],
+        ['runDiagnostics returns triage', () => runDiagnostics({ checks:['source'] }).triageItems.length > 0],
+        ['report returns triage count', () => report(runDiagnostics({ checks:['source'] })).includes('Triage items')],
+        ['runDiagnostics returns digest', () => Array.isArray(runDiagnostics({ checks:['source'] }).digest.byCheck)],
+        ['report returns top check', () => report(runDiagnostics({ checks:['source'] })).includes('Top check')],
+        ['runDiagnostics returns mode', () => typeof runDiagnostics({ checks:['source'] }).mode === 'string'],
+        ['report returns mode', () => report(runDiagnostics({ checks:['source'] })).includes('Mode')],
+        ['triage returns items', () => triage({ ok:false, preset:'storage', selectedChecks:['storage'], failures:[{ check:'storage', label:'Storage', message:'fake' }], warnings:[], metrics:{}, results:{} }).items.length > 0],
+        ['report returns title', () => report({ ok:true, preset:'edit', selectedChecks:['self'], failures:[], warnings:[], metrics:{}, nextSteps:[] }).startsWith('# WC Diagnostics Report')]
+      ];
+      tests.forEach(([name, run]) => {
+        try {
+          if (!run()) addFailure(failures, 'self-test failed', name);
+        } catch (error) {
+          addFailure(failures, 'self-test threw ' + name, error.message || String(error));
+        }
+      });
+      return {
+        ok: failures.length === 0,
+        failures,
+        warnings: [],
+        metrics: { selfTests: tests.length }
+      };
+    }
+
+    const CHECK_RUNNERS = {
+      ui: checkUi,
+      source: checkSource,
+      storage: checkStorage,
+      data: checkData,
+      calculation: checkCalculation,
+      flow: checkFlow,
+      importExport: checkImportExport,
+      self: checkSelf
+    };
+
+    function mergeMetrics(results) {
+      return Object.values(results).reduce((metrics, result) => Object.assign(metrics, result.metrics || {}), {});
+    }
+
+    function mergeProposals(results) {
+      const proposals = [];
+      Object.entries(results).forEach(([check, result]) => {
+        (result.proposals || []).forEach(message => {
+          if (!proposals.some(item => item.message === message)) {
+            proposals.push({ check, label: CHECK_LABELS[check], message });
+          }
+        });
+      });
+      return proposals;
+    }
+
+    function nextSteps(summary) {
+      const steps = [];
+      const add = (id, title, detail) => {
+        if (!steps.some(step => step.id === id)) steps.push({ id, title, detail });
+      };
+      summary.failures.forEach(item => {
+        if (item.check === 'storage') add('inspect-storage', 'Inspect storage candidates', 'Use proposals only; do not rewrite saved records automatically.');
+        if (item.check === 'data') add('inspect-data', 'Inspect record schema', 'Check normalizeRecord, serializeRecord, fields, and duplicate ids.');
+        if (item.check === 'ui' || item.check === 'flow') add('smoke-ui', 'Smoke test WC UI', 'Open the page, switch tabs, and verify the data table/config output render.');
+        if (item.check === 'source') add('read-zones', 'Read zone markers', 'Place the next edit in the narrowest WC zone.');
+      });
+      if (!steps.length) add('keep-small', 'Keep next edit small', 'Route the request, edit the narrowest zone, then run the matching preset.');
+      return steps;
+    }
+
+    function issueDigest(summary) {
+      const checks = {};
+      const bump = (item, type) => {
+        const key = item.check || 'unknown';
+        if (!checks[key]) {
+          checks[key] = {
+            check: key,
+            label: item.label || CHECK_LABELS[key] || key,
+            priority: CHECK_PRIORITY[key] || 99,
+            failures: 0,
+            warnings: 0
+          };
+        }
+        checks[key][type] += 1;
+      };
+      (summary.failures || []).forEach(item => bump(item, 'failures'));
+      (summary.warnings || []).forEach(item => bump(item, 'warnings'));
+      const byCheck = Object.values(checks).sort((a, b) =>
+        a.priority - b.priority || b.failures - a.failures || b.warnings - a.warnings || a.check.localeCompare(b.check)
+      );
+      const top = byCheck[0] || null;
+      return {
+        topCheck: top ? top.check : null,
+        topLabel: top ? top.label : null,
+        byCheck,
+        failureCount: (summary.failures || []).length,
+        warningCount: (summary.warnings || []).length
+      };
+    }
+
+    function operatingMode(snap, digest = null) {
+      if (snap.risk.level === 'critical') return 'protect-data';
+      if (snap.risk.posture === 'inspect-before-save') return 'inspect-storage';
+      if (snap.risk.posture === 'dedupe-before-save') return 'dedupe-records';
+      if (digest?.topCheck === 'ui' || digest?.topCheck === 'flow') return 'smoke-ui';
+      if (digest?.topCheck === 'importExport') return 'roundtrip-io';
+      if (digest?.topCheck === 'data') return 'schema-first';
+      return 'normal-edit';
+    }
+
+    function guidanceForMode(mode) {
+      return MODE_GUIDANCE[mode] || MODE_GUIDANCE['normal-edit'];
+    }
+
+    function summarizeRun(summary) {
+      const snap = snapshot();
+      const triageResult = triage(summary);
+      const digest = issueDigest(summary);
+      return {
+        ...summary,
+        risk: snap.risk.level,
+        posture: snap.risk.posture,
+        mode: operatingMode(snap, digest),
+        digest,
+        triageItems: triageResult.items,
+        snapshot: snap
+      };
+    }
+
+    function resumeCard(scope, preset, summary = null) {
+      const snap = summary?.snapshot || snapshot();
+      const digest = summary?.digest || null;
+      const mode = operatingMode(snap, digest);
+      return {
+        scope,
+        preset,
+        risk: snap.risk.level,
+        posture: snap.risk.posture,
+        mode,
+        topCheck: digest?.topLabel || 'none',
+        guidance: guidanceForMode(mode),
+        nextCommand: 'WcDiagnostics.afterEdit("' + scope + '")'
+      };
+    }
+
+    function runDiagnostics(options = {}) {
+      const preset = CHECKS[options.preset] ? options.preset : 'quick';
+      const selectedChecks = options.checks || CHECKS[preset];
+      const results = {};
+      const failures = [];
+      const warnings = [];
+      selectedChecks.forEach(check => {
+        const runner = CHECK_RUNNERS[check];
+        if (!runner) return;
+        try {
+          const result = runner();
+          results[check] = result;
+          (result.failures || []).forEach(message => failures.push({ check, label: CHECK_LABELS[check], message }));
+          (result.warnings || []).forEach(message => warnings.push({ check, label: CHECK_LABELS[check], message }));
+        } catch (error) {
+          const message = error.message || String(error);
+          results[check] = { ok:false, failures:[message], warnings:[], metrics:{} };
+          failures.push({ check, label: CHECK_LABELS[check], message });
+        }
+      });
+      const summary = {
+        ok: failures.length === 0,
+        preset,
+        selectedChecks: [...selectedChecks],
+        failures,
+        warnings,
+        proposals: mergeProposals(results),
+        metrics: mergeMetrics(results),
+        results
+      };
+      summary.nextSteps = nextSteps(summary);
+      Object.assign(summary, summarizeRun(summary));
+      summary.explanation = explain(summary);
+      if (options.log) console.log(summary.explanation, summary);
+      return summary;
+    }
+
+    function route(text = '') {
+      const input = String(text || '').toLowerCase();
+      const ranked = Object.entries(CHANGE_SCOPES).map(([scope, plan]) => ({
+        scope,
+        matchWeight: plan.keywords.reduce((weight, keyword) => weight + (input.includes(String(keyword).toLowerCase()) ? 1 : 0), 0),
+        plan
+      })).sort((a, b) => b.matchWeight - a.matchWeight);
+      const best = ranked[0]?.matchWeight > 0 ? ranked[0] : { scope:'edit', plan:CHANGE_SCOPES.edit, matchWeight:0 };
+      return {
+        scope: best.scope,
+        preset: best.plan.preset,
+        confidence: best.matchWeight > 1 ? 'high' : best.matchWeight === 1 ? 'medium' : 'low',
+        zones: [...best.plan.zones],
+        anchors: [...best.plan.anchors]
+      };
+    }
+
+    function guide(scopeOrText = 'edit') {
+      const scoped = CHANGE_SCOPES[scopeOrText] ? { scope:scopeOrText, preset:CHANGE_SCOPES[scopeOrText].preset } : route(scopeOrText);
+      const plan = CHANGE_SCOPES[scoped.scope] || CHANGE_SCOPES.edit;
+      return {
+        scope: scoped.scope,
+        preset: plan.preset,
+        zones: [...plan.zones],
+        anchors: [...plan.anchors],
+        steps: [...plan.steps],
+        commands: [
+          'WcDiagnostics.guide("' + scoped.scope + '")',
+          'WcDiagnostics.runDiagnostics({ preset: "' + plan.preset + '", log: true })',
+          'WcDiagnostics.afterEdit("' + scoped.scope + '")'
+        ]
+      };
+    }
+
+    function workbench(text = '', options = {}) {
+      const routed = route(text);
+      const g = guide(routed.scope);
+      const summary = options.run ? runDiagnostics({ preset:g.preset }) : null;
+      const resume = resumeCard(routed.scope, g.preset, summary);
+      return {
+        request: text,
+        scope: routed.scope,
+        confidence: routed.confidence,
+        guide: g,
+        resume,
+        readFirst: g.anchors,
+        searchFirst: g.anchors.concat(CHANGE_SCOPES[routed.scope].keywords),
+        runWhenReady: 'WcDiagnostics.runDiagnostics({ preset: "' + g.preset + '", log: true })',
+        summary
+      };
+    }
+
+    function brief(scopeOrText = 'edit') {
+      const g = guide(scopeOrText);
+      return [
+        'scope=' + g.scope,
+        'preset=' + g.preset,
+        'zones=' + g.zones.join(' | '),
+        'anchors=' + g.anchors.join(' | ')
+      ].join('\n');
+    }
+
+    function coach(text = '', format = 'object') {
+      const wb = workbench(text);
+      const snap = snapshot();
+      const guidance = guidanceForMode(wb.resume.mode);
+      const steps = [
+        { phase:'preflight', detail:'Mode ' + wb.resume.mode + ', risk ' + snap.risk.level + ', posture ' + snap.risk.posture },
+        { phase:'read', detail:'Read ' + guidance.read.concat(wb.readFirst).slice(0, 6).join(', ') },
+        { phase:'search', detail:'Search ' + wb.searchFirst.slice(0, 6).join(', ') },
+        { phase:'edit', detail:snap.risk.level === 'critical' ? 'Pause save-path edits until storage is inspected' : 'Avoid ' + guidance.avoid.join(', ') },
+        { phase:'verify', detail:guidance.verify || wb.runWhenReady },
+        { phase:'finish', detail:'WcDiagnostics.afterEdit("' + wb.scope + '")' }
+      ];
+      if (format !== 'markdown') return { scope:wb.scope, preset:wb.guide.preset, mode:wb.resume.mode, risk:snap.risk.level, posture:snap.risk.posture, guidance, steps };
+      return ['# WC Edit Coach', '- Scope: ' + wb.scope, '- Preset: ' + wb.guide.preset, '- Mode: ' + wb.resume.mode, '- Risk: ' + snap.risk.level, '- Posture: ' + snap.risk.posture]
+        .concat(steps.map(step => '- ' + step.phase + ': ' + step.detail))
+        .join('\n');
+    }
+
+    function recommend(text = '') {
+      const wb = workbench(text);
+      const b = budget();
+      const snap = snapshot();
+      const helper = snap.risk.level === 'critical'
+        ? 'triage'
+        : wb.scope === 'storage'
+        ? 'afterEdit'
+        : wb.scope === 'diagnostics'
+          ? 'budget'
+          : wb.scope === 'edit'
+            ? 'workbench'
+            : 'guide';
+      const command = helper === 'afterEdit'
+        ? 'WcDiagnostics.afterEdit("' + wb.scope + '")'
+        : helper === 'triage'
+          ? 'WcDiagnostics.triage("' + text + '", "markdown")'
+        : helper === 'budget'
+          ? 'WcDiagnostics.budget("markdown")'
+          : helper === 'workbench'
+            ? 'WcDiagnostics.workbench("' + text + '")'
+            : 'WcDiagnostics.guide("' + wb.scope + '")';
+      return {
+        helper,
+        command,
+        scope: wb.scope,
+        preset: wb.guide.preset,
+        confidence: wb.confidence,
+        mode: wb.resume.mode,
+        risk: snap.risk.level,
+        posture: snap.risk.posture,
+        guidance: guidanceForMode(wb.resume.mode),
+        budgetOk: b.ok,
+        budgetWarnings: b.warnings,
+        why: snap.risk.level === 'critical'
+          ? 'WC storage risk is critical; triage before editing.'
+          : 'WC edits should start from route/guide, then verify with the smallest matching preset.'
+      };
+    }
+
+    function snapshot(format = 'object') {
+      const storage = storageProfile();
+      const data = dataProfile();
+      const source = checkSource();
+      const overallRiskWeight = Math.max(storage.riskWeight, data.riskWeight);
+      const notes = stabilityNotes(storage, data);
+      const snap = {
+        storage,
+        data,
+        risk: {
+          weight: overallRiskWeight,
+          level: riskLevel(overallRiskWeight),
+          posture: storage.restorePosture,
+          stabilityNotes: notes
+        },
+        source: source.metrics,
+        ui: {
+          currentTab,
+          tabButtons: document.querySelectorAll('[data-tab]').length,
+          tabPanels: document.querySelectorAll('[data-tab-panel]').length
+        },
+        budget: budget()
+      };
+      if (format !== 'markdown') return snap;
+      return [
+        '# WC Snapshot',
+        '- Risk: ' + snap.risk.level,
+        '- Restore posture: ' + snap.risk.posture,
+        '- Stability notes: ' + (snap.risk.stabilityNotes.length ? snap.risk.stabilityNotes.join(', ') : 'none'),
+        '- Records: ' + data.records,
+        '- Correction ready: ' + data.correctionReady,
+        '- Data warnings: ' + data.warnings,
+        '- Duplicate ids: ' + data.duplicateIds.length,
+        '- Storage main/latest: ' + storage.localMainCount + '/' + storage.backupLatestCount,
+        '- Storage keys: ' + storage.nonEmptyStorageKeys,
+        '- Invalid storage JSON: ' + (storage.invalidJsonKeys.length ? storage.invalidJsonKeys.join(', ') : 'none'),
+        '- Export behind: ' + (storage.exportBehind ? 'yes' : 'no'),
+        '- Budget: ' + (snap.budget.ok ? 'OK' : 'WARN')
+      ].join('\n');
+    }
+
+    function triage(input = '', format = 'object') {
+      const summary = typeof input === 'object' && input?.selectedChecks ? input : runDiagnostics({ preset: route(input).preset });
+      const snap = snapshot();
+      const items = [];
+      const add = (priority, title, detail) => {
+        if (!items.some(item => item.title === title)) items.push({ priority, title, detail });
+      };
+      if (snap.risk.level === 'critical') add(0, 'Freeze saves', 'Inspect snapshot and restore candidates before any save path.');
+      if (snap.storage.restorePosture === 'dedupe-before-save') add(1, 'Dedupe records', 'Resolve duplicate ids before the next explicit save.');
+      if (snap.storage.restorePosture === 'export-recommended') add(2, 'Fresh JSON backup', 'Export or copy JSON before larger edits.');
+      summary.failures.forEach(item => {
+        if (item.check === 'storage') add(1, 'Storage first', 'Inspect backups and duplicate ids before changing data.');
+        if (item.check === 'data') add(2, 'Data schema', 'Review normalizeRecord, serializeRecord, fields, and numericFields.');
+        if (item.check === 'importExport') add(3, 'Roundtrip', 'Check JSON/CSV parsers with a single known record.');
+        if (item.check === 'ui' || item.check === 'flow') add(4, 'UI flow', 'Smoke test tabs, table render, and config output.');
+      });
+      if (summary.warnings.some(item => item.check === 'storage')) add(5, 'Backup freshness', 'Ask for JSON export/copy when records outpace backups.');
+      if (!items.length) add(9, 'No urgent triage', 'Use coach() and the smallest matching preset for the next edit.');
+      items.sort((a, b) => a.priority - b.priority);
+      if (format !== 'markdown') return { ok: summary.ok, preset: summary.preset, items };
+      return ['# WC Triage', '- Status: ' + (summary.ok ? 'OK' : 'FAIL'), '- Preset: ' + summary.preset, '- Risk: ' + snap.risk.level, '- Posture: ' + snap.risk.posture]
+        .concat(items.map(item => '- P' + item.priority + ' ' + item.title + ': ' + item.detail))
+        .join('\n');
+    }
+
+    function handoff(text = '') {
+      const wb = workbench(text);
+      const inv = inventory();
+      const guidance = guidanceForMode(wb.resume.mode);
+      return [
+        'WC handoff',
+        'request=' + String(text || 'unspecified'),
+        'scope=' + wb.scope,
+        'preset=' + wb.guide.preset,
+        'mode=' + wb.resume.mode,
+        'risk=' + wb.resume.risk,
+        'topCheck=' + wb.resume.topCheck,
+        'modeRead=' + guidance.read.join(' | '),
+        'modeAvoid=' + guidance.avoid.join(' | '),
+        'read=' + wb.readFirst.join(' | '),
+        'verify=' + (guidance.verify || wb.runWhenReady),
+        'records=' + records.length,
+        'snapshot=WcDiagnostics.snapshot("markdown")',
+        'triage=WcDiagnostics.triage("' + wb.scope + '", "markdown")',
+        'diagnostics=' + inv.checks.length + ' checks / ' + inv.presets.length + ' presets'
+      ].join('\n');
+    }
+
+    function afterEdit(scopeOrText = 'edit', options = {}) {
+      const g = guide(scopeOrText);
+      const summary = runDiagnostics({ ...options, preset: options.preset || g.preset });
+      return {
+        scope: g.scope,
+        preset: summary.preset,
+        ok: summary.ok,
+        risk: summary.risk,
+        mode: summary.mode,
+        summary,
+        snapshot: summary.snapshot,
+        triage: { ok: summary.ok, preset: summary.preset, items: summary.triageItems },
+        report: report(summary)
+      };
+    }
+
+    function inventory(format = 'object') {
+      const data = {
+        presets: Object.keys(CHECKS),
+        checks: Object.keys(CHECK_RUNNERS),
+        scopes: Object.keys(CHANGE_SCOPES),
+        publicApi: [
+          'runDiagnostics', 'explain', 'report', 'route', 'guide', 'workbench',
+          'brief', 'coach', 'recommend', 'snapshot', 'triage', 'handoff', 'afterEdit', 'inventory',
+          'budget', 'prunePlan', 'protocol', 'map'
+        ],
+        budgets: BUDGETS
+      };
+      if (format !== 'markdown') return data;
+      return [
+        '# WC Diagnostics Inventory',
+        '- Presets: ' + data.presets.join(', '),
+        '- Checks: ' + data.checks.join(', '),
+        '- Scopes: ' + data.scopes.join(', '),
+        '- Public API count: ' + data.publicApi.length
+      ].join('\n');
+    }
+
+    function budget(format = 'object') {
+      const inv = inventory();
+      const warnings = [];
+      if (inv.publicApi.length > BUDGETS.maxPublicApi) warnings.push('public API exceeds budget');
+      if (inv.scopes.length > BUDGETS.maxScopes) warnings.push('scope count exceeds budget');
+      const data = { ok:warnings.length === 0, warnings, budgets:BUDGETS, inventory:inv };
+      if (format !== 'markdown') return data;
+      return [
+        '# WC Diagnostics Budget',
+        '- Status: ' + (data.ok ? 'OK' : 'WARN'),
+        '- Public API: ' + inv.publicApi.length + '/' + BUDGETS.maxPublicApi,
+        '- Scopes: ' + inv.scopes.length + '/' + BUDGETS.maxScopes,
+        '- Warnings: ' + (warnings.length ? warnings.join(' / ') : 'none')
+      ].join('\n');
+    }
+
+    function prunePlan(format = 'object') {
+      const inv = inventory();
+      const suggestions = [];
+      if (inv.publicApi.length > 14) suggestions.push('Keep new helpers private unless they shorten future edits.');
+      if (inv.scopes.length > 7) suggestions.push('Merge tiny scopes back into edit or diagnostics before adding another scope.');
+      if (countMatches(readSource(), /localStorage\./g) > 55) suggestions.push('Move future storage changes toward fewer, named Storage-zone helpers.');
+      if (!suggestions.length) suggestions.push('No pruning needed; keep future growth inside existing scopes.');
+      const data = { ok:true, suggestions };
+      if (format !== 'markdown') return data;
+      return ['# WC Diagnostics Prune Plan'].concat(suggestions.map(item => '- ' + item)).join('\n');
+    }
+
+    function protocol(format = 'object') {
+      const data = {
+        first: 'WcDiagnostics.recommend(requestText)',
+        beforeEdit: 'WcDiagnostics.workbench(requestText)',
+        duringEdit: 'WcDiagnostics.coach(requestText, "markdown")',
+        afterEdit: 'WcDiagnostics.afterEdit(scope)',
+        inspectState: 'WcDiagnostics.snapshot("markdown")',
+        triage: 'WcDiagnostics.triage(requestText, "markdown")',
+        resume: 'WcDiagnostics.handoff(requestText)',
+        keepLight: ['budget', 'prunePlan', 'inventory']
+      };
+      if (format !== 'markdown') return data;
+      return [
+        '# WC Diagnostics Protocol',
+        '- First: ' + data.first,
+        '- Before edit: ' + data.beforeEdit,
+        '- During edit: ' + data.duringEdit,
+        '- After edit: ' + data.afterEdit,
+        '- Inspect state: ' + data.inspectState,
+        '- Triage: ' + data.triage,
+        '- Resume: ' + data.resume,
+        '- Keep light: ' + data.keepLight.join(', ')
+      ].join('\n');
+    }
+
+    function map(format = 'object') {
+      const rows = Object.entries(CHANGE_SCOPES).map(([scope, plan]) => ({
+        scope,
+        preset: plan.preset,
+        zones: [...plan.zones],
+        anchors: [...plan.anchors]
+      }));
+      if (format !== 'markdown') return rows;
+      return ['# WC Edit Map'].concat(rows.map(row => '- ' + row.scope + ': ' + row.zones.join(' | '))).join('\n');
+    }
+
+    function explain(summary) {
+      const target = summary || runDiagnostics({ preset:'quick' });
+      const digest = target.digest || issueDigest(target);
+      const top = digest.topLabel ? ' / top ' + digest.topLabel : '';
+      const line = target.ok
+        ? 'WC diagnostics OK: ' + target.selectedChecks.join(', ') + ' / mode ' + (target.mode || operatingMode(snapshot()))
+        : 'WC diagnostics found ' + target.failures.length + ' failure(s) in ' + target.selectedChecks.join(', ') + ' / mode ' + (target.mode || operatingMode(snapshot())) + ' / risk ' + (target.risk || snapshot().risk.level) + top;
+      const warn = target.warnings.length ? ' Warnings: ' + target.warnings.length + '.' : '';
+      return line + '.' + warn;
+    }
+
+    function report(summary) {
+      const result = summary || runDiagnostics({ preset:'quick' });
+      const snap = result.snapshot || snapshot();
+      const lines = [
+        '# WC Diagnostics Report',
+        '- Status: ' + (result.ok ? 'OK' : 'FAIL'),
+        '- Preset: ' + result.preset,
+        '- Checks: ' + result.selectedChecks.join(', '),
+        '- Records: ' + (result.metrics.records ?? records.length),
+        '- Correction ready: ' + (result.metrics.correctionReady ?? correctionReadyCount()),
+        '- Storage local main: ' + (result.metrics.localMainCount ?? 'n/a'),
+        '- Storage risk: ' + (result.metrics.storageRiskLevel ?? snap.storage.riskLevel),
+        '- Data risk: ' + (result.metrics.dataRiskLevel ?? snap.data.riskLevel),
+        '- Mode: ' + (result.mode || operatingMode(snap)),
+        '- Mode verify: ' + guidanceForMode(result.mode || operatingMode(snap)).verify,
+        '- Top check: ' + ((result.digest || issueDigest(result)).topLabel || 'none'),
+        '- Triage items: ' + (result.triageItems?.length ?? triage(result).items.length),
+        '- Budget: ' + (budget().ok ? 'OK' : 'WARN')
+      ];
+      const digestRows = (result.digest || issueDigest(result)).byCheck;
+      if (digestRows.length) {
+        lines.push('', '## Issue Digest');
+        digestRows.forEach(row => lines.push('- [' + row.label + '] failures ' + row.failures + ', warnings ' + row.warnings));
+      }
+      if (result.failures.length) {
+        lines.push('', '## Failures');
+        result.failures.forEach(item => lines.push('- [' + item.label + '] ' + item.message));
+      }
+      if (result.warnings.length) {
+        lines.push('', '## Warnings');
+        result.warnings.forEach(item => lines.push('- [' + item.label + '] ' + item.message));
+      }
+      if (result.proposals?.length) {
+        lines.push('', '## Proposals');
+        result.proposals.forEach(item => lines.push('- [' + item.label + '] ' + item.message));
+      }
+      if (result.nextSteps?.length) {
+        lines.push('', '## Next Steps');
+        result.nextSteps.forEach(step => lines.push('- ' + step.title + ': ' + step.detail));
+      }
+      return lines.join('\n');
+    }
+
+    return {
+      runDiagnostics,
+      explain,
+      report,
+      route,
+      guide,
+      workbench,
+      brief,
+      coach,
+      recommend,
+      snapshot,
+      triage,
+      handoff,
+      afterEdit,
+      inventory,
+      budget,
+      prunePlan,
+      protocol,
+      map,
+      checkUi,
+      checkSource,
+      checkStorage,
+      checkData,
+      checkCalculation,
+      checkFlow,
+      checkImportExport,
+      checkSelf
+    };
+  })();
+  window.WcDiagnostics = WcDiagnostics;
+  window.AppDiagnostics = WcDiagnostics;
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', () => {

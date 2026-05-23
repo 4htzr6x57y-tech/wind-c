@@ -1,0 +1,41 @@
+{
+  "id": "./coil-calibrator.html",
+  "name": "CC",
+  "short_name": "CC",
+  "description": "Coil measured inverse calculator.",
+  "start_url": "./coil-calibrator.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "orientation": "portrait",
+  "shortcuts": [
+    {
+      "name": "CC Diagnostics",
+      "short_name": "Diagnostics",
+      "description": "Open the Coil Calibrator test harness.",
+      "url": "./watchtower.html",
+      "icons": [
+        {
+          "src": "./icons/icon-cc-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "icons": [
+    {
+      "src": "./icons/icon-cc-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-cc-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
