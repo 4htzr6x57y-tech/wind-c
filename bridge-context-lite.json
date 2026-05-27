@@ -1,7 +1,7 @@
 {
   "context_kind": "bridge-context-lite",
-  "lite_version": "0.1",
-  "generated_at": "2026-05-27T12:57:21.965890Z",
+  "lite_version": "0.2",
+  "generated_at": "2026-05-27T14:53:02.569928Z",
   "source_file": "bridge-context-final.json",
   "source_sha256": "5c568f38d295ac184c14ea6a9d0bbea5f1c19b3ecf69856bfc8f5d4c971f6969",
   "source_bridge_version": "1.5",
@@ -12,6 +12,7 @@
     "current_human_directive",
     "latest_semantic_packets",
     "recovery_checkpoint",
+    "resume_delta",
     "task_summary",
     "ai_freshness_summary",
     "counts_and_pointers"
@@ -443,5 +444,41 @@
     "current_truth_snapshot full object",
     "change_log full history"
   ],
-  "usage_rule": "Use this file for boot/navigation only. If an AI needs evidence, audit, or mutation, load the full canonical context first."
+  "usage_rule": "Use this file for boot/navigation only. If an AI needs evidence, audit, or mutation, load the full canonical context first.",
+  "resume_delta": {
+    "delta_version": "0.1",
+    "from_packet_id": "sp-018",
+    "to_packet_id": "sp-6674c829-00ed-4ce8-8b36-fb9771036ab9",
+    "canonical_pointer_updated_at": "2026-05-27T02:21:13.564Z",
+    "basis": "Derived from bridge-context-final.json semantic_packets, canonical_current_state, watchtower_gate, recovery_checkpoint, ai_boot_log, and change_log tail.",
+    "packet_span": [
+      {
+        "packet_id": "sp-018",
+        "created_at": "2026-05-27T00:35:46.587Z",
+        "type": "insight",
+        "source_agent": "Human",
+        "summary": "WTcはコード作成前よりコード作成後の検証・認定に強い。WATCHTOWER実行不能環境でblockedとfallbackを誠実に記録し、既存APIを壊さずminimal_token_path寄りに実装した今回の実装姿勢を、Human official praiseとして認定する。praise_log独立フィールドはPraise運用が数件たまってからv1.6以降の明示的version bump候補として再検討する。"
+      },
+      {
+        "packet_id": "sp-6674c829-00ed-4ce8-8b36-fb9771036ab9",
+        "created_at": "2026-05-27T02:21:13.569Z",
+        "type": "decision",
+        "source_agent": "Human / CODEX",
+        "summary": "canonical pointer updated: current authoritative surfaces and WATCHTOWER Gate status were refreshed."
+      }
+    ],
+    "delta_summary": [
+      "Human official praise sp-018 was added as reusable semantic knowledge without creating a new praise_log field.",
+      "Grok re-read the v1.5 canonical context and was recorded fresh before the canonical pointer refresh.",
+      "WATCHTOWER Gate was refreshed to passed after fallback/browser-equivalent checks.",
+      "canonical_current_state was advanced to the latest canonical pointer packet.",
+      "recovery_checkpoint rc-003 records work_status=in_progress with two pending actions."
+    ],
+    "current_blockers": [],
+    "next_single_action": "bridge.htmlで最終JSONを読み込み「JSONを保存」を実行して正本ファイルを更新する",
+    "secondary_pending_action": "CODEXのBoot basisをv1.5 canonical pointerに合わせて更新する（warning状態の解消）",
+    "requires_full_context_for_edit": true,
+    "safe_for_boot_without_full_context": true,
+    "do_not_infer": "If a packet id appears in packet_span, treat it as summarized evidence only; consult the full canonical context before mutation or audit claims."
+  }
 }
