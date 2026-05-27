@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coil-tools-pwa-v5';
+const CACHE_NAME = 'coil-tools-pwa-v28';
 const APP_ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,11 @@ const APP_ASSETS = [
   './coil-calibrator.html',
   './watchtower.html',
   './ect-designer.html',
+  './ferrite-lab.html',
+  './bridge.html',
+  './bridge.js',
+  './bridge-context.json',
+  './bridge-context.sample.json',
   './manifest.webmanifest',
   './manifest-wc.webmanifest',
   './manifest-cd.webmanifest',
@@ -52,6 +57,21 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  const pathname = new URL(event.request.url).pathname;
+  const requiresFreshBridge = pathname.endsWith('/watchtower.html')
+    || pathname.endsWith('/bridge.html')
+    || pathname.endsWith('/bridge.js')
+    || pathname.endsWith('/bridge-context.json');
+  if (requiresFreshBridge) {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;

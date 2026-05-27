@@ -1,0 +1,447 @@
+{
+  "context_kind": "bridge-context-lite",
+  "lite_version": "0.1",
+  "generated_at": "2026-05-27T12:57:21.965890Z",
+  "source_file": "bridge-context-final.json",
+  "source_sha256": "5c568f38d295ac184c14ea6a9d0bbea5f1c19b3ecf69856bfc8f5d4c971f6969",
+  "source_bridge_version": "1.5",
+  "non_authoritative_notice": "This lite file is a compact read-only navigation surface. Do not edit it as SSOT. Authoritative records remain in bridge-context-final.json / bridge-context.json.",
+  "read_order": [
+    "canonical_current_state_summary",
+    "watchtower_gate",
+    "current_human_directive",
+    "latest_semantic_packets",
+    "recovery_checkpoint",
+    "task_summary",
+    "ai_freshness_summary",
+    "counts_and_pointers"
+  ],
+  "task_summary": {
+    "task_id": "bridge-v0-implementation",
+    "status": "active",
+    "session_mode": "mission-control-human-router-support",
+    "human_intent": "Human Router負荷を減らし、全AIへの手動Broadcastとfreshness監視を一画面で行えるようにする",
+    "primary_goal": "bridge-context.json を中心にAI間の文脈引き継ぎを成立させる",
+    "stage": "v1.3-mission-control",
+    "constraints": [
+      "人間用UIを作り込まない",
+      "AI-readable structure first（構造優先）",
+      "Handoffを最優先機能として実装する",
+      "Memory GraphはLite（5ノードタイプのみ）",
+      "仕様書にない機能を自動追加しない",
+      "単体HTML+JSファイルとして壊れにくく作る",
+      "破壊的スキーマ変更は明示的なversion bumpと移行判断がある場合のみ実装する"
+    ],
+    "priorities": [
+      "bridge-context.json",
+      "watchtower_gate",
+      "agent_responses",
+      "consensus_state",
+      "consensus_test_log",
+      "current_truth_snapshot",
+      "canonical_current_state",
+      "current_human_directive",
+      "recovery_checkpoint",
+      "ai_boot_protocol",
+      "handoff",
+      "semantic_packets"
+    ]
+  },
+  "canonical_current_state_summary": {
+    "canonical_pointer_version": "1.0",
+    "updated_at": "2026-05-27T02:21:13.564Z",
+    "updated_by": "Human / CODEX",
+    "authority": "manual-canonical-pointer",
+    "bridge_version": "1.5",
+    "bridge_generated_at": "2026-05-25T16:19:42.1877822Z",
+    "latest_snapshot_id": "cts-6b581e9a-32ba-4610-b99d-5a1f34b04bc2",
+    "latest_handoff_generated_at": "2026-05-25T16:19:42.1877822Z",
+    "latest_semantic_packet_id": "sp-6674c829-00ed-4ce8-8b36-fb9771036ab9",
+    "watchtower_gate_current_status": "passed",
+    "watchtower_gate_last_checked_at": "2026-05-27T02:21:13.558Z",
+    "current_truth_priority": [
+      "canonical_current_state",
+      "watchtower_gate",
+      "current_human_directive",
+      "latest_semantic_packets",
+      "handoff",
+      "recovery_checkpoint",
+      "current_truth_snapshot",
+      "memory_graph_lite"
+    ],
+    "notes": "Canonical pointer advanced to sp-018 (Human official praise) after Grok v1.5 context refresh and WATCHTOWER fallback pass."
+  },
+  "watchtower_gate": {
+    "required_before_edit": true,
+    "status": "passed",
+    "last_checked_at": "2026-05-27T02:21:13.558Z",
+    "checked_by": "CODEX / Human",
+    "signature": "visible-result:fallback-passed/focus:BRIDGE/grok-context-refreshed",
+    "intent": "Confirm Grok v1.5 context refresh resolves the blocked reason; re-verify BRIDGE canonical state",
+    "result_summary": "Grok rebooted with v1.5 canonical context_basis (fresh, no mismatches). Block reason resolved. Canonical pointer lag (sp-017→sp-018) is the only remaining item, addressed by update_canonical_current_state.",
+    "blocked_reason": "",
+    "fallback_checks": [
+      "Confirmed BRIDGE is registered in WATCHTOWER_CONFIG.expectedIds and apps",
+      "Grok Boot response recorded with fresh status and zero mismatches against v1.5 canonical pointer",
+      "WT Core run_bridge_core_diagnostics: bridge_status=warning (not failed), reject_agents=none",
+      "recovery_checkpoint validation: valid",
+      "Previous blocked_reason (Grok basis predates v1.5 canonical pointer) is resolved by boot-grok-v15-002",
+      "Canonical pointer lag sp-017→sp-018 is a known pending addition (Human official praise sp-018), not a stale edit",
+      "AppDiagnostics.runDiagnostics() last confirmed pass in cl-v12-wt-live-context-freshness-022"
+    ]
+  },
+  "current_human_directive": {
+    "directive_id": "",
+    "issued_at": "",
+    "issued_by": "Human",
+    "content": "",
+    "target_agents": [
+      "GPT",
+      "Claude",
+      "Grok",
+      "Gemini"
+    ],
+    "delivery_mode": "manual_broadcast",
+    "source_packet_id": ""
+  },
+  "recovery_checkpoint": {
+    "checkpoint_id": "rc-003",
+    "saved_at": "2026-05-27T02:21:37.042Z",
+    "saved_by": "Human / CODEX",
+    "bridge_version": "1.5",
+    "canonical_pointer_updated_at": "2026-05-27T02:21:13.564Z",
+    "work_status": "in_progress",
+    "access_mode_at_save": "full_access",
+    "active_task": "sp-018 Human official praise canonical昇格 / Grok v1.5 context refresh完了",
+    "completed_actions": [
+      "sp-018 (Human official praise) をsemantic_packetsに追加",
+      "Grok v1.5 canonical contextを再読込み、Boot status fresh確認",
+      "WT Gate をblocked→passedへ更新（fallback checks記録済み）",
+      "update_canonical_current_state でcanonical pointer をsp-019へ進め、sp-018昇格を正式反映"
+    ],
+    "pending_actions": [
+      "bridge.htmlで最終JSONを読み込み「JSONを保存」を実行して正本ファイルを更新する",
+      "CODEXのBoot basisをv1.5 canonical pointerに合わせて更新する（warning状態の解消）"
+    ],
+    "blocking_issues": [],
+    "last_safe_operation": "canonical pointer advanced to sp-019; WT Gate passed; Grok fresh",
+    "handoff_generated_at": "2026-05-25T16:19:42.1877822Z",
+    "notes": ""
+  },
+  "latest_semantic_packets": [
+    {
+      "packet_id": "sp-014",
+      "created_at": "2026-05-25T15:56:06.1982842Z",
+      "source_agent": "CODEX",
+      "type": "decision",
+      "content": "canonical pointer updated: BRIDGE v1.2は手動Recovery Checkpointを導入し、中断作業の最後の安全地点と次の単一アクションを正本と照合して保存する。BRIDGE画面は古いService Worker cacheの正本採用を避けるためfresh context loadを優先する。",
+      "confidence": 1,
+      "provenance": "BRIDGE v1.2 Recovery Checkpoint migration and WATCHTOWER verification",
+      "tags": [
+        "canonical-pointer",
+        "recovery-checkpoint",
+        "v1.2"
+      ],
+      "related_packets": [
+        "sp-013"
+      ]
+    },
+    {
+      "packet_id": "sp-015",
+      "created_at": "2026-05-25T16:19:42.1877822Z",
+      "source_agent": "CODEX",
+      "type": "decision",
+      "content": "canonical pointer updated: WATCHTOWERはBRIDGE画面が実際に表示しているcontextをfresh正本と比較し、古いversion、canonical pointer、Semantic Packet、WT status、Recovery Checkpointを自動で失敗検知する。",
+      "confidence": 1,
+      "provenance": "WATCHTOWER BRIDGE live context freshness diagnostics implementation and browser verification",
+      "tags": [
+        "watchtower",
+        "canonical-pointer",
+        "live-context-freshness",
+        "v1.2"
+      ],
+      "related_packets": [
+        "sp-014"
+      ]
+    },
+    {
+      "packet_id": "sp-016",
+      "created_at": "2026-05-26T10:10:01.662Z",
+      "source_agent": "Claude（秘書）",
+      "type": "insight",
+      "content": "WT CoreはBRIDGE用コード診断に留まらず、用途別診断プロファイル（WT Core for Coding / Research / Writing / Experiment / Planning等）として汎用化できる。AIが作業前に状態を高速把握するための標準チェックリストになり得る。BRIDGEが記憶なら、WT Coreはその記憶を読む前の健康診断・道案内。",
+      "confidence": 0.95,
+      "provenance": "v1.3実装議論中に社長が発見した副産物",
+      "tags": [
+        "wt-core",
+        "generalization",
+        "insight",
+        "v1.3"
+      ],
+      "related_packets": []
+    },
+    {
+      "packet_id": "sp-017",
+      "created_at": "2026-05-26T15:31:06.276Z",
+      "source_agent": "CODEX",
+      "type": "decision",
+      "content": "WT Core と WATCHTOWER は canonical pointer の Semantic Packet 取り残し、runtime/context version 差、Boot 再読込み不足、未通過 Gate を警告する。現在は v1.5 に整合し、Grok の最新 context 再確認まで編集を保留する。",
+      "confidence": 1,
+      "provenance": "BRIDGE v1.5 freshness hardening",
+      "tags": [
+        "wt-core",
+        "watchtower",
+        "canonical-pointer",
+        "negative-memory",
+        "v1.5"
+      ],
+      "related_packets": [
+        "sp-016"
+      ]
+    },
+    {
+      "packet_id": "sp-018",
+      "created_at": "2026-05-27T00:35:46.587Z",
+      "source_agent": "Human",
+      "type": "insight",
+      "content": "WTcはコード作成前よりコード作成後の検証・認定に強い。WATCHTOWER実行不能環境でblockedとfallbackを誠実に記録し、既存APIを壊さずminimal_token_path寄りに実装した今回の実装姿勢を、Human official praiseとして認定する。praise_log独立フィールドはPraise運用が数件たまってからv1.6以降の明示的version bump候補として再検討する。",
+      "confidence": 1,
+      "provenance": "Human official praise / Praise運用実験 v1.5",
+      "tags": [
+        "official-praise",
+        "wt-design-learning",
+        "minimal-token-path",
+        "v1.5"
+      ],
+      "related_packets": [
+        "sp-003",
+        "sp-004",
+        "sp-007",
+        "sp-017"
+      ]
+    },
+    {
+      "packet_id": "sp-6674c829-00ed-4ce8-8b36-fb9771036ab9",
+      "created_at": "2026-05-27T02:21:13.569Z",
+      "source_agent": "Human / CODEX",
+      "type": "decision",
+      "content": "canonical pointer updated: current authoritative surfaces and WATCHTOWER Gate status were refreshed.",
+      "confidence": 1,
+      "provenance": "update_canonical_current_state()",
+      "tags": [
+        "canonical-pointer",
+        "freshness",
+        "v1.5"
+      ],
+      "related_packets": [],
+      "category": "",
+      "severity": "",
+      "friction_score": null,
+      "suggested_fix": ""
+    }
+  ],
+  "latest_failure_log": [
+    {
+      "failure_id": "fl-v15-canonical-pointer-lag-001",
+      "occurred_at": "2026-05-26T15:31:06.276Z",
+      "source_agent": "CODEX",
+      "failure_type": "stale_context",
+      "severity": "high",
+      "summary": "WATCHTOWER reported OK while canonical_current_state still pointed to sp-015 and semantic_packets already ended at sp-016.",
+      "cause": "Live freshness compared displayed and saved context but did not compare the canonical packet pointer with the packet tail.",
+      "detected_by": "WTc",
+      "affected_surfaces": [
+        "bridge.js",
+        "watchtower.html",
+        "bridge-context.json"
+      ],
+      "recovery_action": "Reject stale canonical pointers, align the v1.5 context, and block editing until affected agents reread the current pointer.",
+      "prevention_rule": "WT Core and WATCHTOWER must reject canonical_current_state.latest_semantic_packet_id when it is behind semantic_packets.",
+      "related_packet_id": "sp-017",
+      "related_checkpoint_id": "rc-002",
+      "status": "mitigated"
+    }
+  ],
+  "latest_change_log": [
+    {
+      "change_id": "cl-v12-wt-live-context-freshness-022",
+      "changed_at": "2026-05-25T16:19:42.1877822Z",
+      "changed_by": "Human / CODEX",
+      "summary": "WATCHTOWERへBRIDGE live context freshness診断を追加",
+      "reason": "BRIDGEの内部Diagnosticsが正常でも、画面が古いcanonical contextを表示していれば自動的にFAILEDとして検出するため",
+      "affected_fields": [
+        "watchtower.html",
+        "WATCHTOWER.md",
+        "README.md",
+        "canonical_current_state",
+        "semantic_packets",
+        "validation_checklist",
+        "watchtower_gate",
+        "handoff"
+      ]
+    },
+    {
+      "change_id": "cl-v12-recovery-save-023",
+      "changed_at": "2026-05-25T16:19:42.1877822Z",
+      "changed_by": "CODEX",
+      "summary": "WT live freshness検証後のRecovery Checkpointを保存",
+      "reason": "WTの新しい鮮度監視が通った安全地点から次の検証作業を再開できるようにするため",
+      "affected_fields": [
+        "recovery_checkpoint",
+        "canonical_current_state",
+        "watchtower_gate",
+        "ai_boot_log"
+      ]
+    },
+    {
+      "change_id": "cl-v15-freshness-hardening-024",
+      "changed_at": "2026-05-26T15:31:06.276Z",
+      "changed_by": "CODEX",
+      "summary": "v1.5 canonical packet lag detection and Negative Memory alignment",
+      "reason": "WATCHTOWER had accepted a canonical pointer behind the actual Semantic Packet tail; keep editing blocked until stale agent context is reread.",
+      "affected_fields": [
+        "bridge_version",
+        "semantic_packets",
+        "failure_log",
+        "canonical_current_state",
+        "recovery_checkpoint",
+        "ai_boot_protocol",
+        "watchtower_gate"
+      ]
+    },
+    {
+      "change_id": "e8c92a5f-0b13-4a9d-b676-88086fb1b512",
+      "changed_at": "2026-05-27T02:21:13.569Z",
+      "changed_by": "Human / CODEX",
+      "summary": "canonical_current_state pointer updated",
+      "reason": "Refresh the authoritative current-state pointer for AI Boot freshness validation.",
+      "affected_fields": [
+        "canonical_current_state",
+        "semantic_packets",
+        "watchtower_gate"
+      ]
+    },
+    {
+      "change_id": "d5470c9f-7db1-47e5-8c44-a0c25cb07382",
+      "changed_at": "2026-05-27T02:21:37.046Z",
+      "changed_by": "Human / CODEX",
+      "summary": "recovery_checkpoint saved",
+      "reason": "Preserve the latest safe resumption point for interrupted AI work.",
+      "affected_fields": [
+        "recovery_checkpoint"
+      ]
+    }
+  ],
+  "ai_freshness_summary": {
+    "CODEX": {
+      "boot_id": "boot-codex-v12-003",
+      "completed_at": "2026-05-25T16:19:42.1877822Z",
+      "status": "fresh",
+      "access_mode": "full_access",
+      "confirm_phase": "v1.2-recovery-checkpoint",
+      "latest_semantic_packet_id_seen": "sp-015",
+      "watchtower_gate_status_seen": "passed"
+    },
+    "Grok": {
+      "boot_id": "boot-grok-v15-002",
+      "completed_at": "2026-05-27T02:20:39.059Z",
+      "status": "fresh",
+      "access_mode": "full_access",
+      "confirm_phase": "v1.5-freshness-hardening / mission-control-human-router-support",
+      "latest_semantic_packet_id_seen": "sp-017",
+      "watchtower_gate_status_seen": "blocked"
+    }
+  },
+  "handoff_summary": {
+    "generated_at": "2026-05-25T16:19:42.1877822Z",
+    "from_agent": "Claude（専務役） / CODEX",
+    "decided_count": 27,
+    "open_count": 0,
+    "recommended_next_actions": [
+      {
+        "action": "WTのBRIDGE live context freshness診断を維持し、必要なら意図的stale iframe fixtureでFAILED経路の統合テストを追加する",
+        "target_agent": "CODEX",
+        "reason": "現在は正常系とWT自己診断sampleで検証済みであり、完全な画面レベル失敗実証を追加できるため"
+      },
+      {
+        "action": "次に別AIへ渡す時、v1.2サンプルまたは正本を使ってBoot回答に加えてcheckpointの次アクションも説明してもらう",
+        "target_agent": "Human",
+        "reason": "canonical freshnessに加え、中断復帰の読解安定性を外部AIで確認するため"
+      }
+    ]
+  },
+  "memory_graph_lite_summary": {
+    "nodes_count": 4,
+    "edge_proposals_count": 1,
+    "edges_count": 1,
+    "latest_nodes": [
+      {
+        "node_id": "mn-001",
+        "type": "Decision",
+        "label": "Semantic Packet confidence contract",
+        "content": "Semantic Packetのconfidenceは既存API契約に合わせ、0.0から1.0のfloatとして運用する。",
+        "created_at": "2026-05-25T12:56:21.8436351Z",
+        "source_agent": "CODEX",
+        "source_packet_id": "sp-001"
+      },
+      {
+        "node_id": "mn-002",
+        "type": "Shortcut",
+        "label": "Verified current-state entrypoint",
+        "content": "四者consensusはagreement_level 1.0で成立し、current_truth_snapshotは本番合意のみから凍結済みである。",
+        "created_at": "2026-05-25T12:56:21.8436351Z",
+        "source_agent": "CODEX",
+        "source_packet_id": "sp-002"
+      },
+      {
+        "node_id": "mn-003",
+        "type": "Risk",
+        "label": "WATCHTOWER passed path unverified",
+        "content": "WATCHTOWERのfull browser runは現在のローカルURL制限でblockedであり、passed経路の実証はまだ残る。",
+        "created_at": "2026-05-25T12:56:21.8436351Z",
+        "source_agent": "CODEX",
+        "source_packet_id": "sp-003"
+      },
+      {
+        "node_id": "mn-004",
+        "type": "Decision",
+        "label": "Keep WT blocked state visible until passed path is verified",
+        "content": "WATCHTOWERのpassed経路が実証されるまで、blocked状態とfallback検証結果を明示して運用する。",
+        "created_at": "2026-05-25T13:01:03.5126897Z",
+        "source_agent": "CODEX",
+        "source_packet_id": "sp-004"
+      }
+    ],
+    "latest_edges": [
+      {
+        "from": "mn-004",
+        "to": "mn-003",
+        "relation": "mitigates",
+        "proposal_id": "mep-001",
+        "validated_by": "CODEX",
+        "validated_at": "2026-05-25T13:01:03.5126897Z"
+      }
+    ]
+  },
+  "counts_and_pointers": {
+    "semantic_packets_count": 19,
+    "latest_semantic_packet_id": "sp-6674c829-00ed-4ce8-8b36-fb9771036ab9",
+    "failure_log_count": 1,
+    "agent_responses_count": 4,
+    "ai_boot_log_count": 5,
+    "change_log_count": 26,
+    "consensus_test_log_count": 1,
+    "current_truth_snapshot_id": "cts-6b581e9a-32ba-4610-b99d-5a1f34b04bc2",
+    "recovery_checkpoint_id": "rc-003"
+  },
+  "excluded_authoritative_surfaces": [
+    "semantic_packets full history",
+    "failure_log full history",
+    "agent_responses",
+    "consensus_state",
+    "consensus_test_log",
+    "current_truth_snapshot full object",
+    "change_log full history"
+  ],
+  "usage_rule": "Use this file for boot/navigation only. If an AI needs evidence, audit, or mutation, load the full canonical context first."
+}
