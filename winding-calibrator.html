@@ -1203,19 +1203,41 @@ tr:last-child td { border-bottom:0; }
   const round = (value, digits = 4) => Number.isFinite(value) ? Number(value.toFixed(digits)) : null;
   const fmt = (value, digits = 4) => Number.isFinite(value) ? String(round(value, digits)) : '-';
   const hasPositiveFinite = value => Number.isFinite(value) && value > 0;
+  const normalizeNumericText = value => String(value ?? '').trim().normalize('NFKC').replace(/,/g, '').replace(/\s+/g, '');
   const toNumber = value => {
     if (value === null || value === undefined || value === '') return null;
-    const n = Number(String(value).trim());
+    const n = Number(normalizeNumericText(value));
     return Number.isFinite(n) ? n : null;
   };
+  function createRecordId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    return String(Date.now()) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+  function recordIdSet(list) {
+    return new Set((Array.isArray(list) ? list : []).map(record => record?.id).filter(Boolean));
+  }
+  function withFreshIdentity(record, usedIds = new Set()) {
+    const rec = normalizeRecord(record);
+    while (!rec.id || usedIds.has(rec.id)) {
+      rec.id = createRecordId();
+      rec.createdAt = new Date().toISOString();
+      rec.updatedAt = '';
+    }
+    usedIds.add(rec.id);
+    return rec;
+  }
+  function prepareRecordsForAppend(list, existing = records) {
+    const usedIds = recordIdSet(existing);
+    return (Array.isArray(list) ? list : []).map(record => withFreshIdentity(record, usedIds));
+  }
   function toHzFromKHz(kHz) {
     const v = Number(kHz);
     return Number.isFinite(v) ? v * 1000 : null;
   }
   function toKHzFromText(value) {
     if (value === null || value === undefined || value === '') return null;
-    const text = String(value).trim();
-    const num = parseFloat(text.replace(',', ''));
+    const text = normalizeNumericText(value);
+    const num = parseFloat(text);
     if (!Number.isFinite(num) || num <= 0) return null;
     if (/MHz/i.test(text)) return num * 1000;
     if (/kHz/i.test(text)) return num;
@@ -1338,7 +1360,7 @@ tr:last-child td { border-bottom:0; }
     const defaultFerriteShape = rec.ferriteMaterial === 'なし' ? 'none' : 'round';
     rec.ferriteShape = ferriteShapeAliases[rec.ferriteShape] || rec.ferriteShape || defaultFerriteShape;
     if (!ferriteShapeLabels[rec.ferriteShape]) rec.ferriteShape = defaultFerriteShape;
-    rec.id = raw.id || String(Date.now()) + '-' + Math.random().toString(36).slice(2, 8);
+    rec.id = raw.id || createRecordId();
     rec.createdAt = raw.createdAt || new Date().toISOString();
     rec.updatedAt = raw.updatedAt || '';
     return rec;
@@ -2794,7 +2816,7 @@ tr:last-child td { border-bottom:0; }
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const list = parseRecordsFromJsonText(String(reader.result || ''));
+        const list = prepareRecordsForAppend(parseRecordsFromJsonText(String(reader.result || '')));
         records = records.concat(list);
         const result = await save('JSONインポート保存');
         if (result.blocked) {
@@ -2907,7 +2929,7 @@ tr:last-child td { border-bottom:0; }
       if (validate(rec).length === 0) imported.push(rec);
       else skipped += 1;
     });
-    records = records.concat(imported);
+    records = records.concat(prepareRecordsForAppend(imported));
     const result = await save('CSVインポート保存');
     if (result.blocked) {
       render();
@@ -3060,7 +3082,10 @@ tr:last-child td { border-bottom:0; }
       setStorageMessage('IndexedDBを開けませんでした。localStorageバックアップで起動します。', 'status-warn');
     }
     await loadRecords();
-    if (!restoreEditDraft() && !restoreFormDraft()) clearForm();
+    if (!restoreEditDraft()) {
+      discardFormDraft();
+      clearForm();
+    }
     render();
     updatePreview();
     bindEvents();
@@ -3575,6 +3600,9 @@ tr:last-child td { border-bottom:0; }
       const parsed = parseRecordsFromJsonText(payload);
       if (parsed.length !== 1) addFailure(failures, 'JSON roundtrip record count mismatch');
       if (!Number.isFinite(parsed[0]?.frequency_kHz)) addFailure(failures, 'JSON roundtrip lost frequency_kHz');
+      const dedupedAppend = prepareRecordsForAppend([sample, { ...sample }], [sample]);
+      if (new Set(dedupedAppend.map(record => record.id)).size !== 2) addFailure(failures, 'append identity dedupe failed');
+      if (dedupedAppend.some(record => record.id === sample.id)) addFailure(failures, 'append identity reused existing id');
       const csvRows = parseCsv('wireDia,totalTurns,windingLength,frequency,measuredZ\n0.2,100,10,100,12');
       if (csvRows.length !== 2 || csvRows[1].length !== 5) addFailure(failures, 'CSV parser smoke mismatch');
       if (!configCode().includes('CONFIG.windingCorrection')) warnings.push('configCode output missing expected assignment text');
@@ -3584,6 +3612,7 @@ tr:last-child td { border-bottom:0; }
         warnings,
         metrics: {
           jsonRoundtripRecords: parsed.length,
+          appendDedupeRecords: dedupedAppend.length,
           csvRows: csvRows.length,
           configOutputChars: configCode().length
         }
@@ -3595,6 +3624,8 @@ tr:last-child td { border-bottom:0; }
       const tests = [
         ['route storage', () => route('backup restore localStorage').scope === 'storage'],
         ['route importExport', () => route('CSV JSON export').scope === 'importExport'],
+        ['fullwidth numeric input', () => toNumber('１,２３４.５') === 1234.5],
+        ['frequency comma input', () => normalizeFrequencyKHz({ frequency:'1,200 kHz' }) === 1200],
         ['guide returns preset', () => guide('data').preset === 'data'],
         ['snapshot returns records', () => Number.isFinite(snapshot().data.records)],
         ['snapshot returns mode notes', () => Array.isArray(snapshot().risk.stabilityNotes)],

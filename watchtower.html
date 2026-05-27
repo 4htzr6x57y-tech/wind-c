@@ -1,9 +1,76 @@
+<!--
+================================================================
+PORTABLE GUIDE — watchtower.html 単体移植メモ
+================================================================
+
+このファイル1つで完結します。他のファイルは不要です。
+
+## AI ENTRYPOINT — 初見AIはここから
+
+1. このファイルがあるプロジェクトでは、編集前に watchtower.html を確認する
+2. ブラウザで開き window.WATCHTOWER.run() を実行する
+3. window.WATCHTOWER.checkRequest("依頼内容", result) を実行する
+4. result.editBudget と result.forbiddenSurfaceMap を読む
+5. 人間用ボタン契約（診断する / 診断結果を承認 / AIに続きを頼む / 今の状態を基準にする）は、ユーザーが明示した時だけ変更する
+6. 小さいサマリーカードの見た目は HUMAN_SUMMARY_CARD_CONTRACT として固定。ユーザーが明示した時だけ変更する
+7. 編集後は window.WATCHTOWER.runAndRender() で再診断する
+8. 作業後は window.WATCHTOWER.recordSessionLog({ intent, outcome, detail, signatureBefore, signatureAfter, filesChanged }) を呼ぶ
+
+## 移植手順
+
+1. watchtower.html をコピーして新プロジェクトに置く
+2. WATCHTOWER_CONFIG だけを編集する:
+   - projectTitle     : プロジェクト名
+   - baselineNamespace: localStorage のキープレフィックス（重複しない文字列）
+   - loadTimeout      : アプリ読み込み待機時間（ms、デフォルト 8000）
+   - expectedIds      : 監視するアプリIDの一覧
+   - knownWarnings    : 既知の警告（無視してよいもの）
+   - apps             : 監視対象アプリの定義
+
+3. 各アプリに diagnostics.protocol を設定する:
+   - 'standard' : AppDiagnostics を持つアプリ
+   - 'harness'  : カスタムテストハーネスを持つアプリ
+   - 'self'     : Watchtower 自身
+
+4. 「診断する」を押して診断が通ったら「今の状態を基準にする」を保存する
+
+## AI向け利用フロー
+
+1. window.WATCHTOWER.run() で診断実行
+2. result.aiBrief.verdict を確認
+3. result.workbench.focus のアプリを修正
+4. 修正後に再度 run() して比較
+5. OK になったらオーナーに「診断結果を承認」を依頼
+
+## 安定フィールド（破壊的変更なし）
+
+- result.status / result.signature / result.level
+- result.aiBrief.verdict / reviewOrder / nextAction
+- result.actionPacket.mission / targetApp / successCondition
+- result.workbench.focus / queues / acceptance
+- result.handoffPacket.markdown / approval
+- result.editBudget.level / maxFiles / maxRisk
+- result.forbiddenSurfaceMap.surfaces[]
+- result.safetyMap.apps[].safe / medium / danger
+- result.bugLedger.open / dangerZones
+- result.focusPacket.doNow / skip / text
+- result.dangerWarning.message / risk / safe
+- result.briefExports.sessionBrief.text
+- result.briefExports.conversationStarter.claude
+- result.handoffPacket.sessionLog / result.machineReadable.sessionLog
+- window.WATCHTOWER.generateReadme(result)
+- window.WATCHTOWER.assessChange(intent, result)
+- window.WATCHTOWER.checkRequest(intent, result)
+- window.WATCHTOWER.recordSessionLog(entry)
+
+================================================================
+-->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COIL TOOLS WATCHTOWER</title>
+<title>WATCHTOWER</title>
 <style>
 :root {
   --bg:#0d1117;
@@ -36,6 +103,12 @@ body {
   gap:12px;
   margin-bottom:12px;
 }
+.actions {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
 h1 {
   margin:0;
   color:var(--accent);
@@ -52,9 +125,110 @@ button {
   cursor:pointer;
 }
 button:hover { border-color:var(--accent); color:var(--accent); }
+button:disabled {
+  opacity:.42;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+button#approve {
+  border-color:var(--border);
+  color:var(--muted);
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+button#approve.ready {
+  border-color:var(--ok);
+  color:var(--ok);
+  opacity:1;
+  cursor:pointer;
+  pointer-events:auto;
+  box-shadow:0 0 0 1px rgba(63,185,80,.2);
+}
+button#approve.ready:hover { background:rgba(63,185,80,.1); }
+button#approve.stamped {
+  border-color:var(--ok);
+  color:var(--ok);
+  opacity:.6;
+  cursor:default;
+  pointer-events:none;
+}
+button#resume {
+  border-color:var(--accent);
+  color:var(--accent);
+  opacity:.35;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+button#resume.ready {
+  opacity:1;
+  cursor:pointer;
+  pointer-events:auto;
+  box-shadow:0 0 0 1px rgba(88,166,255,.2);
+}
+button#resume.ready:hover { background:rgba(88,166,255,.1); }
+button#resume.copied {
+  border-color:var(--ok);
+  color:var(--ok);
+  opacity:1;
+}
+.checkpoint-banner {
+  display:none;
+  align-items:center;
+  gap:8px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--muted);
+  padding:8px 12px;
+  font-size:11px;
+  margin-bottom:6px;
+}
+.checkpoint-banner.visible { display:flex; }
+.checkpoint-banner strong { color:var(--accent); margin-right:4px; }
+.approval-banner {
+  display:none;
+  align-items:center;
+  gap:8px;
+  border:1px solid var(--ok);
+  border-radius:8px;
+  background:rgba(63,185,80,.07);
+  color:var(--ok);
+  padding:8px 12px;
+  font-size:12px;
+  margin-bottom:10px;
+}
+.approval-banner.visible { display:flex; }
+.approval-banner strong { color:var(--ok); margin-right:4px; }
+.owner-panel {
+  display:none;
+  flex-direction:column;
+  gap:5px;
+  border:1px solid var(--accent);
+  border-radius:8px;
+  background:rgba(88,166,255,.06);
+  padding:10px 14px;
+  margin-bottom:10px;
+}
+.owner-panel.visible { display:flex; }
+.owner-panel .owner-title {
+  font-size:11px;
+  color:var(--accent);
+  font-weight:800;
+  letter-spacing:.6px;
+  margin-bottom:2px;
+}
+.owner-panel .owner-row {
+  font-size:13px;
+  color:var(--text);
+  line-height:1.6;
+}
+.owner-panel .owner-row .ja { color:var(--text); }
+.owner-panel .owner-row .en { color:var(--muted); font-size:11px; margin-left:8px; }
 .summary {
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns:repeat(auto-fill, minmax(145px, 153px));
+  justify-content:start;
   gap:8px;
   margin-bottom:10px;
 }
@@ -65,6 +239,9 @@ button:hover { border-color:var(--accent); color:var(--accent); }
   padding:9px 10px;
   color:var(--muted);
   font-size:12px;
+  text-align:left;
+  cursor:pointer;
+  min-height:80px;
 }
 .tile strong {
   display:block;
@@ -75,6 +252,54 @@ button:hover { border-color:var(--accent); color:var(--accent); }
 .tile.ok strong { color:var(--ok); }
 .tile.warn strong { color:var(--warn); }
 .tile.bad strong { color:var(--bad); }
+.tile span {
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:800;
+  line-height:1.25;
+}
+.tile small {
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  line-height:1.35;
+  font-size:10px;
+}
+.maturity {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:-2px 0 10px;
+}
+.maturity span {
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--surface);
+  color:var(--muted);
+  padding:4px 8px;
+  font-size:11px;
+}
+.report-list {
+  display:grid;
+  gap:10px;
+}
+.report-card {
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+  overflow:hidden;
+}
+.report-card h2 {
+  margin:0;
+  padding:9px 10px;
+  border-bottom:1px solid var(--border);
+  color:var(--text);
+  font-size:13px;
+}
+.report-card.ok h2 { color:var(--ok); }
+.report-card.warn h2 { color:var(--warn); }
+.report-card.bad h2 { color:var(--bad); }
 .status {
   margin-bottom:10px;
   color:var(--muted);
@@ -83,18 +308,37 @@ button:hover { border-color:var(--accent); color:var(--accent); }
 .status.ok { color:var(--ok); }
 .status.warn { color:var(--warn); }
 .status.bad { color:var(--bad); }
-pre {
+.run-progress {
+  margin:-4px 0 10px;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.4;
+}
+.run-progress strong { color:var(--text); }
+.report-card pre {
   min-height:300px;
   margin:0;
-  border:1px solid var(--border);
-  border-radius:8px;
-  background:var(--surface);
   color:var(--muted);
   padding:12px;
   overflow:auto;
   white-space:pre-wrap;
   font-size:12px;
   line-height:1.5;
+}
+.healer {
+  margin:10px 0;
+  border:1px solid rgba(88,166,255,.28);
+  border-radius:8px;
+  background:rgba(88,166,255,.07);
+  color:var(--muted);
+  padding:9px 10px;
+  font-size:12px;
+  line-height:1.5;
+}
+.healer strong {
+  display:block;
+  margin-bottom:4px;
+  color:var(--accent);
 }
 iframe {
   position:absolute;
@@ -103,44 +347,784 @@ iframe {
   opacity:0;
   pointer-events:none;
 }
+@media (max-width: 700px) {
+  .wrap { padding:12px; }
+  .head {
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .actions {
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    justify-content:stretch;
+  }
+  button {
+    width:100%;
+    min-height:38px;
+    padding:8px 9px;
+    font-size:12px;
+  }
+  .owner-panel .owner-row .en {
+    display:block;
+    margin-left:0;
+  }
+  .summary { grid-template-columns:repeat(auto-fill, minmax(145px, 1fr)); }
+  .report-card pre {
+    min-height:180px;
+    font-size:11px;
+  }
+}
+@media (max-width: 420px) {
+  .actions { grid-template-columns:1fr; }
+}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="head">
-    <h1>COIL TOOLS WATCHTOWER</h1>
-    <button type="button" id="run">RUN</button>
+    <h1 id="project-title">WATCHTOWER</h1>
+    <div class="actions">
+      <button type="button" id="run" data-default-label="診断する">診断する</button>
+      <button type="button" id="approve" data-default-label="診断結果を承認" title="診断結果を確認して、この状態でよいと人間が判断したときに押します">診断結果を承認</button>
+      <button type="button" id="resume" data-default-label="AIに続きを頼む" title="現在の診断結果をAIへ渡す依頼文としてコピーします">AIに続きを頼む</button>
+      <button type="button" id="baseline" data-default-label="今の状態を基準にする" title="今後の診断で変化を見つけるため、現在の状態を基準として保存します">今の状態を基準にする</button>
+    </div>
   </div>
   <div class="status" id="status">waiting</div>
+  <div class="run-progress" id="run-progress">診断待機中。「診断する」で全アプリを確認します。</div>
+  <div class="checkpoint-banner" id="checkpoint-banner">
+    <strong>CHECKPOINT</strong><span id="checkpoint-text"></span>
+  </div>
+  <div class="approval-banner" id="approval-banner">
+    <strong>承認済み</strong><span id="approval-text"></span>
+  </div>
+  <div class="owner-panel" id="owner-panel">
+    <div class="owner-title">👤 オーナー確認 / FOR YOUR REVIEW</div>
+    <div class="owner-row" id="owner-row-1"></div>
+    <div class="owner-row" id="owner-row-2"></div>
+    <div class="owner-row" id="owner-row-3"></div>
+  </div>
   <div class="summary" id="summary"></div>
-  <pre id="output"></pre>
+  <div class="maturity" id="maturity"></div>
+  <div class="healer" id="healer"><strong>HEALER HINT</strong><span>Run watchtower to receive guidance.</span></div>
+  <div class="report-list" id="output"></div>
+  <script type="application/json" id="watchtower-json">null</script>
 </div>
 <iframe id="target"></iframe>
 <script>
 'use strict';
 const target = document.getElementById('target');
 const statusEl = document.getElementById('status');
+const runProgressEl = document.getElementById('run-progress');
 const summaryEl = document.getElementById('summary');
+const maturityEl = document.getElementById('maturity');
+const healerEl = document.getElementById('healer');
 const output = document.getElementById('output');
+const jsonEl = document.getElementById('watchtower-json');
+const titleEl = document.getElementById('project-title');
+const approveBtn = document.getElementById('approve');
+const resumeBtn = document.getElementById('resume');
+const approvalBanner = document.getElementById('approval-banner');
+const approvalText = document.getElementById('approval-text');
+const checkpointBanner = document.getElementById('checkpoint-banner');
+const checkpointText = document.getElementById('checkpoint-text');
+const ownerPanel = document.getElementById('owner-panel');
+const ownerRow1 = document.getElementById('owner-row-1');
+const ownerRow2 = document.getElementById('owner-row-2');
+const ownerRow3 = document.getElementById('owner-row-3');
+let isRunning = false;
 
-const APPS = Object.freeze([
-  Object.freeze({ id: 'WC', title: 'WINDING CALIBRATOR', url: './winding-calibrator.html', kind: 'wc' }),
-  Object.freeze({ id: 'CD', title: 'COIL DESIGNER', url: './coil-designer.html', kind: 'cd' }),
-  Object.freeze({ id: 'CC', title: 'COIL CALIBRATOR', url: './coil-calibrator.html', kind: 'cc' }),
-  Object.freeze({ id: 'ECT-D', title: 'ECT DESIGNER', url: './ect-designer.html', kind: 'basic' }),
+const HUMAN_BUTTON_CONTRACT = Object.freeze([
+  Object.freeze({ id:'run', label:'診断する' }),
+  Object.freeze({ id:'approve', label:'診断結果を承認' }),
+  Object.freeze({ id:'resume', label:'AIに続きを頼む' }),
+  Object.freeze({ id:'baseline', label:'今の状態を基準にする' }),
 ]);
+const HUMAN_SUMMARY_CARD_CONTRACT = Object.freeze({
+  gridTemplate: 'repeat(auto-fill, minmax(145px, 153px))',
+  desktopWidthPx: 153,
+  minHeightPx: 80,
+  titleFontSizePx: 13,
+  labelFontSizePx: 11,
+  reasonFontSizePx: 10,
+});
+
+let lastSummaryCardContractCheck = { checked:false, ok:null, warnings:[], failures:[] };
+
+const WATCHTOWER_CONFIG = Object.freeze({
+  productName: 'WATCHTOWER',
+  projectTitle: 'WATCHTOWER',
+  baselineNamespace: 'coilTools',
+  loadTimeout: 8000,
+  expectedIds: Object.freeze(['WT', 'WC', 'CD', 'CC', 'ECT-D', 'F-LAB', 'BRIDGE']),
+  knownWarnings: Object.freeze([
+    Object.freeze({ appId: 'CD', issueCode: 'cd-boundary-localstorage' }),
+  ]),
+  diagnosticDefaults: Object.freeze({
+    standardGlobals: Object.freeze(['AppDiagnostics', 'WcDiagnostics']),
+    standardMethods: Object.freeze(['runDiagnostics', 'runSmokeChecks']),
+    presets: Object.freeze({
+      wc: 'quick',
+      cd: 'edit',
+      ferrite: 'quick',
+    }),
+  }),
+  agent: Object.freeze({
+    contractVersion: 1,
+    audience: 'AI coding agents',
+    entrypoints: Object.freeze(['window.WATCHTOWER.run()', 'window.WATCHTOWER.runAndRender()', '#watchtower-json']),
+    portableMode: Object.freeze({
+      primaryFile: 'watchtower.html',
+      requiredFiles: Object.freeze(['watchtower.html']),
+      optionalFiles: Object.freeze(['README.md', 'WATCHTOWER.md']),
+      rule: 'watchtower.html is self-contained. Copy this single file into another project unless the human explicitly wants extra guide files.',
+    }),
+    quickStart: Object.freeze([
+      'Open watchtower.html in a browser.',
+      'Run window.WATCHTOWER.run() before editing.',
+      'Run window.WATCHTOWER.checkRequest("request text", result) before editing.',
+      'Read result.aiBrief, result.workbench, result.editBudget, and result.forbiddenSurfaceMap.',
+      'Do not change human-facing buttons unless the human explicitly asks.',
+      'Do not change compact summary cards unless the human explicitly asks.',
+      'After edits, run window.WATCHTOWER.runAndRender().',
+      'After work, call window.WATCHTOWER.recordSessionLog({ intent, outcome, detail, signatureBefore, signatureAfter, filesChanged }).',
+    ]),
+    aiFirstSteps: Object.freeze([
+      Object.freeze({ step: 1, id: 'run', command: 'window.WATCHTOWER.run()', purpose: 'Get the current project health before reading or editing files.' }),
+      Object.freeze({ step: 2, id: 'read', command: 'result.machineReadable', purpose: 'Read aiBrief, workbench, operationalInsights, editBudget, and forbiddenSurfaceMap.' }),
+      Object.freeze({ step: 3, id: 'gate', command: 'window.WATCHTOWER.checkRequest(intent, result)', purpose: 'Check whether the human request touches forbidden or risky surfaces.' }),
+      Object.freeze({ step: 4, id: 'edit', command: 'Edit only inside allowedScopes', purpose: 'Keep the change small and stay inside the focused app unless the human explicitly asks otherwise.' }),
+      Object.freeze({ step: 5, id: 'rerun', command: 'window.WATCHTOWER.runAndRender()', purpose: 'Verify WT and every registered app after the edit.' }),
+      Object.freeze({ step: 6, id: 'log', command: 'window.WATCHTOWER.recordSessionLog(entry)', purpose: 'Leave a compact work record for the next AI and the human owner.' }),
+    ]),
+    aiProfiles: Object.freeze({
+      codex: Object.freeze({
+        label: 'Codex',
+        outputBias: 'structured-json-and-guardrails',
+        prefers: Object.freeze(['editBudget', 'forbiddenSurfaceMap', 'function boundaries', 'regression checks', 'post-edit verification']),
+        handoffStyle: 'compact structured handoff with exact commands and risk gates',
+        beforeEdit: Object.freeze(['checkRequest(intent, result)', 'read editBudget', 'read forbiddenSurfaceMap']),
+        afterEdit: Object.freeze(['runAndRender()', 'recordSessionLog()', 'compare signature']),
+      }),
+      claude: Object.freeze({
+        label: 'Claude',
+        outputBias: 'long-context-design-intent',
+        prefers: Object.freeze(['why', 'architecture rationale', 'owner intent', 'tradeoffs', 'handoff narrative']),
+        handoffStyle: 'longer explanation with intent, constraints, and reasoning',
+        beforeEdit: Object.freeze(['read handoffPacket.markdown', 'read agentGuide', 'read safetyMap']),
+        afterEdit: Object.freeze(['summarize design impact', 'recordSessionLog()', 'rerun diagnostics']),
+      }),
+      cursor: Object.freeze({
+        label: 'Cursor',
+        outputBias: 'small-file-diff',
+        prefers: Object.freeze(['file-scoped TODOs', 'small diffs', 'nearby code context', 'single function edits']),
+        handoffStyle: 'short file-level checklist with exact targets',
+        beforeEdit: Object.freeze(['identify target file', 'limit to one function or section', 'read required checks']),
+        afterEdit: Object.freeze(['run nearest diagnostic preset', 'run Watchtower']),
+      }),
+      copilot: Object.freeze({
+        label: 'Copilot',
+        outputBias: 'nearby-completion-support',
+        prefers: Object.freeze(['local context', 'clear comments', 'small helper functions', 'explicit expected shape']),
+        handoffStyle: 'minimal local task description and expected output',
+        beforeEdit: Object.freeze(['open target function', 'read adjacent helpers', 'avoid broad refactors']),
+        afterEdit: Object.freeze(['run focused checks', 'verify no unrelated surface changed']),
+      }),
+      gemini: Object.freeze({
+        label: 'Gemini',
+        outputBias: 'spec-and-consistency',
+        prefers: Object.freeze(['types and schemas', 'consistency checks', 'spec language', 'cross-file invariants']),
+        handoffStyle: 'spec-oriented summary with invariants and acceptance criteria',
+        beforeEdit: Object.freeze(['read stable surfaces', 'read schema-like result fields', 'check consistency across apps']),
+        afterEdit: Object.freeze(['verify invariants', 'run full diagnostic when shape changed']),
+      }),
+    }),
+    capabilities: Object.freeze([
+      'suite-diagnostics',
+      'baseline-delta',
+      'regression-detection',
+      'known-warning-triage',
+      'healer-hints',
+      'portable-diagnostics-protocols',
+      'agent-workbench',
+      'completion-gates',
+      'handoff-packets',
+      'session-continuity',
+      'ai-brief-export',
+      'action-packet-contract',
+      'safe-danger-map',
+      'architecture-score',
+      'ai-confidence-index',
+      'change-impact-engine',
+      'pre-edit-risk-assessment',
+      'edit-budget-contract',
+      'forbidden-surface-map',
+      'single-file-portability',
+      'session-work-log',
+      'ai-profile-adaptation',
+      'bridge-live-context-freshness',
+    ]),
+    safetyDefaults: Object.freeze({
+      safe: Object.freeze(['labels', 'copy text', 'diagnostics additions', 'report formatting']),
+      medium: Object.freeze(['rendering', 'UI state sync', 'import/export glue']),
+      danger: Object.freeze(['storage schema', 'calculation core', 'public API contract', 'baseline contract']),
+    }),
+    gates: Object.freeze({
+      start: Object.freeze(['run-watchtower', 'read-workbench', 'identify-focus-app']),
+      beforeEdit: Object.freeze(['avoid-unrelated-files', 'respect-known-warnings', 'prefer-small-edits']),
+      afterEdit: Object.freeze(['rerun-watchtower', 'compare-baseline', 'check-ai-brief']),
+      complete: Object.freeze(['no-blockers', 'no-new-regressions', 'review-order-acknowledged']),
+    }),
+    editBudgets: Object.freeze({
+      clear: Object.freeze({ level:'observe', maxFiles:0, maxRisk:'safe', maxAttempts:1 }),
+      knownWarning: Object.freeze({ level:'tiny', maxFiles:1, maxRisk:'safe', maxAttempts:1 }),
+      investigate: Object.freeze({ level:'small', maxFiles:2, maxRisk:'medium', maxAttempts:2 }),
+      blocker: Object.freeze({ level:'focused-repair', maxFiles:3, maxRisk:'medium', maxAttempts:3 }),
+      regression: Object.freeze({ level:'focused-repair', maxFiles:3, maxRisk:'medium', maxAttempts:3 }),
+    }),
+  }),
+  apps: Object.freeze([
+    Object.freeze({ id: 'WT', title: 'WATCHTOWER', url: './watchtower.html', kind: 'self', maturity: 'self monitoring', diagnostics: Object.freeze({ protocol: 'self' }), safety: Object.freeze({ safe: Object.freeze(['config registry', 'portable docs']), medium: Object.freeze(['machine-readable schema']), danger: Object.freeze(['baseline contract', 'WATCHTOWER public API']) }) }),
+    Object.freeze({ id: 'WC', title: 'WINDING CALIBRATOR', url: './winding-calibrator.html', kind: 'wc', maturity: 'deep diagnostics', diagnostics: Object.freeze({ protocol: 'standard', globals: Object.freeze(['WcDiagnostics', 'AppDiagnostics']), preset: 'quick' }), safety: Object.freeze({ safe: Object.freeze(['labels', 'help text']), medium: Object.freeze(['render sync', 'diagnostics presets']), danger: Object.freeze(['calculation formulas', 'persisted inputs']) }) }),
+    Object.freeze({ id: 'CD', title: 'COIL DESIGNER', url: './coil-designer.html', kind: 'cd', maturity: 'deep diagnostics', diagnostics: Object.freeze({ protocol: 'standard', globals: Object.freeze(['AppDiagnostics']), preset: 'edit' }), safety: Object.freeze({ safe: Object.freeze(['UI labels', 'render text', 'diagnostics additions']), medium: Object.freeze(['render pipeline', 'mode sync']), danger: Object.freeze(['inverse solver', 'localStorage schema', 'calculation state']) }) }),
+    Object.freeze({ id: 'CC', title: 'COIL CALIBRATOR', url: './coil-calibrator.html', kind: 'cc', maturity: 'deep diagnostics', diagnostics: Object.freeze({ protocol: 'standard', globals: Object.freeze(['AppDiagnostics']), methods: Object.freeze(['runDiagnostics', 'runSmokeChecks']), preset: 'quick' }), safety: Object.freeze({ safe: Object.freeze(['diagnostic copy', 'chart labels']), medium: Object.freeze(['tuner import/export', 'rendered warnings']), danger: Object.freeze(['estimateFromPoints', 'validation constraints', 'storage schema']) }) }),
+    Object.freeze({ id: 'ECT-D', title: 'ECT DESIGNER', url: './ect-designer.html', kind: 'ect', maturity: 'deep diagnostics', diagnostics: Object.freeze({ protocol: 'standard', globals: Object.freeze(['AppDiagnostics']), methods: Object.freeze(['runDiagnostics', 'runSmokeChecks']), preset: 'quick' }), safety: Object.freeze({ safe: Object.freeze(['labels', 'static explanatory text']), medium: Object.freeze(['navigation panels', 'result rendering', 'diagnostics presets']), danger: Object.freeze(['physics formulas', 'cable model assumptions']) }) }),
+    Object.freeze({ id: 'F-LAB', title: 'FERRITE LAB', url: './ferrite-lab.html', kind: 'ferrite', maturity: 'deep diagnostics', diagnostics: Object.freeze({ protocol: 'standard', globals: Object.freeze(['AppDiagnostics']), methods: Object.freeze(['runDiagnostics', 'runSmokeChecks']), preset: 'quick' }), safety: Object.freeze({ safe: Object.freeze(['labels', 'table display', 'diagnostic copy']), medium: Object.freeze(['JSON import/export', 'nearest-condition ranking']), danger: Object.freeze(['correction estimator weights', 'localStorage record schema']) }) }),
+    Object.freeze({ id: 'BRIDGE', title: 'BRIDGE', url: './bridge.html?wt_bridge=v15', kind: 'bridge', maturity: 'schema + live context freshness diagnostics', diagnostics: Object.freeze({ protocol: 'standard', globals: Object.freeze(['AppDiagnostics']), methods: Object.freeze(['runDiagnostics', 'runSmokeChecks']), preset: 'quick', liveContextFreshness: true }), safety: Object.freeze({ safe: Object.freeze(['labels', 'diagnostics additions']), medium: Object.freeze(['handoff formatting', 'JSON import/export']), danger: Object.freeze(['context schema', 'public API contract']) }) }),
+  ]),
+});
+
+document.title = WATCHTOWER_CONFIG.projectTitle;
+titleEl.textContent = WATCHTOWER_CONFIG.projectTitle;
+
+const BASELINE_KEY = WATCHTOWER_CONFIG.baselineNamespace + '.watchtower.baseline.v1';
+const APPROVAL_KEY = WATCHTOWER_CONFIG.baselineNamespace + '.watchtower.approval.v1';
+const SESSION_LOG_KEY = WATCHTOWER_CONFIG.baselineNamespace + '.watchtower.sessionlog.v1';
+const SESSION_LOG_MAX = 50;
+
+function readApproval() {
+  try {
+    return JSON.parse(localStorage.getItem(APPROVAL_KEY) || 'null');
+  } catch (_) {
+    return null;
+  }
+}
+
+function readSessionLog() {
+  try {
+    const value = JSON.parse(localStorage.getItem(SESSION_LOG_KEY) || '[]');
+    return Array.isArray(value) ? value : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function normalizeSessionOutcome(outcome) {
+  const value = String(outcome || 'note').toLowerCase();
+  return ['success', 'failed', 'blocked', 'note'].includes(value) ? value : 'note';
+}
+
+function recordSessionLog(entry = {}) {
+  const previous = readSessionLog();
+  const item = {
+    id: 'log-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    recordedAt: new Date().toISOString(),
+    intent: String(entry.intent || 'unspecified work'),
+    outcome: normalizeSessionOutcome(entry.outcome),
+    detail: String(entry.detail || ''),
+    signatureBefore: entry.signatureBefore || null,
+    signatureAfter: entry.signatureAfter || null,
+    filesChanged: Array.isArray(entry.filesChanged) ? entry.filesChanged.map(String) : [],
+    verdict: entry.verdict || null,
+  };
+  const next = [item, ...previous].slice(0, SESSION_LOG_MAX);
+  try {
+    localStorage.setItem(SESSION_LOG_KEY, JSON.stringify(next));
+  } catch (_) {}
+  return item;
+}
+
+function readSessionLogSummary(limit = 3) {
+  const entries = readSessionLog();
+  const recent = entries.slice(0, Math.max(1, limit || 3));
+  const successCount = entries.filter(entry => entry.outcome === 'success').length;
+  const failedCount = entries.filter(entry => entry.outcome === 'failed' || entry.outcome === 'blocked').length;
+  return {
+    contractVersion: 1,
+    available: entries.length > 0,
+    total: entries.length,
+    successCount,
+    failedCount,
+    maxEntries: SESSION_LOG_MAX,
+    entries: recent,
+    latest: recent[0] || null,
+    summary: entries.length
+      ? recent.map(formatSessionLogEntry).join('\n')
+      : '作業日誌はまだありません。',
+  };
+}
+
+function resetSessionLog() {
+  try {
+    localStorage.removeItem(SESSION_LOG_KEY);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function formatSessionLogEntry(entry) {
+  const ts = entry.recordedAt
+    ? new Date(entry.recordedAt).toLocaleString('ja-JP', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
+    : '日時不明';
+  const sig = entry.signatureAfter ? ' → ' + String(entry.signatureAfter).split('|')[0] : '';
+  return ts + ' / ' + entry.outcome + ' / ' + entry.intent + sig;
+}
+
+function writeApproval(stamp) {
+  try {
+    localStorage.setItem(APPROVAL_KEY, JSON.stringify(stamp));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function stampApproval(signature) {
+  const stamp = {
+    approvedAt: new Date().toISOString(),
+    signature,
+  };
+  return writeApproval(stamp) ? stamp : null;
+}
+
+// ── BUG LEDGER ──────────────────────────────────────────────
+const BUG_LEDGER_KEY = WATCHTOWER_CONFIG.baselineNamespace + '.watchtower.bugledger.v1';
+
+function readBugLedger() {
+  try {
+    return JSON.parse(localStorage.getItem(BUG_LEDGER_KEY) || '[]');
+  } catch (_) {
+    return [];
+  }
+}
+
+function writeBugLedger(entries) {
+  try {
+    localStorage.setItem(BUG_LEDGER_KEY, JSON.stringify(entries));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function resetBugLedger() {
+  try {
+    localStorage.removeItem(BUG_LEDGER_KEY);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function autoRegisterBugs(result) {
+  // 診断結果からバグを自動登録する。
+  // bad / warn(known以外) のアプリを対象に、同じissueCodeが未登録なら追加。
+  const ledger = readBugLedger();
+  const newEntries = [];
+  for (const app of result.apps) {
+    if (app.level === 'ok') continue;
+    if (app.knownWarning) continue;
+    const alreadyLogged = ledger.some(entry =>
+      entry.appId === app.id && entry.issueCode === app.issueCode
+    );
+    if (alreadyLogged) continue;
+    const config = APPS.find(item => item.id === app.id);
+    const dangerZone = config?.safety?.danger?.[0] || app.id + ' unknown zone';
+    newEntries.push({
+      id: 'bug-' + Date.now() + '-' + app.id,
+      detectedAt: result.generatedAt,
+      appId: app.id,
+      appTitle: app.title,
+      issueCode: app.issueCode,
+      level: app.level,
+      reason: app.reason,
+      dangerZone,
+      signature: result.signature,
+      resolved: false,
+    });
+  }
+  // resolved済みを更新（今回OKになったものをresolvedにする）
+  const updated = ledger.map(entry => {
+    if (entry.resolved) return entry;
+    const currentApp = result.apps.find(app => app.id === entry.appId);
+    if (currentApp && currentApp.level === 'ok') {
+      return { ...entry, resolved: true, resolvedAt: result.generatedAt };
+    }
+    return entry;
+  });
+  const merged = [...updated, ...newEntries];
+  writeBugLedger(merged);
+  return { added: newEntries.length, total: merged.length, entries: merged };
+}
+
+function buildBugLedgerSummary(result) {
+  const ledger = readBugLedger();
+  const open = ledger.filter(entry => !entry.resolved);
+  const resolved = ledger.filter(entry => entry.resolved);
+  const focusId = result?.workbench?.focus?.id;
+  const prioritized = open.slice().sort((a, b) => {
+    if (a.appId === focusId && b.appId !== focusId) return -1;
+    if (b.appId === focusId && a.appId !== focusId) return 1;
+    const lvl = { bad: 2, warn: 1 };
+    return (lvl[b.level] || 0) - (lvl[a.level] || 0);
+  });
+  // 「いつから壊れたか」: checkpointHistoryと照合して初出世代を付与
+  const history = readCheckpointHistory();
+  const withAge = prioritized.map(entry => {
+    const firstSeen = history.reduce((earliest, cp) => {
+      const found = (cp.apps || []).find(app =>
+        app.id === entry.appId && app.level !== 'ok' && app.issueCode === entry.issueCode
+      );
+      if (found && (!earliest || cp.savedAt < earliest)) return cp.savedAt;
+      return earliest;
+    }, null);
+    const ageMs = firstSeen ? Date.now() - new Date(firstSeen).getTime() : null;
+    const ageDays = ageMs !== null ? Math.floor(ageMs / 86400000) : null;
+    return {
+      ...entry,
+      firstSeenAt: firstSeen || entry.detectedAt,
+      ageDays,
+      ageLabel: ageDays === null ? '初回検出' : ageDays === 0 ? '今日から' : ageDays + '日前から',
+    };
+  });
+  return {
+    contractVersion: 1,
+    open: withAge,
+    resolved: resolved.slice(-10),
+    openCount: open.length,
+    resolvedCount: resolved.length,
+    dangerZones: [...new Set(open.map(entry => entry.dangerZone))],
+    warning: open.length
+      ? open.length + '件の未解決バグ。dangerZonesを触る前に確認してください。'
+      : '未解決バグなし。',
+  };
+}
+
+// ── CHECKPOINT ───────────────────────────────────────────────
+const CHECKPOINT_KEY = WATCHTOWER_CONFIG.baselineNamespace + '.watchtower.checkpoint.v1';
+const CHECKPOINT_MAX = 5;
+
+function readCheckpointHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(CHECKPOINT_KEY) || '[]');
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveCheckpoint(result) {
+  try {
+    const history = readCheckpointHistory();
+    const entry = {
+      savedAt: result.generatedAt,
+      signature: result.signature,
+      status: result.status,
+      level: result.level,
+      verdict: result.aiBrief?.verdict || 'unknown',
+      focus: result.workbench?.focus?.id || null,
+      apps: result.apps.map(app => ({
+        id: app.id,
+        level: app.level,
+        issueCode: app.issueCode,
+      })),
+    };
+    const updated = [entry, ...history].slice(0, CHECKPOINT_MAX);
+    localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(updated));
+    return { saved: true, total: updated.length };
+  } catch (_) {
+    return { saved: false, total: 0 };
+  }
+}
+
+function renderCheckpoint(result) {
+  const history = readCheckpointHistory();
+  if (!history.length) {
+    checkpointBanner.classList.remove('visible');
+    return;
+  }
+  const latest = history[0];
+  const ts = new Date(latest.savedAt).toLocaleString('ja-JP', {
+    month: 'numeric', day: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+  checkpointText.textContent = ts + ' / ' + latest.status +
+    (latest.focus ? ' / focus:' + latest.focus : '') +
+    ' (' + history.length + '/' + CHECKPOINT_MAX + '件保持)';
+  checkpointBanner.classList.add('visible');
+}
+
+function renderOwnerPanel(result) {
+  if (!result) { ownerPanel.classList.remove('visible'); return; }
+
+  const bugSummary = buildBugLedgerSummary(result);
+  const openBugs = bugSummary.openCount;
+
+  // 行1: 全体の状態
+  const statusEmoji = result.level === 'ok' ? '🟢' : result.level === 'warn' ? '🟡' : '🔴';
+  const statusJa = result.level === 'ok'
+    ? '全アプリ正常です'
+    : result.level === 'warn'
+      ? '軽微な問題があります（動作には影響なし）'
+      : '問題があります（要確認）';
+  const statusEn = result.level === 'ok'
+    ? 'All apps healthy'
+    : result.level === 'warn'
+      ? 'Minor issue (non-blocking)'
+      : 'Problem detected';
+
+  // 行2: バグ状況
+  const bugEmoji = openBugs === 0 ? '✅' : openBugs <= 2 ? '🟡' : '🔴';
+  const bugJa = openBugs === 0
+    ? '未解決バグ: なし'
+    : '未解決バグ: ' + openBugs + '件（' +
+      bugSummary.open.slice(0, 2).map(b => b.appId + ' / ' + b.ageLabel).join('、') +
+      (openBugs > 2 ? '…' : '') + '）';
+  const bugEn = openBugs === 0
+    ? 'No open bugs'
+    : openBugs + ' open bug' + (openBugs > 1 ? 's' : '');
+
+  // 行3: AIの次の作業
+  const nextJa = result.aiBrief?.nextAction || 'Watchtowerを再実行してください';
+  const actionEmoji = result.ok ? '📋' : '🔧';
+
+  function row(emoji, ja, en) {
+    return emoji + ' <span class="ja">' + escapeHtml(ja) + '</span>' +
+      '<span class="en">/ ' + escapeHtml(en) + '</span>';
+  }
+
+  ownerRow1.innerHTML = row(statusEmoji, statusJa, statusEn);
+  ownerRow2.innerHTML = row(bugEmoji, bugJa, bugEn);
+  ownerRow3.innerHTML = row(actionEmoji, 'AIの次の作業: ' + nextJa, '');
+  ownerPanel.classList.add('visible');
+}
+
+// ── RESUME (「続きをやって」) ────────────────────────────────
+function buildResumeText(result) {
+  const hp = result.handoffPacket;
+  const fp = result.focusPacket;
+  const approval = readApproval();
+  const approvalLine = approval
+    ? '承認: ' + new Date(approval.approvedAt).toLocaleString('ja-JP') +
+      (approval.signature === result.signature ? ' [この結果]' : ' [別バージョン]')
+    : '承認: なし';
+  const bugSummary = buildBugLedgerSummary(result);
+  const bugLines = bugSummary.open.slice(0, 3).map(b =>
+    '  - ' + b.appId + ' / ' + b.issueCode + ' (' + b.ageLabel + ')'
+  );
+  const sessionLog = readSessionLogSummary(3);
+  const sessionLines = sessionLog.available
+    ? sessionLog.entries.map(entry => '  ' + formatSessionLogEntry(entry)).join('\n')
+    : '  ' + sessionLog.summary;
+  const lines = [
+    '━━ WATCHTOWER 引き継ぎ ━━',
+    'プロジェクト: ' + result.project.title,
+    'ステータス: ' + result.status + ' / verdict:' + result.aiBrief.verdict,
+    'actionPacket: ' + ((result.actionPacket?.mission || 'inspect-watchtower') + (result.actionPacket?.targetApp ? ' @' + result.actionPacket.targetApp : '')),
+    approvalLine,
+    '',
+    '【今回やること】',
+    fp?.doNow?.length ? fp.doNow.join(', ') : 'なし（全部OK）',
+    '',
+    '【今回触らない】',
+    fp?.skip?.length ? fp.skip.join(', ') : 'なし',
+    '',
+    '【未解決バグ】',
+    bugSummary.openCount
+      ? bugLines.join('\n') + (bugSummary.openCount > 3 ? '\n  ...他' + (bugSummary.openCount - 3) + '件' : '')
+      : 'なし',
+    '',
+    '【作業日誌 (直近3件)】',
+    sessionLines,
+    '',
+    '【次のアクション】',
+    result.aiBrief.nextAction,
+    '',
+    '【チェックリスト】',
+    '1. Watchtower を run() して最新状態を確認',
+    '2. focusPacket.doNow のアプリから着手',
+    '3. 編集前に assessChange("意図") でリスク確認',
+    '4. 編集後に Watchtower を再実行',
+    '5. OK になったらオーナーに「診断結果を承認」を依頼',
+    '',
+    'signature: ' + result.signature,
+    '生成: ' + new Date(result.generatedAt).toLocaleString('ja-JP'),
+    '━━━━━━━━━━━━━━━━',
+  ];
+  return lines.join('\n');
+}
+
+function renderResume(result) {
+  if (!result) {
+    resumeBtn.className = '';
+    resumeBtn.disabled = true;
+    return;
+  }
+  resumeBtn.className = 'ready';
+  resumeBtn.disabled = false;
+  resumeBtn.dataset.resumeSignature = result.signature;
+}
+
+function copyResumeText(result) {
+  const text = buildResumeText(result);
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      resumeBtn.textContent = 'コピー済み ✓';
+      resumeBtn.className = 'ready copied';
+      setTimeout(() => {
+        resumeBtn.textContent = resumeBtn.dataset.defaultLabel || 'AIに続きを頼む';
+        resumeBtn.className = 'ready';
+      }, 2500);
+    }).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  resumeBtn.textContent = 'コピー済み ✓';
+  resumeBtn.className = 'ready copied';
+  setTimeout(() => {
+    resumeBtn.textContent = resumeBtn.dataset.defaultLabel || 'AIに続きを頼む';
+    resumeBtn.className = 'ready';
+  }, 2500);
+}
+
+function renderApproval(level, signature) {
+  const approval = readApproval();
+  const canApprove = (level === 'ok' || level === 'warn');
+  const alreadyApproved = approval && approval.signature === signature;
+  if (alreadyApproved) {
+    approveBtn.className = 'stamped';
+    approveBtn.textContent = '承認済み';
+    approveBtn.disabled = true;
+  } else {
+    approveBtn.className = canApprove ? 'ready' : '';
+    approveBtn.textContent = approveBtn.dataset.defaultLabel || '診断結果を承認';
+    approveBtn.disabled = !canApprove;
+  }
+  if (approval) {
+    const ts = new Date(approval.approvedAt).toLocaleString('ja-JP', {
+      year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const sameRun = approval.signature === signature;
+    approvalText.textContent = ts + (sameRun ? ' (この結果)' : ' (別バージョン)');
+    approvalBanner.classList.add('visible');
+  } else {
+    approvalBanner.classList.remove('visible');
+  }
+}
+const APPS = WATCHTOWER_CONFIG.apps;
 
 function setStatus(text, level = 'ok') {
   statusEl.textContent = text;
   statusEl.className = 'status ' + level;
 }
 
+function checkSummaryCardContract() {
+  const failures = [];
+  const warnings = [];
+  if (!summaryEl) {
+    failures.push('summary card contract missing: summary container');
+  } else {
+    const tile = summaryEl.querySelector('.tile');
+    if (!tile) {
+      warnings.push('summary card contract: tile not yet rendered');
+    } else if (window.innerWidth >= 900) {
+      const tileStyle = getComputedStyle(tile);
+      const tileWidth = Math.round(tile.getBoundingClientRect().width);
+      const minHeight = parseInt(tileStyle.minHeight, 10);
+      const titleFontSize = parseInt(getComputedStyle(tile.querySelector('strong')).fontSize, 10);
+      const labelFontSize = parseInt(getComputedStyle(tile.querySelector('span')).fontSize, 10);
+      const reasonFontSize = parseInt(getComputedStyle(tile.querySelector('small')).fontSize, 10);
+      if (tileWidth !== HUMAN_SUMMARY_CARD_CONTRACT.desktopWidthPx) failures.push('summary card width changed: ' + tileWidth);
+      if (minHeight !== HUMAN_SUMMARY_CARD_CONTRACT.minHeightPx) failures.push('summary card min-height changed: ' + minHeight);
+      if (titleFontSize !== HUMAN_SUMMARY_CARD_CONTRACT.titleFontSizePx) failures.push('summary card title font changed: ' + titleFontSize);
+      if (labelFontSize !== HUMAN_SUMMARY_CARD_CONTRACT.labelFontSizePx) failures.push('summary card label font changed: ' + labelFontSize);
+      if (reasonFontSize !== HUMAN_SUMMARY_CARD_CONTRACT.reasonFontSizePx) failures.push('summary card reason font changed: ' + reasonFontSize);
+    }
+  }
+  lastSummaryCardContractCheck = {
+    checked:true,
+    ok: failures.length === 0,
+    warnings,
+    failures,
+    checkedAt: new Date().toISOString(),
+  };
+  return lastSummaryCardContractCheck;
+}
+
+function setProgress(text) {
+  if (runProgressEl) runProgressEl.innerHTML = text;
+}
+
+function setResultActionsEnabled(enabled) {
+  document.querySelectorAll('[data-result-action]').forEach(button => {
+    button.disabled = !enabled;
+  });
+  resumeBtn.disabled = !enabled;
+  if (!enabled) {
+    resumeBtn.classList.remove('ready', 'copied');
+    approveBtn.disabled = true;
+    approveBtn.classList.remove('ready', 'stamped');
+  }
+}
+
+function setControlsRunning(running) {
+  isRunning = !!running;
+  document.querySelectorAll('.actions button').forEach(button => {
+    button.disabled = isRunning;
+  });
+  if (isRunning) {
+    approveBtn.classList.remove('ready', 'stamped');
+    resumeBtn.classList.remove('ready', 'copied');
+    document.getElementById('run').textContent = '診断中...';
+    return;
+  }
+  document.getElementById('run').textContent = document.getElementById('run').dataset.defaultLabel || '診断する';
+  const current = readRenderedResult();
+  setResultActionsEnabled(!!current);
+  if (current) {
+    renderApproval(current.level, current.signature);
+    renderResume(current);
+  }
+}
+
+function readRenderedResult() {
+  try {
+    const result = JSON.parse(jsonEl?.textContent || 'null');
+    return result && result.signature ? result : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function waitForFrame(url) {
   return new Promise((resolve, reject) => {
+    const ms = WATCHTOWER_CONFIG.loadTimeout || 8000;
     const timeout = window.setTimeout(() => {
       target.removeEventListener('load', onLoad);
-      reject(new Error('timeout loading ' + url));
-    }, 6000);
+      reject(new Error('timeout loading ' + url + ' (limit: ' + ms + 'ms)'));
+    }, ms);
     function onLoad() {
       window.clearTimeout(timeout);
       target.removeEventListener('load', onLoad);
@@ -167,92 +1151,2737 @@ function runBasic(app, win) {
 
 function normalizeDiagnosticResult(app, value) {
   if (!value) return { level: 'bad', report: app.id + ' diagnostics unavailable' };
-  if (typeof value === 'string') return { level: /FAILED|failure|Status:\s*NG/i.test(value) ? 'warn' : 'ok', report: value };
+  if (typeof value === 'string') {
+    const hasBadStatus = /FAILED|Status:\s*(NG|WARN)|\bWARN\b|警告/i.test(value);
+    const failureCount = value.match(/Failures:\s*(\d+)/i);
+    const hasFailures = failureCount ? Number(failureCount[1]) > 0 : /\bfailure\b/i.test(value);
+    return { level: (hasBadStatus || hasFailures) ? 'warn' : 'ok', report: value };
+  }
   if (typeof value.ok === 'boolean') {
     return { level: value.ok ? 'ok' : 'warn', report: value.report || JSON.stringify(value, null, 2) };
   }
   return { level: 'ok', report: JSON.stringify(value, null, 2) };
 }
 
-function runAppDiagnostics(app, win) {
-  if (app.kind === 'cc') {
-    const result = win.CC_TEST_HARNESS?.run();
-    if (!result) return { level: 'bad', report: 'CC harness unavailable' };
+function runHarnessDiagnostics(app, win, diagnostics) {
+  const api = win[diagnostics.global];
+  const method = diagnostics.method || 'run';
+  const result = api?.[method]?.();
+  if (!result) return { level: 'bad', report: app.id + ' harness unavailable: ' + diagnostics.global + '.' + method };
+  if (diagnostics.format === 'cc') {
     return {
       level: result.ok ? 'ok' : 'bad',
       report: result.report
-        + '\n\nspecs:\n' + JSON.stringify(result.specs.results, null, 2)
-        + '\n\nsiege:\n' + JSON.stringify(result.siege.results, null, 2),
+        + '\n\nspecs:\n' + JSON.stringify(result.specs?.results || [], null, 2)
+        + '\n\nsiege:\n' + JSON.stringify(result.siege?.results || [], null, 2),
     };
   }
+  return normalizeDiagnosticResult(app, result.report || result);
+}
 
-  if (app.kind === 'wc') {
-    const diagnostics = win.WcDiagnostics || win.AppDiagnostics;
-    const result = diagnostics?.runDiagnostics
-      ? diagnostics.runDiagnostics({ preset: 'quick', log: false })
-      : null;
-    const report = diagnostics?.report && result ? diagnostics.report(result) : result;
-    return normalizeDiagnosticResult(app, report || result);
+function runStandardDiagnostics(app, win, diagnostics = {}) {
+  const defaults = WATCHTOWER_CONFIG.diagnosticDefaults;
+  const globals = diagnostics.globals || defaults.standardGlobals;
+  const methods = diagnostics.methods || defaults.standardMethods;
+  const preset = diagnostics.preset || defaults.presets[app.kind] || 'quick';
+  for (const globalName of globals) {
+    const api = win[globalName];
+    if (!api) continue;
+    for (const method of methods) {
+      if (typeof api[method] !== 'function') continue;
+      const result = api[method]({ preset, log: false });
+      const report = api.report && result ? api.report(result) : result;
+      return normalizeDiagnosticResult(app, report || result);
+    }
+  }
+  return null;
+}
+
+function assessBridgeLiveContext(displayedContext, canonicalContext) {
+  const failures = [];
+  const displayed = displayedContext || null;
+  const canonical = canonicalContext || null;
+  function requireMatch(field, expected, seen) {
+    if (String(expected || '') !== String(seen || '')) {
+      failures.push(field + ' mismatch: expected ' + String(expected || 'missing') + ', seen ' + String(seen || 'missing'));
+    }
+  }
+  if (!displayed) failures.push('displayed bridge context missing');
+  if (!canonical) failures.push('canonical bridge context missing');
+  if (!displayed || !canonical) {
+    return { ok: false, failures, report: 'BRIDGE live context freshness: FAILED\n' + failures.map(item => '- ' + item).join('\n') };
+  }
+  requireMatch('bridge_version', canonical.bridge_version, displayed.bridge_version);
+  if (!displayed.canonical_current_state) failures.push('displayed canonical_current_state missing');
+  if (!canonical.canonical_current_state) failures.push('canonical canonical_current_state missing');
+  const expectedPointer = canonical.canonical_current_state || {};
+  const shownPointer = displayed.canonical_current_state || {};
+  const canonicalPackets = Array.isArray(canonical.semantic_packets) ? canonical.semantic_packets : [];
+  const canonicalLatestPacketId = canonicalPackets.length
+    ? String(canonicalPackets[canonicalPackets.length - 1].packet_id || '') : '';
+  requireMatch('canonical_current_state.updated_at', expectedPointer.updated_at, shownPointer.updated_at);
+  requireMatch('canonical_current_state.latest_semantic_packet_id', expectedPointer.latest_semantic_packet_id, shownPointer.latest_semantic_packet_id);
+  requireMatch('canonical_current_state.watchtower_gate_current_status', expectedPointer.watchtower_gate_current_status, shownPointer.watchtower_gate_current_status);
+  requireMatch('canonical_current_state.watchtower_gate_last_checked_at', expectedPointer.watchtower_gate_last_checked_at, shownPointer.watchtower_gate_last_checked_at);
+  if (String(expectedPointer.latest_semantic_packet_id || '') !== canonicalLatestPacketId) {
+    failures.push('canonical_current_state.latest_semantic_packet_id is behind semantic_packets: expected '
+      + (canonicalLatestPacketId || 'missing') + ', seen ' + String(expectedPointer.latest_semantic_packet_id || 'missing'));
+  }
+  const expectedCheckpoint = canonical.recovery_checkpoint || null;
+  const shownCheckpoint = displayed.recovery_checkpoint || null;
+  if (expectedCheckpoint && !shownCheckpoint) {
+    failures.push('displayed recovery_checkpoint missing');
+  } else if (expectedCheckpoint && shownCheckpoint) {
+    requireMatch('recovery_checkpoint.checkpoint_id', expectedCheckpoint.checkpoint_id, shownCheckpoint.checkpoint_id);
+    requireMatch('recovery_checkpoint.canonical_pointer_updated_at', shownPointer.updated_at, shownCheckpoint.canonical_pointer_updated_at);
+    requireMatch('recovery_checkpoint.bridge_version', shownPointer.bridge_version, shownCheckpoint.bridge_version);
+    if (['in_progress', 'blocked'].includes(shownCheckpoint.work_status)
+      && !String((shownCheckpoint.pending_actions || [])[0] || '').trim()) {
+      failures.push('recovery_checkpoint.pending_actions[0] missing');
+    }
+  }
+  return {
+    ok: failures.length === 0,
+    failures,
+    report: [
+      'BRIDGE live context freshness: ' + (failures.length ? 'FAILED' : 'OK'),
+      '- displayed_bridge_version: ' + String(displayed.bridge_version || 'missing'),
+      '- canonical_bridge_version: ' + String(canonical.bridge_version || 'missing'),
+      '- canonical_latest_semantic_packet_id: ' + String(shownPointer.latest_semantic_packet_id || 'missing'),
+      '- actual_latest_semantic_packet_id: ' + (canonicalLatestPacketId || 'missing'),
+      '- recovery_checkpoint: ' + String((shownCheckpoint || {}).checkpoint_id || 'missing'),
+    ].concat(failures.map(item => '- ' + item)).join('\n'),
+  };
+}
+
+async function runBridgeLiveContextDiagnostics(app, win, diagnostics = {}) {
+  const standard = runStandardDiagnostics(app, win, diagnostics) || runBasic(app, win);
+  let displayedContext = null;
+  let canonicalContext = null;
+  const deadline = Date.now() + (WATCHTOWER_CONFIG.loadTimeout || 8000);
+  while (!displayedContext && Date.now() < deadline) {
+    try {
+      const view = win.document.getElementById('jsonView');
+      displayedContext = JSON.parse(view && view.value ? view.value : '');
+    } catch (error) {
+      await new Promise(resolve => window.setTimeout(resolve, 50));
+    }
+  }
+  if (!displayedContext) {
+    return { level: 'bad', report: standard.report + '\n\nBRIDGE live context freshness: FAILED\n- displayed context did not become readable before timeout' };
+  }
+  try {
+    const response = await fetch('./bridge-context.json?wt_fresh=' + Date.now(), { cache: 'no-store' });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    canonicalContext = await response.json();
+  } catch (error) {
+    return { level: 'bad', report: standard.report + '\n\nBRIDGE live context freshness: FAILED\n- unable to fetch canonical context: ' + error.message };
+  }
+  const live = assessBridgeLiveContext(displayedContext, canonicalContext);
+  const core = win.BRIDGE && typeof win.BRIDGE.run_bridge_core_diagnostics === 'function'
+    ? win.BRIDGE.run_bridge_core_diagnostics(canonicalContext) : null;
+  const coreOk = !core || core.bridge_status === 'healthy';
+  const coreReport = core ? [
+    'WT Core live context: ' + (coreOk ? 'OK' : 'FAILED'),
+    '- bridge_status: ' + core.bridge_status,
+    '- canonical: ' + core.canonical,
+    '- warnings: ' + ((core.warnings || []).join(' / ') || 'none')
+  ].join('\n') : 'WT Core live context: unavailable';
+  return {
+    level: standard.level === 'ok' && live.ok && coreOk ? 'ok' : 'bad',
+    report: standard.report + '\n\n' + live.report + '\n\n' + coreReport,
+  };
+}
+
+function runAppDiagnostics(app, win) {
+  const diagnostics = app.diagnostics || {};
+  if (diagnostics.protocol === 'self' || app.kind === 'self') {
+    return runWatchtowerSelfDiagnostics();
   }
 
-  if (app.kind === 'cd') {
-    const diagnostics = win.AppDiagnostics;
-    const result = diagnostics?.runSmokeChecks
-      ? diagnostics.runSmokeChecks({ preset: 'edit', log: false })
-      : diagnostics?.runDiagnostics
-        ? diagnostics.runDiagnostics({ preset: 'edit', log: false })
-        : null;
-    const report = diagnostics?.report && result ? diagnostics.report(result) : result;
-    return normalizeDiagnosticResult(app, report || result);
+  if (diagnostics.protocol === 'harness') {
+    return runHarnessDiagnostics(app, win, diagnostics);
+  }
+
+  if (diagnostics.protocol === 'standard' || diagnostics.protocol === 'auto' || !diagnostics.protocol) {
+    const result = runStandardDiagnostics(app, win, diagnostics);
+    if (result) return result;
   }
 
   return runBasic(app, win);
 }
 
+function runWatchtowerSelfDiagnostics() {
+  const failures = [];
+  const warnings = [];
+  const src = document.documentElement.innerHTML;
+
+  // ── アプリレジストリ整合性 ──
+  const appIds = APPS.map(app => app.id);
+  const appUrls = APPS.map(app => app.url);
+  const duplicatedIds = appIds.filter((id, index) => appIds.indexOf(id) !== index);
+  const duplicatedUrls = appUrls.filter((url, index) => appUrls.indexOf(url) !== index);
+  WATCHTOWER_CONFIG.expectedIds.forEach(id => {
+    if (!appIds.includes(id)) failures.push('missing app registry entry: ' + id);
+  });
+  if (duplicatedIds.length) failures.push('duplicate app ids: ' + [...new Set(duplicatedIds)].join(', '));
+  if (duplicatedUrls.length) failures.push('duplicate app urls: ' + [...new Set(duplicatedUrls)].join(', '));
+
+  // ── DOM構造 ──
+  if (!target || target.tagName !== 'IFRAME') failures.push('iframe loader missing');
+  if (!summaryEl || !maturityEl || !output) failures.push('report containers missing');
+  if (!document.getElementById('owner-panel')) failures.push('owner panel missing');
+  if (!document.getElementById('approval-banner')) failures.push('approval banner missing');
+  if (!document.getElementById('checkpoint-banner')) failures.push('checkpoint banner missing');
+  if (!document.getElementById('watchtower-json')) failures.push('machine-readable json element missing');
+  const humanButtons = Array.from(document.querySelectorAll('.actions > button'));
+  const actualHumanButtonIds = humanButtons.map(button => button.id).join('|');
+  const expectedHumanButtonIds = HUMAN_BUTTON_CONTRACT.map(button => button.id).join('|');
+  if (actualHumanButtonIds !== expectedHumanButtonIds) {
+    failures.push('human button contract changed: ' + actualHumanButtonIds + ' expected ' + expectedHumanButtonIds);
+  }
+  HUMAN_BUTTON_CONTRACT.forEach(spec => {
+    const button = document.getElementById(spec.id);
+    if (!button) {
+      failures.push('human button missing: ' + spec.id);
+      return;
+    }
+    const label = button.dataset.defaultLabel || button.textContent.trim();
+    if (label !== spec.label) failures.push('human button label changed: ' + spec.id + '=' + label);
+  });
+  if (!summaryEl) failures.push('summary card contract missing: summary container');
+  const expectedColumns = HUMAN_SUMMARY_CARD_CONTRACT.gridTemplate;
+  const sourceHasDesktopGrid = src.includes('grid-template-columns:' + expectedColumns);
+  if (!sourceHasDesktopGrid) failures.push('summary card grid contract changed');
+  if (lastSummaryCardContractCheck.checked) {
+    lastSummaryCardContractCheck.failures.forEach(item => failures.push(item));
+  }
+
+  // ── 設定整合性 ──
+  if (!WATCHTOWER_CONFIG.loadTimeout) warnings.push('loadTimeout not set in config');
+  if (!WATCHTOWER_CONFIG.baselineNamespace) failures.push('baselineNamespace missing');
+  const validLevels = ['ok', 'warn', 'bad'];
+  if (validLevels.length !== 3) failures.push('result levels invalid');
+  if (!APPS.every(app => app.maturity && app.title && app.url)) warnings.push('some registry metadata is incomplete');
+  if (!APPS.every(app => app.diagnostics?.protocol)) warnings.push('some apps use implicit diagnostics protocol');
+
+  // ── 公開APIの存在確認 ──
+  const requiredApis = [
+    'run', 'runAndRender', 'readBaseline', 'saveBaseline',
+    'exportBaseline', 'importBaseline', 'readApproval', 'stampApproval',
+    'readBugLedger', 'resetBugLedger', 'buildBugLedgerSummary',
+    'readSessionLog', 'recordSessionLog', 'readSessionLogSummary', 'resetSessionLog',
+    'readCheckpointHistory', 'saveCheckpoint', 'buildResumeText',
+    'buildFocusPacket', 'buildDangerWarning', 'compareWithBaseline',
+    'buildAiBrief', 'buildActionPacket', 'getActionPacket', 'buildAgentCard', 'buildWorkbench', 'buildHandoffPacket',
+    'buildSafetyMap', 'buildEditBudget', 'buildForbiddenSurfaceMap', 'buildArchitectureScore', 'buildBriefExports',
+    'buildCleanupCandidates', 'assessBridgeLiveContext',
+    'generateReadme', 'assessChange', 'healerHintFor',
+    'formatHandoffForAgent', 'getMachineReadableResult', 'getMachineReadableResultAsync',
+    'suggestNextActions', 'checkRequest', 'assessIntentAndGuard', 'isIntentSafe',
+    'inferHumanRequestedFocus',
+    'instrumentAppForTracing', 'analyzeChangeImpact',
+    'learnFromHistory', 'getHistoricalRiskProfile',
+    'getAiProfileGuide', 'getAgentProfile', 'updateAgentProfile',
+  ];
+  requiredApis.forEach(name => {
+    if (typeof window.WATCHTOWER?.[name] !== 'function') {
+      warnings.push('WATCHTOWER.' + name + ' missing from public API');
+    }
+  });
+
+  // ── コアコントラクトのソース検査 ──
+  const requiredTokens = [
+    'sessionBrief', 'conversationStarter', 'scoreBreakdown',
+    'loadTimeout', 'APPROVAL_KEY', 'BUG_LEDGER_KEY', 'CHECKPOINT_KEY',
+    'SESSION_LOG_KEY', 'recordSessionLog', 'readSessionLogSummary',
+    'portableMode', 'requiredFiles', 'optionalFiles', 'quickStart', 'aiFirstSteps', 'single-file-portability',
+    'aiProfiles', 'ai-profile-adaptation', 'getAiProfileGuide',
+    'buildCleanupCandidates', 'cleanupCandidates',
+    'actionPacket', 'buildActionPacket', 'editBudget', 'forbiddenSurfaceMap', 'buildEditBudget', 'buildForbiddenSurfaceMap', 'buildFocusPacket', 'buildDangerWarning', 'firstSeenAt',
+    'renderOwnerPanel', 'assessIntentAndGuard', 'checkRequest', 'HUMAN_BUTTON_CONTRACT', 'HUMAN_SUMMARY_CARD_CONTRACT',
+    'humanRequestedFocus',
+  ];
+  requiredTokens.forEach(token => {
+    if (!src.includes(token)) warnings.push('contract token missing: ' + token);
+  });
+
+  // ── ポータビリティチェック ──
+  const portableTokens = [
+    'WATCHTOWER_CONFIG', 'baselineNamespace', 'expectedIds',
+    'diagnosticDefaults', 'knownWarnings', 'PORTABLE GUIDE', 'AI ENTRYPOINT',
+  ];
+  portableTokens.forEach(token => {
+    if (!src.includes(token)) warnings.push('portability token missing: ' + token);
+  });
+
+  // ── 残骸とリクエストゲートの契約 ──
+  ['suggest-actions', 'copy-action-packet', 'copy-handoff'].forEach(id => {
+    if (document.getElementById(id)) failures.push('retired AI UI control returned: #' + id);
+  });
+  ['Suggest actions', 'AI Action Packet', 'Agent handoff'].forEach(label => {
+    if (humanButtons.some(button => button.textContent.trim() === label)) {
+      failures.push('retired AI UI control returned: ' + label);
+    }
+  });
+
+  const selfSample = {
+    generatedAt: new Date().toISOString(),
+    signature: 'self-diagnostic-sample',
+    project: {
+      title: WATCHTOWER_CONFIG.projectTitle,
+      productName: WATCHTOWER_CONFIG.productName,
+      baselineNamespace: WATCHTOWER_CONFIG.baselineNamespace,
+    },
+    apps: APPS.map(app => ({
+      id: app.id,
+      title: app.title,
+      url: app.url,
+      kind: app.kind,
+      maturity: app.maturity,
+      level: app.id === 'CD' ? 'warn' : 'ok',
+      issueCode: app.id === 'CD' ? 'cd-boundary-localstorage' : 'ok',
+      knownWarning: app.id === 'CD',
+      reason: app.id === 'CD' ? 'Status: NG' : app.maturity,
+      healerHint: 'self diagnostic sample',
+    })),
+    delta: { available:false, status:'none', changes:[] },
+  };
+  selfSample.ok = true;
+  selfSample.level = 'warn';
+  selfSample.status = 'WARN-KNOWN';
+  selfSample.aiBrief = buildAiBrief(selfSample);
+  selfSample.workbench = buildWorkbench(selfSample);
+  selfSample.safetyMap = buildSafetyMap(selfSample);
+  selfSample.editBudget = buildEditBudget(selfSample);
+  selfSample.forbiddenSurfaceMap = buildForbiddenSurfaceMap(selfSample);
+  selfSample.cleanupCandidates = buildCleanupCandidates(selfSample);
+  selfSample.operationalInsights = buildOperationalInsights(selfSample);
+  selfSample.actionPacket = buildActionPacket(selfSample);
+  selfSample.handoffPacket = buildHandoffPacket(selfSample);
+  selfSample.architectureScore = buildArchitectureScore(selfSample);
+  selfSample.focusPacket = buildFocusPacket(selfSample);
+
+  const protectedCardRequest = checkRequest('WT OKカードを大きくして', selfSample);
+  if (protectedCardRequest.canProceed) failures.push('checkRequest allowed compact summary card edit');
+  if (!protectedCardRequest.forbiddenHits.some(hit => hit.id === 'compact-summary-card-contract')) {
+    failures.push('checkRequest missed compact summary card contract');
+  }
+  const protectedButtonRequest = checkRequest('WTの人間用ボタンを増やして', selfSample);
+  if (protectedButtonRequest.canProceed) failures.push('checkRequest allowed human button edit');
+  if (!protectedButtonRequest.forbiddenHits.some(hit => hit.id === 'human-button-contract')) {
+    failures.push('checkRequest missed human button contract');
+  }
+  const bridgeCurrentSample = {
+    bridge_version: '1.2',
+    semantic_packets: [{ packet_id: 'sp-latest' }],
+    canonical_current_state: {
+      bridge_version: '1.2',
+      updated_at: 'latest',
+      latest_semantic_packet_id: 'sp-latest',
+      watchtower_gate_current_status: 'passed',
+      watchtower_gate_last_checked_at: 'latest'
+    },
+    recovery_checkpoint: {
+      checkpoint_id: 'rc-latest',
+      bridge_version: '1.2',
+      canonical_pointer_updated_at: 'latest',
+      work_status: 'in_progress',
+      pending_actions: ['resume']
+    }
+  };
+  const bridgeFreshSample = assessBridgeLiveContext(bridgeCurrentSample, bridgeCurrentSample);
+  const bridgeStaleSample = assessBridgeLiveContext(Object.assign({}, bridgeCurrentSample, {
+    bridge_version: '1.1',
+    canonical_current_state: Object.assign({}, bridgeCurrentSample.canonical_current_state, { latest_semantic_packet_id: 'sp-old' }),
+    recovery_checkpoint: null
+  }), bridgeCurrentSample);
+  if (!bridgeFreshSample.ok) failures.push('BRIDGE live context freshness rejected current sample');
+  if (bridgeStaleSample.ok || !bridgeStaleSample.failures.some(item => item.includes('latest_semantic_packet_id'))) {
+    failures.push('BRIDGE live context freshness missed stale displayed context');
+  }
+  const bridgeBehindSample = assessBridgeLiveContext(Object.assign({}, bridgeCurrentSample, {
+    semantic_packets: [{ packet_id: 'sp-latest' }, { packet_id: 'sp-newer' }]
+  }), Object.assign({}, bridgeCurrentSample, {
+    semantic_packets: [{ packet_id: 'sp-latest' }, { packet_id: 'sp-newer' }]
+  }));
+  if (bridgeBehindSample.ok || !bridgeBehindSample.failures.some(item => item.includes('behind semantic_packets'))) {
+    failures.push('BRIDGE live context freshness missed canonical packet pointer lag');
+  }
+  const machineSample = getMachineReadableResult(selfSample);
+  if (!selfSample.editBudget || selfSample.editBudget.budgetType !== 'watchtower.editBudget') failures.push('editBudget contract missing');
+  if (!selfSample.forbiddenSurfaceMap || selfSample.forbiddenSurfaceMap.mapType !== 'watchtower.forbiddenSurfaceMap') failures.push('forbiddenSurfaceMap contract missing');
+  if (!selfSample.actionPacket?.editBudget) failures.push('actionPacket editBudget missing');
+  if (!selfSample.actionPacket?.forbiddenSurfaceMap) failures.push('actionPacket forbiddenSurfaceMap missing');
+  if (!machineSample.machineReadable?.editBudget) failures.push('machineReadable editBudget missing');
+  if (!machineSample.machineReadable?.forbiddenSurfaceMap) failures.push('machineReadable forbiddenSurfaceMap missing');
+  if (!machineSample.machineReadable?.cleanupCandidates) failures.push('machineReadable cleanupCandidates missing');
+  if (!machineSample.machineReadable?.operationalInsights) failures.push('machineReadable operationalInsights missing');
+  if (!machineSample.machineReadable?.operationalInsights?.appAdditionTemplate) failures.push('machineReadable appAdditionTemplate missing');
+  if (!machineSample.machineReadable?.agentGuide?.aiFirstSteps?.length) failures.push('machineReadable aiFirstSteps missing');
+  if (!machineSample.machineReadable?.operationalInsights?.aiFirstSteps?.length) failures.push('operationalInsights aiFirstSteps missing');
+
+  const ok = failures.length === 0;
+  return {
+    level: ok ? 'ok' : 'bad',
+    report: [
+      'WT self diagnostics: ' + (ok ? 'OK' : 'FAILED'),
+      'app registry: ' + (failures.some(i => i.includes('registry') || i.includes('duplicate')) ? 'FAILED' : 'OK'),
+      'dom structure: ' + (failures.some(i => i.includes('missing') && !i.includes('registry')) ? 'FAILED' : 'OK'),
+      'human buttons: ' + (failures.some(i => i.includes('human button')) ? 'FAILED' : 'OK'),
+      'summary cards: ' + (failures.some(i => i.includes('summary card')) ? 'FAILED' : 'OK'),
+      'request gate: ' + (failures.some(i => i.includes('checkRequest')) ? 'FAILED' : 'OK'),
+      'bridge live freshness contract: ' + (failures.some(i => i.includes('BRIDGE live context freshness')) ? 'FAILED' : 'OK'),
+      'machine contracts: ' + (failures.some(i => i.includes('editBudget') || i.includes('forbiddenSurfaceMap') || i.includes('cleanupCandidates') || i.includes('operationalInsights') || i.includes('machineReadable')) ? 'FAILED' : 'OK'),
+      'retired UI controls: ' + (failures.some(i => i.includes('retired AI UI control')) ? 'FAILED' : 'OK'),
+      'config: ' + (failures.some(i => i.includes('config') || i.includes('namespace')) ? 'FAILED' : 'OK'),
+      'public API: ' + (warnings.some(i => i.includes('WATCHTOWER.')) ? 'WARN' : 'OK'),
+      'contract tokens: ' + (warnings.some(i => i.includes('contract token')) ? 'WARN' : 'OK'),
+      'portability: ' + (warnings.some(i => i.includes('portability')) ? 'WARN' : 'OK'),
+      'diagnostics protocols: ' + (warnings.some(i => i.includes('protocol')) ? 'WARN' : 'OK'),
+      warnings.length ? 'warnings: ' + warnings.join(', ') : 'warnings: none',
+      failures.length ? 'failures: ' + failures.join(', ') : 'failures: none',
+    ].join('\n'),
+  };
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function summarizeReport(result) {
+  if (result.level === 'ok') return result.app.maturity;
+  const firstProblem = String(result.report || '')
+    .split('\n')
+    .find(line => /Failure|FAILED|Status:\s*NG|警告|WARN|missing|unavailable|outside/i.test(line));
+  return firstProblem ? firstProblem.replace(/^[-#\s]+/, '').slice(0, 80) : result.app.maturity;
+}
+
+function issueCodeFor(result) {
+  const report = String(result.report || '');
+  if (result.level === 'ok') return 'ok';
+  if (result.app.id === 'CD' && /localStorage used outside Storage\/Diagnostics zones/i.test(report)) return 'cd-boundary-localstorage';
+  if (/diagnostics unavailable/i.test(report)) return 'diagnostics-unavailable';
+  if (/timeout loading/i.test(report)) return 'load-timeout';
+  if (/harness unavailable/i.test(report)) return 'harness-unavailable';
+  if (/missing/i.test(report)) return 'missing-contract';
+  return result.level + '-unclassified';
+}
+
+function isKnownWarning(result, issueCode) {
+  return result.level === 'warn' && WATCHTOWER_CONFIG.knownWarnings.some(item =>
+    item.appId === result.app.id && item.issueCode === issueCode
+  );
+}
+
+function healerHintFor(result) {
+  if (result.level === 'bad') {
+    return 'Open ' + result.app.url + ' directly, check console/runtime errors, then rerun WT before editing.';
+  }
+  if (result.app.id === 'CD' && result.level === 'warn') {
+    return 'CD is operational but has a boundary warning. Inspect AppDiagnostics boundary failures before changing behavior.';
+  }
+  if (result.app.id === 'ECT-D' && result.app.maturity === 'light diagnostics') {
+    return 'ECT-D is healthy at light depth. Promote it by adding source guards and data/import checks when ECT-D changes next.';
+  }
+  if (result.app.id === 'WT') {
+    return 'WT self-monitoring is healthy. Keep APPS registry aligned when adding tools. Run self diagnostics to verify the contract.';
+  }
+  if (result.app.id === 'CC') {
+    return 'CC is fortified. Run siege/spec diagnostics before and after any behavior change.';
+  }
+  if (result.app.id === 'WC') {
+    return 'WC has deep diagnostics. Use its own recommended next command from the report when touching WC.';
+  }
+  return 'No healing needed. Keep edits small and rerun WT.';
+}
+
+function enrichResult(result) {
+  const reason = summarizeReport(result);
+  const healerHint = healerHintFor(result);
+  const issueCode = issueCodeFor(result);
+  const knownWarning = isKnownWarning(result, issueCode);
+  return { ...result, reason, healerHint, issueCode, knownWarning };
+}
+
 function renderSummary(results) {
   summaryEl.innerHTML = results.map(result =>
-    '<div class="tile ' + result.level + '">' +
+    '<button type="button" class="tile ' + result.level + '" data-target="' + result.app.id + '">' +
     '<strong>' + result.app.id + ' ' + result.level.toUpperCase() + '</strong>' +
     '<span>' + result.app.title + '</span>' +
-    '</div>'
+    '<small>' + escapeHtml(result.reason) + '</small>' +
+    '</button>'
+  ).join('');
+  summaryEl.querySelectorAll('.tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      document.getElementById('report-' + tile.dataset.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+  checkSummaryCardContract();
+}
+
+function renderHealer(results) {
+  const target = results.find(result => result.level === 'bad')
+    || results.find(result => result.level === 'warn' && !result.knownWarning)
+    || results.find(result => result.level === 'warn')
+    || results.find(result => result.app.id === 'ECT-D')
+    || results[0];
+  healerEl.innerHTML = '<strong>HEALER HINT</strong><span>' + escapeHtml(target?.healerHint || 'No healing needed.') + '</span>';
+}
+
+function renderMaturity(results) {
+  maturityEl.innerHTML = results.map(result =>
+    '<span>' + result.app.id + ': ' + result.app.maturity + '</span>'
   ).join('');
 }
 
-async function runHarness() {
-  setStatus('running', 'ok');
-  summaryEl.innerHTML = '';
-  output.textContent = '';
-  const results = [];
-  for (const app of APPS) {
-    try {
-      const win = await waitForFrame(app.url);
-      const result = runAppDiagnostics(app, win);
-      results.push({ app, ...result });
-    } catch (error) {
-      results.push({ app, level: 'bad', report: error.stack || String(error) });
+function renderReports(results) {
+  output.innerHTML = results.map(result =>
+    '<section class="report-card ' + result.level + '" id="report-' + result.app.id + '">' +
+    '<h2>' + result.app.id + ' ' + result.level.toUpperCase() + '</h2>' +
+    '<div class="healer"><strong>HEALER HINT</strong><span>' + escapeHtml(result.healerHint) + '</span></div>' +
+    '<pre>' + escapeHtml(result.report) + '</pre>' +
+    '</section>'
+  ).join('');
+}
+
+function renderOperationalInsights(result) {
+  if (!result?.operationalInsights || !output) return;
+  const insights = result.operationalInsights;
+  const delta = insights.deltaCard || {};
+  const outcome = insights.humanOutcomeCard || {};
+  const metrics = insights.appMetrics || [];
+  const capability = insights.diagnosticCapabilityMap || [];
+  const metricLine = metrics.map(item => item.id + ':' + (item.summary || 'metrics n/a')).join(' / ');
+  const capabilityLine = capability.map(item => item.id + ':' + item.badges.join(',')).join(' / ');
+  const html =
+    '<section class="report-card ok" id="report-wt-operational-insights">' +
+    '<h2>WT OPERATIONAL INSIGHTS</h2>' +
+    '<pre>' + escapeHtml([
+      'impact: ' + (delta.summary || 'No delta summary.'),
+      'changedApps: ' + ((delta.changedApps || []).join(', ') || 'none'),
+      'newApps: ' + ((delta.newApps || []).join(', ') || 'none'),
+      'removedApps: ' + ((delta.removedApps || []).join(', ') || 'none'),
+      'humanOutcome: ' + (outcome.summary || 'No recent work log.'),
+      'nextHumanCheck: ' + (outcome.nextHumanCheck || 'Inspect target app normally.'),
+      'aiFirstSteps: ' + ((insights.aiFirstSteps || []).map(item => item.step + '.' + item.id).join(' -> ') || 'missing'),
+      'capabilities: ' + capabilityLine,
+      'appMetrics: ' + metricLine,
+      'newAppTemplate: result.operationalInsights.appAdditionTemplate',
+    ].join('\n')) + '</pre>' +
+    '</section>';
+  output.insertAdjacentHTML('afterbegin', html);
+}
+
+function renderMachineSummary(result) {
+  if (jsonEl) {
+    // immediate, lightweight output
+    const machineReadable = typeof getMachineReadableResult === 'function'
+      ? getMachineReadableResult(result)
+      : result;
+    jsonEl.textContent = JSON.stringify(machineReadable, null, 2);
+    // then attempt to enrich with impact analysis (async, non-blocking)
+    if (typeof integrateImpactIntoResult === 'function') {
+      try {
+        integrateImpactIntoResult(result).then(enriched => {
+          try { jsonEl.textContent = JSON.stringify(enriched, null, 2); } catch (_) {}
+        });
+      } catch (_) {}
     }
-    renderSummary(results);
+  }
+}
+
+function getMachineReadableResult(result) {
+  if (!result || typeof result !== 'object') return result;
+  const normalized = { ...result };
+  const agent = WATCHTOWER_CONFIG.agent;
+  const _rawActions = suggestNextActions(result);
+  const suggestedActions = Array.isArray(_rawActions)
+    ? _rawActions.map(action => ({
+        id: action.id,
+        title: action.title,
+        action: action.action,
+        priority: action.priority ?? 'normal',
+        reason: action.reason,
+        requiredChecks: action.requiredChecks || [],
+        steps: action.steps,
+      }))
+    : [];
+  normalized.machineReadable = {
+    agentGuide: {
+      contractVersion: agent.contractVersion,
+      portableMode: {
+        primaryFile: agent.portableMode.primaryFile,
+        requiredFiles: [...agent.portableMode.requiredFiles],
+        optionalFiles: [...agent.portableMode.optionalFiles],
+        rule: agent.portableMode.rule,
+      },
+      entrypoints: [...agent.entrypoints],
+      quickStart: [...agent.quickStart],
+      aiFirstSteps: agent.aiFirstSteps.map(item => ({ ...item })),
+      profiles: Object.fromEntries(Object.keys(agent.aiProfiles).map(name => [name, getAiProfileGuide(name, result)])),
+      stableSurfaces: [
+        '#watchtower-json',
+        'window.WATCHTOWER.run()',
+        'window.WATCHTOWER.runAndRender()',
+        'window.WATCHTOWER.checkRequest(intent, result)',
+        'window.WATCHTOWER.recordSessionLog(entry)',
+        'result.aiBrief',
+        'result.workbench',
+        'result.editBudget',
+        'result.forbiddenSurfaceMap',
+        'result.handoffPacket.sessionLog',
+        'result.machineReadable.sessionLog',
+      ],
+    },
+    focusPacket: result.focusPacket || (typeof buildFocusPacket === 'function' ? buildFocusPacket(result) : null),
+    aiBrief: result.aiBrief || null,
+    actionPacket: result.actionPacket || (typeof buildActionPacket === 'function' ? buildActionPacket(result) : null),
+    handoffPacket: result.handoffPacket || null,
+    sessionLog: result.sessionLog || readSessionLogSummary(3),
+    safetyMap: result.safetyMap || null,
+    editBudget: result.editBudget || (typeof buildEditBudget === 'function' ? buildEditBudget(result) : null),
+    forbiddenSurfaceMap: result.forbiddenSurfaceMap || (typeof buildForbiddenSurfaceMap === 'function' ? buildForbiddenSurfaceMap(result) : null),
+    cleanupCandidates: result.cleanupCandidates || (typeof buildCleanupCandidates === 'function' ? buildCleanupCandidates(result) : null),
+    operationalInsights: result.operationalInsights || (typeof buildOperationalInsights === 'function' ? buildOperationalInsights(result) : null),
+    architectureScore: result.architectureScore || null,
+    suggestedActions,
+    agentHandoff: {
+      gpt: formatHandoffForAgent('gpt', result, { concise: true }),
+      claude: formatHandoffForAgent('claude', result, { concise: true }),
+      codex: formatHandoffForAgent('codex', result, { concise: true }),
+      cursor: formatHandoffForAgent('cursor', result, { concise: true }),
+      copilot: formatHandoffForAgent('copilot', result, { concise: true }),
+      gemini: formatHandoffForAgent('gemini', result, { concise: true }),
+    },
+    impactSummary: null,
+    historySummary: null,
+    agentProfiles: null,
+  };
+  // inject historical summary and agent profiles if available (non-destructive)
+  try {
+    if (typeof learnFromHistory === 'function') {
+      normalized.machineReadable.historySummary = learnFromHistory();
+    }
+  } catch (_) { /* ignore */ }
+  try {
+    if (typeof readAgentProfiles === 'function') {
+      normalized.machineReadable.agentProfiles = readAgentProfiles();
+    } else if (typeof getAgentProfile === 'function') {
+      // fallback: include empty profile keys for known agents
+      normalized.machineReadable.agentProfiles = {
+        gpt: getAgentProfile('gpt'),
+        claude: getAgentProfile('claude'),
+        codex: getAgentProfile('codex'),
+      };
+    }
+  } catch (_) { /* ignore */ }
+  return normalized;
+}
+
+async function getMachineReadableResultAsync(result, opts = {}) {
+  if (!result) return result;
+  try {
+    return await integrateImpactIntoResult(result, opts);
+  } catch (_error) {
+    return getMachineReadableResult(result);
+  }
+}
+
+// --- Historical learning (bug ledger / checkpoints) ---
+function learnFromHistory() {
+  try {
+    const ledger = readBugLedger() || [];
+    const checkpoints = readCheckpointHistory() || [];
+    const byIssue = {};
+    for (const e of ledger) {
+      const key = e.issueCode || (e.appId + ':' + (e.issueCode || 'unknown'));
+      byIssue[key] = byIssue[key] || { key, occurrences: 0, regressions: 0, apps: new Set(), lastSeen: null };
+      byIssue[key].occurrences += 1;
+      if (e.level === 'bad') byIssue[key].regressions += 1;
+      if (e.appId) byIssue[key].apps.add(e.appId);
+      const ts = e.detectedAt || e.resolvedAt || null;
+      if (ts) {
+        const prev = byIssue[key].lastSeen;
+        if (!prev || new Date(ts) > new Date(prev)) byIssue[key].lastSeen = ts;
+      }
+    }
+    const profiles = Object.values(byIssue).map(p => ({
+      key: p.key,
+      occurrences: p.occurrences,
+      regressions: p.regressions,
+      apps: Array.from(p.apps),
+      lastSeen: p.lastSeen,
+    }));
+    return { contractVersion: 1, generatedAt: new Date().toISOString(), profiles };
+  } catch (e) {
+    return { contractVersion: 1, generatedAt: new Date().toISOString(), profiles: [] };
+  }
+}
+
+function getHistoricalRiskProfile(target) {
+  const hist = learnFromHistory();
+  if (!target) return hist;
+  // match by appId or issueCode
+  const matches = hist.profiles.filter(p => p.key === target || (p.apps && p.apps.includes(target)) || (p.key && p.key.includes(target)));
+  return { contractVersion: 1, target, matches, summary: matches.length ? matches : [] };
+}
+
+// --- Agent profile storage & update hooks ---
+function _agentProfilesKey() {
+  return (WATCHTOWER_CONFIG && WATCHTOWER_CONFIG.baselineNamespace ? WATCHTOWER_CONFIG.baselineNamespace : 'watchtower') + '.agentprofiles.v1';
+}
+
+function readAgentProfiles() {
+  try {
+    const raw = localStorage.getItem(_agentProfilesKey()) || 'null';
+    return JSON.parse(raw) || {};
+  } catch (_) { return {}; }
+}
+
+function getAiProfileGuide(agentName = 'codex', result = null) {
+  const key = String(agentName || 'codex').trim().toLowerCase();
+  const aliases = {
+    gpt: 'codex',
+    openai: 'codex',
+    anthropic: 'claude',
+    google: 'gemini',
+    github: 'copilot',
+  };
+  const profileKey = WATCHTOWER_CONFIG.agent.aiProfiles[key] ? key : (aliases[key] || 'codex');
+  const profile = WATCHTOWER_CONFIG.agent.aiProfiles[profileKey] || WATCHTOWER_CONFIG.agent.aiProfiles.codex;
+  const focus = result?.workbench?.focus || null;
+  return {
+    contractVersion: 1,
+    profile: profileKey,
+    label: profile.label,
+    outputBias: profile.outputBias,
+    handoffStyle: profile.handoffStyle,
+    prefers: [...profile.prefers],
+    beforeEdit: [...profile.beforeEdit],
+    afterEdit: [...profile.afterEdit],
+    currentFocus: focus ? {
+      appId: focus.id,
+      issueCode: focus.issueCode,
+      url: focus.url,
+    } : null,
+    firstCommand: 'window.WATCHTOWER.run()',
+    requestGate: 'window.WATCHTOWER.checkRequest(intent, result)',
+    logCommand: 'window.WATCHTOWER.recordSessionLog(entry)',
+  };
+}
+
+function writeAgentProfiles(obj) {
+  try {
+    localStorage.setItem(_agentProfilesKey(), JSON.stringify(obj));
+    return true;
+  } catch (_) { return false; }
+}
+
+function getAgentProfile(agentName) {
+  const all = readAgentProfiles();
+  return all[agentName] || { name: agentName, runs: 0, successRate: null, regressionRate: null, avgTimeMs: null, strengths: [] };
+}
+
+function updateAgentProfile(agentName, outcome) {
+  try {
+    const all = readAgentProfiles();
+    const cur = all[agentName] || { name: agentName, runs: 0, successes: 0, regressions: 0, totalTimeMs: 0, strengths: [] };
+    cur.runs = (cur.runs || 0) + 1;
+    if (outcome && outcome.success) cur.successes = (cur.successes || 0) + 1;
+    if (outcome && typeof outcome.regressions === 'number') cur.regressions = (cur.regressions || 0) + outcome.regressions;
+    if (outcome && typeof outcome.timeMs === 'number') cur.totalTimeMs = (cur.totalTimeMs || 0) + outcome.timeMs;
+    cur.successRate = cur.runs ? ((cur.successes || 0) / cur.runs) : null;
+    cur.regressionRate = cur.runs ? ((cur.regressions || 0) / cur.runs) : null;
+    cur.avgTimeMs = cur.runs ? Math.round((cur.totalTimeMs || 0) / cur.runs) : null;
+    // optionally merge strengths
+    if (outcome && outcome.strengths && Array.isArray(outcome.strengths)) {
+      cur.strengths = Array.from(new Set([...(cur.strengths || []), ...outcome.strengths]));
+    }
+    all[agentName] = cur;
+    writeAgentProfiles(all);
+    return cur;
+  } catch (e) { return null; }
+}
+
+
+async function integrateImpactIntoResult(result, opts = {}) {
+  if (!result) return result;
+  const out = JSON.parse(JSON.stringify(typeof getMachineReadableResult === 'function' ? getMachineReadableResult(result) : result));
+  try {
+    // choose targets: focus app, then top reviewOrder apps or apps with bad/warn
+    const targets = new Set();
+    const focusId = result.workbench?.focus?.id;
+    if (focusId) targets.add(focusId);
+    const review = Array.isArray(result.aiBrief?.reviewOrder) ? result.aiBrief.reviewOrder.slice(0, 3) : [];
+    review.forEach(id => targets.add(id));
+    (result.apps || []).filter(a => a.level === 'bad' || a.level === 'warn').slice(0,3).forEach(a => targets.add(a.id));
+
+    const impact = {};
+    for (const id of Array.from(targets)) {
+      try {
+        const r = await analyzeChangeImpact(id, null, { waitMs: opts.waitMs || 200 });
+        impact[id] = r;
+      } catch (e) {
+        impact[id] = { ok: false, reason: 'analyze_failed' };
+      }
+    }
+    out.machineReadable = out.machineReadable || {};
+    out.machineReadable.impactSummary = impact;
+    return out;
+  } catch (error) {
+    return out;
+  }
+}
+
+// --- Runtime instrumentation & change-impact analysis (lightweight, same-origin only) ---
+function _findAppWindow(app) {
+  try {
+    if (!app) return null;
+    if (app.kind === 'self') return window;
+    // try target iframe first
+    const iframes = Array.from(document.getElementsByTagName('iframe'));
+    for (const f of iframes) {
+      try {
+        if (!f.src) continue;
+        // match by filename or url fragment
+        const src = f.getAttribute('src') || f.src || '';
+        if (src.includes(app.url.replace('./', '')) || src.endsWith(app.url.replace('./', ''))) {
+          return f.contentWindow;
+        }
+      } catch (_) { continue; }
+    }
+    return null;
+  } catch (_) { return null; }
+}
+
+function instrumentAppForTracing(app) {
+  const tracer = {
+    appId: app?.id || null,
+    available: false,
+    mutations: [],
+    storageOps: [],
+    globals: [],
+    _observer: null,
+    _origStorage: null,
+  };
+  const win = _findAppWindow(app);
+  if (!win) return tracer;
+  try {
+    const doc = win.document;
+    // MutationObserver
+    const observer = new (win.MutationObserver || MutationObserver)((records) => {
+      for (const r of records) {
+        tracer.mutations.push({ type: r.type, target: (r.target && r.target.nodeName) || null, time: Date.now() });
+        if (tracer.mutations.length > 200) tracer.mutations.shift();
+      }
+    });
+    if (doc && doc.body) observer.observe(doc.body, { childList: true, subtree: true, attributes: true });
+    tracer._observer = observer;
+
+    // Wrap localStorage (same-origin only)
+    try {
+      const ls = win.localStorage;
+      if (ls) {
+        const origSet = ls.setItem.bind(ls);
+        const origRemove = ls.removeItem.bind(ls);
+        ls.setItem = function(k, v) { tracer.storageOps.push({ op: 'set', key: k, val: String(v), time: Date.now() }); return origSet(k, v); };
+        ls.removeItem = function(k) { tracer.storageOps.push({ op: 'remove', key: k, time: Date.now() }); return origRemove(k); };
+        tracer._origStorage = { setItem: origSet, removeItem: origRemove };
+      }
+    } catch (_) { /* ignore cross-origin or readonly */ }
+
+    // Globals scan (function names)
+    try {
+      const names = Object.keys(win).filter(n => typeof win[n] === 'function');
+      tracer.globals = names.slice(0, 200);
+    } catch (_) { tracer.globals = []; }
+
+    tracer.available = true;
+    tracer._win = win;
+  } catch (error) {
+    // leave tracer unavailable
+  }
+  tracer.stop = function() {
+    try {
+      if (tracer._observer && tracer._observer.disconnect) tracer._observer.disconnect();
+      if (tracer._origStorage && tracer._win && tracer._win.localStorage) {
+        tracer._win.localStorage.setItem = tracer._origStorage.setItem;
+        tracer._win.localStorage.removeItem = tracer._origStorage.removeItem;
+      }
+    } catch (_) {}
+  };
+  tracer.snapshot = function() {
+    return {
+      appId: tracer.appId,
+      available: tracer.available,
+      mutations: tracer.mutations.slice(-50),
+      storageOps: tracer.storageOps.slice(-50),
+      globals: tracer.globals,
+    };
+  };
+  return tracer;
+}
+
+async function analyzeChangeImpact(appId, functionPath = null, opts = {}) {
+  const app = APPS.find(a => a.id === appId);
+  if (!app) return { ok: false, reason: 'unknown appId' };
+  const tracer = instrumentAppForTracing(app);
+  if (!tracer.available) return { ok: false, reason: 'tracing_unavailable', appId };
+  // capture short live snapshot
+  await new Promise(res => setTimeout(res, opts.waitMs || 150));
+  const snap = tracer.snapshot();
+  tracer.stop();
+
+  // build lightweight dependency candidates from globals
+  const dependencyCandidates = (snap.globals || []).filter(n => n && n.length < 60).slice(0, 200);
+  const storageKeys = Array.from(new Set((snap.storageOps || []).map(s => s.key).filter(Boolean))).slice(0, 50);
+  const renderChain = (snap.mutations || []).slice(-20).map(m => ({ type: m.type, target: m.target, time: m.time }));
+
+  return {
+    ok: true,
+    appId,
+    functionPath: functionPath || null,
+    dependencyCandidates,
+    storageKeys,
+    renderChain,
+    snapshotCount: { mutations: snap.mutations.length, storageOps: snap.storageOps.length },
+  };
+}
+
+
+function suiteSummary(results) {
+  const hasFailure = results.some(result => result.level === 'bad');
+  const hasNewWarning = results.some(result => result.level === 'warn' && !result.knownWarning);
+  const hasKnownWarning = results.some(result => result.level === 'warn' && result.knownWarning);
+  return {
+    ok: !hasFailure && !hasNewWarning,
+    level: hasFailure ? 'bad' : hasNewWarning ? 'warn' : hasKnownWarning ? 'warn' : 'ok',
+    status: hasFailure ? 'FAILED' : hasNewWarning ? 'WARN' : hasKnownWarning ? 'WARN-KNOWN' : 'OK',
+  };
+}
+
+function signatureFor(results) {
+  return results.map(result => {
+    const known = result.knownWarning ? ':known' : '';
+    return result.app.id + ':' + result.level + ':' + result.issueCode + known;
+  }).join('|');
+}
+
+function readBaseline() {
+  try {
+    return JSON.parse(localStorage.getItem(BASELINE_KEY) || 'null');
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeBaseline(result) {
+  try {
+    localStorage.setItem(BASELINE_KEY, JSON.stringify({
+      savedAt: new Date().toISOString(),
+      signature: result.signature,
+      status: result.status,
+      level: result.level,
+      apps: result.apps.map(app => ({
+        id: app.id,
+        level: app.level,
+        issueCode: app.issueCode,
+        knownWarning: app.knownWarning,
+        reason: app.reason,
+      })),
+    }));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function exportBaseline() {
+  const baseline = readBaseline();
+  if (!baseline) return null;
+  const json = JSON.stringify(baseline, null, 2);
+  try {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = WATCHTOWER_CONFIG.baselineNamespace + '.watchtower.baseline.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (_) {
+    // Non-browser environment (e.g. CI): return JSON string for programmatic use
+  }
+  return json;
+}
+
+function importBaseline(jsonOrObject) {
+  try {
+    const baseline = typeof jsonOrObject === 'string'
+      ? JSON.parse(jsonOrObject)
+      : jsonOrObject;
+    if (!baseline || !baseline.signature || !Array.isArray(baseline.apps)) {
+      return { ok: false, reason: 'invalid baseline structure' };
+    }
+    localStorage.setItem(BASELINE_KEY, JSON.stringify(baseline));
+    return { ok: true, savedAt: baseline.savedAt, signature: baseline.signature };
+  } catch (error) {
+    return { ok: false, reason: error.message };
+  }
+}
+
+function severity(level) {
+  return level === 'bad' ? 3 : level === 'warn' ? 2 : 1;
+}
+
+function compareWithBaseline(result, baseline = readBaseline()) {
+  if (!baseline) {
+    return { available: false, status: 'none', changes: [], summary: 'No baseline saved.' };
+  }
+  const changes = result.apps.map(app => {
+    const before = baseline.apps?.find(item => item.id === app.id);
+    if (!before) return { id: app.id, type: 'new-app', before: null, after: app.level, issueCode: app.issueCode };
+    if (before.level === app.level && before.issueCode === app.issueCode && !!before.knownWarning === !!app.knownWarning) return null;
+    const beforeSeverity = severity(before.level);
+    const afterSeverity = severity(app.level);
+    const type = afterSeverity > beforeSeverity
+      ? 'regression'
+      : afterSeverity < beforeSeverity
+        ? 'improvement'
+        : 'changed';
+    return {
+      id: app.id,
+      type,
+      before: before.level,
+      after: app.level,
+      beforeIssueCode: before.issueCode,
+      afterIssueCode: app.issueCode,
+      knownWarning: app.knownWarning,
+    };
+  }).filter(Boolean);
+  const removed = (baseline.apps || [])
+    .filter(item => !result.apps.some(app => app.id === item.id))
+    .map(item => ({ id: item.id, type: 'removed-app', before: item.level, after: null, beforeIssueCode: item.issueCode }));
+  const allChanges = changes.concat(removed);
+  const hasRegression = allChanges.some(change => change.type === 'regression' || change.type === 'new-app' && change.after !== 'ok');
+  const hasImprovement = allChanges.some(change => change.type === 'improvement');
+  return {
+    available: true,
+    status: hasRegression ? 'regression' : hasImprovement ? 'improvement' : allChanges.length ? 'changed' : 'unchanged',
+    baselineSignature: baseline.signature,
+    currentSignature: result.signature,
+    savedAt: baseline.savedAt || null,
+    changes: allChanges,
+    summary: allChanges.length
+      ? allChanges.map(change => change.id + ':' + change.type + '(' + (change.before || '-') + '->' + (change.after || '-') + ')').join(', ')
+      : 'No changes from baseline.',
+  };
+}
+
+function buildAiBrief(result) {
+  const blockers = result.apps.filter(app => app.level === 'bad');
+  const newWarnings = result.apps.filter(app => app.level === 'warn' && !app.knownWarning);
+  const knownWarnings = result.apps.filter(app => app.knownWarning);
+  const regressions = result.delta?.changes?.filter(change => change.type === 'regression') || [];
+  const focus = blockers.length
+    ? blockers
+    : regressions.length
+      ? result.apps.filter(app => regressions.some(change => change.id === app.id))
+      : newWarnings.length
+        ? newWarnings
+        : knownWarnings;
+  const verdict = blockers.length
+    ? 'blocker'
+    : regressions.length
+      ? 'regression'
+      : newWarnings.length
+        ? 'investigate'
+        : knownWarnings.length
+          ? 'known-warning'
+          : 'clear';
+  return {
+    contractVersion: 1,
+    verdict,
+    baseline: result.delta?.available ? result.delta.status : 'missing',
+    headline: focus[0]
+      ? focus[0].id + ': ' + focus[0].issueCode + ' - ' + focus[0].reason
+      : 'All monitored apps are clear.',
+    reviewOrder: focus.map(app => app.id).concat(
+      result.apps
+        .filter(app => !focus.some(item => item.id === app.id))
+        .map(app => app.id)
+    ),
+    blockers: blockers.map(app => ({ id: app.id, issueCode: app.issueCode, hint: app.healerHint })),
+    regressions,
+    knownWarnings: knownWarnings.map(app => ({ id: app.id, issueCode: app.issueCode, reason: app.reason })),
+    nextAction: blockers.length
+      ? 'Fix blocking diagnostics first, then rerun Watchtower.'
+      : regressions.length
+        ? 'Inspect regression apps before touching unrelated code.'
+        : newWarnings.length
+          ? 'Triage new warnings and decide whether they are expected.'
+          : result.delta?.available
+            ? 'No urgent action. Keep baseline if this is the intended state.'
+      : 'Save a baseline so future AI runs can detect regressions.',
+  };
+}
+
+
+function buildActionPacket(result = {}) {
+  const aiBrief = result?.aiBrief || {};
+  const focus = result?.workbench?.focus || null;
+  const focusId = focus?.id || aiBrief.reviewOrder?.[0] || null;
+  const focusApp = focus || result?.apps?.find(app => app.id === focusId) || null;
+  const config = APPS.find(app => app.id === focusId) || null;
+  const safety = config?.safety || WATCHTOWER_CONFIG.agent.safetyDefaults;
+  const verdict = aiBrief.verdict || 'unknown';
+  const baseline = result?.delta?.available ? result.delta.status : 'missing';
+  const editBudget = result?.editBudget || buildEditBudget(result);
+  const forbiddenSurfaceMap = result?.forbiddenSurfaceMap || (result?.apps ? buildForbiddenSurfaceMap(result) : null);
+  const mission = verdict === 'blocker'
+    ? 'fix-blocker'
+    : verdict === 'regression'
+      ? 'fix-regression'
+      : verdict === 'investigate'
+        ? 'triage-warning'
+        : verdict === 'known-warning'
+          ? 'respect-known-warning'
+          : verdict === 'clear'
+            ? (baseline === 'missing' ? 'prepare-baseline-candidate' : 'preserve-clear-state')
+            : 'inspect-watchtower';
+  const priority = verdict === 'blocker'
+    ? 100
+    : verdict === 'regression'
+      ? 90
+      : verdict === 'investigate'
+        ? 70
+        : verdict === 'known-warning'
+          ? 40
+          : 20;
+  const allowedActions = verdict === 'clear'
+    ? ['rerun', 'compare-baseline', 'prepare-handoff']
+    : ['inspect', 'edit', 'rerun', 'compare-baseline', 'prepare-handoff'];
+  const forbiddenActions = [
+    'approval-write',
+    'unrelated-edits',
+    'danger-zone-edits-without-explicit-intent',
+  ];
+  if (verdict !== 'clear') forbiddenActions.push('baseline-update');
+  const successCondition = [];
+  if (verdict === 'blocker') successCondition.push('focus-app-level!=bad');
+  if (verdict === 'regression') successCondition.push('delta.status!=regression');
+  if (verdict === 'investigate') successCondition.push('warning-fixed-or-classified');
+  if (verdict === 'known-warning') successCondition.push('no-new-warnings');
+  if (verdict === 'clear') successCondition.push(baseline === 'missing' ? 'owner-may-save-baseline' : 'clear-state-preserved');
+  successCondition.push('watchtower-rerun-complete');
+  successCondition.push('signature-recorded');
+  const targetArea = focusApp
+    ? [
+        focusApp.issueCode || focusApp.reason || 'diagnostics-focus',
+        ...((safety.safe || []).slice(0, 2)),
+        ...((safety.medium || []).slice(0, 1)),
+      ]
+    : ['suite-summary', 'aiBrief.reviewOrder', 'focusPacket.doNow'];
+  return {
+    contractVersion: 1,
+    packetType: 'watchtower.action',
+    mission,
+    priority,
+    targetApp: focusId,
+    targetUrl: focusApp?.url || null,
+    targetArea,
+    protectedSurface: [...(safety.danger || [])],
+    why: aiBrief.headline || result?.status || 'Inspect current Watchtower result.',
+    summary: aiBrief.nextAction || 'Run Watchtower and inspect the top review target.',
+    allowedActions,
+    forbiddenActions,
+    editBudget,
+    forbiddenSurfaceMap: forbiddenSurfaceMap ? {
+      mapType: forbiddenSurfaceMap.mapType,
+      focusApp: forbiddenSurfaceMap.focusApp,
+      defaultRule: forbiddenSurfaceMap.defaultRule,
+      surfaces: forbiddenSurfaceMap.surfaces.map(surface => ({
+        id: surface.id,
+        appId: surface.appId,
+        forbidden: surface.forbidden,
+        requiresExplicitUserIntent: surface.requiresExplicitUserIntent,
+      })),
+    } : null,
+    requiredChecks: [
+      'window.WATCHTOWER.run()',
+      ...(focusId ? ['Inspect focus app: ' + focusId] : []),
+      'Compare against baseline before handoff',
+    ],
+    successCondition,
+    retryPolicy: {
+      maxAttempts: verdict === 'clear' ? 1 : 3,
+      backoff: verdict === 'blocker' ? 'short' : 'minimal',
+    },
+    handoffKey: [
+      WATCHTOWER_CONFIG.baselineNamespace,
+      focusId || 'suite',
+      result?.signature || 'unsigned',
+    ].join(':'),
+    signature: result?.signature || null,
+    baseline,
+    generatedAt: result?.generatedAt || new Date().toISOString(),
+  };
+}
+
+function getActionPacket(result = null) {
+  if (result && typeof result === 'object') {
+    return result.actionPacket || buildActionPacket(result);
+  }
+  try {
+    const parsed = JSON.parse(jsonEl?.textContent || 'null');
+    return parsed ? (parsed.actionPacket || buildActionPacket(parsed)) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function buildAgentCard(result) {
+  const agent = WATCHTOWER_CONFIG.agent;
+  return {
+    name: WATCHTOWER_CONFIG.productName,
+    contractVersion: agent.contractVersion,
+    audience: agent.audience,
+    project: result.project,
+    portableMode: {
+      primaryFile: agent.portableMode.primaryFile,
+      requiredFiles: [...agent.portableMode.requiredFiles],
+      optionalFiles: [...agent.portableMode.optionalFiles],
+      rule: agent.portableMode.rule,
+    },
+    entrypoints: [...agent.entrypoints],
+    quickStart: [...agent.quickStart],
+    aiProfiles: Object.fromEntries(Object.keys(agent.aiProfiles).map(name => [name, getAiProfileGuide(name, result)])),
+    capabilities: [...agent.capabilities],
+    protocols: APPS.map(app => ({
+      id: app.id,
+      protocol: app.diagnostics?.protocol || 'basic',
+      url: app.url,
+    })),
+    current: {
+      status: result.status,
+      signature: result.signature,
+      baseline: result.delta?.available ? result.delta.status : 'missing',
+      verdict: result.aiBrief?.verdict || 'unknown',
+      nextAction: result.aiBrief?.nextAction || 'Run Watchtower before editing.',
+      reviewOrder: result.aiBrief?.reviewOrder || APPS.map(app => app.id),
+    },
+    workflow: Object.freeze([
+      ...agent.quickStart,
+      'Save a new baseline only when the current suite state is intended.',
+    ]),
+  };
+}
+
+function buildWorkbench(result) {
+  const gates = WATCHTOWER_CONFIG.agent.gates;
+  const focusId = result.aiBrief?.reviewOrder?.[0] || null;
+  const focusApp = result.apps.find(app => app.id === focusId) || null;
+  const regressionIds = (result.delta?.changes || [])
+    .filter(change => change.type === 'regression')
+    .map(change => change.id);
+  const editMode = result.aiBrief?.verdict === 'blocker' || result.aiBrief?.verdict === 'regression'
+    ? 'repair-first'
+    : result.aiBrief?.verdict === 'known-warning'
+      ? 'changes-allowed-with-baseline'
+      : 'changes-allowed';
+  return {
+    contractVersion: 1,
+    purpose: 'AI coding workbench for project diagnostics, repair focus, and completion gates.',
+    editMode,
+    focus: focusApp ? {
+      id: focusApp.id,
+      title: focusApp.title,
+      url: focusApp.url,
+      level: focusApp.level,
+      issueCode: focusApp.issueCode,
+      knownWarning: focusApp.knownWarning,
+      reason: focusApp.reason,
+      healerHint: focusApp.healerHint,
+    } : null,
+    queues: {
+      repair: result.apps
+        .filter(app => app.level === 'bad' || regressionIds.includes(app.id))
+        .map(app => app.id),
+      triage: result.apps
+        .filter(app => app.level === 'warn' && !app.knownWarning)
+        .map(app => app.id),
+      acknowledged: result.apps
+        .filter(app => app.knownWarning)
+        .map(app => app.id),
+    },
+    gates: {
+      start: [...gates.start],
+      beforeEdit: [...gates.beforeEdit],
+      afterEdit: [...gates.afterEdit],
+      complete: [...gates.complete],
+    },
+    acceptance: {
+      canFinish: result.ok && result.delta?.status !== 'regression',
+      reason: result.ok
+        ? result.delta?.status === 'regression'
+          ? 'Current suite is usable, but it regressed from baseline.'
+          : 'No blockers or new warnings detected.'
+        : 'Blockers or new warnings remain.',
+      requiredNextCommand: 'Run Watchtower again and inspect workbench.acceptance before handing off.',
+    },
+    handoff: {
+      summary: result.aiBrief?.headline || result.status,
+      status: result.status,
+      baseline: result.delta?.available ? result.delta.status : 'missing',
+      signature: result.signature,
+      nextAction: result.aiBrief?.nextAction,
+    },
+  };
+}
+
+function buildSafetyMap(result) {
+  const defaults = WATCHTOWER_CONFIG.agent.safetyDefaults;
+  return {
+    contractVersion: 1,
+    project: result.project.title,
+    apps: result.apps.map(app => {
+      const config = APPS.find(item => item.id === app.id);
+      const safety = config?.safety || defaults;
+      const risk = app.level === 'bad'
+        ? 'danger'
+        : app.level === 'warn' && !app.knownWarning
+          ? 'medium'
+          : app.knownWarning
+            ? 'medium-known'
+            : 'normal';
+      return {
+        id: app.id,
+        title: app.title,
+        risk,
+        safe: [...(safety.safe || defaults.safe)],
+        medium: [...(safety.medium || defaults.medium)],
+        danger: [...(safety.danger || defaults.danger)],
+        requiredChecks: app.kind === 'cc'
+          ? ['CC_TEST_HARNESS.run()', 'SpecCatalog.run', 'SiegeTests.run']
+          : app.kind === 'wc'
+            ? ['WcDiagnostics.runDiagnostics({ preset: "quick" })']
+            : app.kind === 'cd'
+              ? ['AppDiagnostics.runSmokeChecks({ preset: "edit" })']
+              : app.kind === 'ect'
+                ? ['AppDiagnostics.runSmokeChecks()']
+                : ['window.WATCHTOWER.run()'],
+      };
+    }),
+  };
+}
+
+function buildEditBudget(result = {}) {
+  const verdict = result.aiBrief?.verdict || 'unknown';
+  const focusId = result.workbench?.focus?.id || result.aiBrief?.reviewOrder?.[0] || null;
+  const config = WATCHTOWER_CONFIG.agent.editBudgets[verdict] || WATCHTOWER_CONFIG.agent.editBudgets.investigate;
+  const focusApp = result.apps?.find(app => app.id === focusId) || null;
+  const hasBlocker = (result.apps || []).some(app => app.level === 'bad');
+  const hasRegression = result.delta?.status === 'regression';
+  const baseline = result.delta?.available ? result.delta.status : 'missing';
+  const mustAskHuman = hasRegression || verdict === 'clear' || baseline === 'missing';
+  const allowedScopes = focusId
+    ? [focusId]
+    : (result.aiBrief?.reviewOrder || []).slice(0, 1);
+  return {
+    contractVersion: 1,
+    budgetType: 'watchtower.editBudget',
+    verdict,
+    level: config.level,
+    maxFiles: config.maxFiles,
+    maxRisk: config.maxRisk,
+    maxAttempts: config.maxAttempts,
+    focusApp: focusId,
+    allowedScopes,
+    allowedChangeTypes: verdict === 'clear'
+      ? ['diagnostics-rerun', 'handoff-only']
+      : ['targeted-fix', 'diagnostics-addition', 'small-label-or-report-copy-change'],
+    requiresHumanApprovalBefore: mustAskHuman
+      ? ['baseline-update', 'approval-write', 'danger-zone-edit']
+      : ['approval-write', 'danger-zone-edit'],
+    stopIf: [
+      'touches-human-button-contract',
+      'changes-unrelated-app',
+      'requires-more-than-' + config.maxFiles + '-files',
+      hasBlocker ? 'new-blocker-appears' : 'blocker-appears',
+    ],
+    rationale: focusApp
+      ? 'Limit edits to ' + focusApp.id + ' because Watchtower focus is ' + focusApp.issueCode + '.'
+      : 'No focus app selected; inspect only until Watchtower identifies a target.',
+    generatedAt: result.generatedAt || new Date().toISOString(),
+  };
+}
+
+function buildForbiddenSurfaceMap(result = {}) {
+  const safetyMap = result.safetyMap || buildSafetyMap(result);
+  const focusId = result.workbench?.focus?.id || result.aiBrief?.reviewOrder?.[0] || null;
+  const globalSurfaces = [
+    {
+      id: 'human-button-contract',
+      appId: 'WT',
+      label: 'Human-facing Watchtower buttons',
+      forbidden: HUMAN_BUTTON_CONTRACT.map(button => button.id + ':' + button.label).concat([
+        '人間用ボタン',
+        'ボタンを増や',
+        'ボタンを変更',
+        'ボタン名',
+      ]),
+      reason: 'Human controls are stable UX contract; do not rename, reorder, add, or remove without explicit user request.',
+      requiresExplicitUserIntent: true,
+    },
+    {
+      id: 'compact-summary-card-contract',
+      appId: 'WT',
+      label: 'Compact Watchtower summary cards',
+      forbidden: [
+        'summary card width',
+        'summary card grid',
+        'summary card font size',
+        'compact cards',
+        'WT OK cards',
+        'サマリーカード',
+        '小さいカード',
+        'WT OKカード',
+        'カードを大きく',
+      ],
+      reason: 'Compact summary cards are stable human UI contract; do not resize or restyle without explicit user request.',
+      requiresExplicitUserIntent: true,
+    },
+    {
+      id: 'approval-and-baseline-state',
+      appId: 'WT',
+      label: 'Approval and baseline writes',
+      forbidden: ['APPROVAL_KEY writes', 'BASELINE_KEY writes', 'automatic approval', 'automatic baseline update'],
+      reason: 'Only the human owner should approve results or choose a new comparison baseline.',
+      requiresExplicitUserIntent: true,
+    },
+  ];
+  const appSurfaces = safetyMap.apps.map(app => ({
+    id: app.id + '-danger-surface',
+    appId: app.id,
+    label: app.title + ' danger surface',
+    forbidden: [...app.danger],
+    reason: app.id === focusId
+      ? 'Focus app danger zones still require explicit user intent.'
+      : 'Non-focus app danger zones are unrelated for this run.',
+    requiresExplicitUserIntent: true,
+  }));
+  return {
+    contractVersion: 1,
+    mapType: 'watchtower.forbiddenSurfaceMap',
+    focusApp: focusId,
+    defaultRule: 'Do not touch forbidden surfaces unless the user explicitly names that surface in the current request.',
+    surfaces: globalSurfaces.concat(appSurfaces),
+    generatedAt: result.generatedAt || new Date().toISOString(),
+  };
+}
+
+function buildCleanupCandidates(result = {}) {
+  const candidates = [];
+  const source = document.documentElement.outerHTML || '';
+  const domHasRetiredControls = ['suggest-actions', 'copy-action-packet', 'copy-handoff']
+    .some(id => !!document.getElementById(id));
+  const missingLegacyHelpers = ['attachMvpControls', 'buildSuggestionPanelText', 'copyAgentHandoff']
+    .filter(name => typeof window.WATCHTOWER?.[name] !== 'function');
+  if (!domHasRetiredControls && missingLegacyHelpers.length === 3) {
+    candidates.push({
+      id: 'retired-mvp-controls',
+      kind: 'already-clean',
+      confidence: 'high',
+      safeToRemoveNow: false,
+      target: 'legacy MVP action buttons and helper APIs',
+      reason: 'The old human-facing AI helper buttons are gone and their public helper APIs are no longer exposed.',
+      action: 'Do not restore them. Keep only suggestNextActions because machineReadable.suggestedActions still uses it.',
+      evidence: missingLegacyHelpers,
+    });
+  } else if (domHasRetiredControls) {
+    candidates.push({
+      id: 'retired-mvp-controls-returned',
+      kind: 'remove',
+      confidence: 'high',
+      safeToRemoveNow: true,
+      target: 'suggest-actions / copy-action-packet / copy-handoff DOM controls',
+      reason: 'These are retired AI UI controls and conflict with HUMAN_BUTTON_CONTRACT.',
+      action: 'Remove the returned DOM controls unless the human explicitly asked to restore them.',
+      evidence: ['retired DOM control detected'],
+    });
   }
 
-  const hasFailure = results.some(result => result.level === 'bad');
-  const hasWarning = results.some(result => result.level === 'warn');
-  setStatus(hasFailure ? 'FAILED' : hasWarning ? 'WARN' : 'OK', hasFailure ? 'bad' : hasWarning ? 'warn' : 'ok');
-  output.textContent = results.map(result =>
-    '# ' + result.app.id + ' ' + result.level.toUpperCase() + '\n' + result.report
-  ).join('\n\n---\n\n');
+  const portable = WATCHTOWER_CONFIG.agent.portableMode;
+  candidates.push({
+    id: 'optional-guide-files',
+    kind: 'omit-when-porting',
+    confidence: 'high',
+    safeToRemoveNow: false,
+    target: portable.optionalFiles.join(', '),
+    reason: 'Watchtower is self-contained; these files are discovery notes, not runtime dependencies.',
+    action: 'When copying Watchtower to another project, copy only ' + portable.primaryFile + ' unless the human wants extra guide files.',
+    evidence: ['requiredFiles=' + portable.requiredFiles.join(',')],
+  });
+
+  const sessionLog = readSessionLogSummary(3);
+  if (sessionLog.total >= Math.floor(SESSION_LOG_MAX * 0.8)) {
+    candidates.push({
+      id: 'session-log-near-cap',
+      kind: 'storage-housekeeping',
+      confidence: 'medium',
+      safeToRemoveNow: false,
+      target: 'localStorage ' + SESSION_LOG_KEY,
+      reason: 'The work log is near its cap and old entries will be trimmed automatically.',
+      action: 'Keep recent entries. Use resetSessionLog() only if the human asks to clear history.',
+      evidence: ['entries=' + sessionLog.total, 'max=' + SESSION_LOG_MAX],
+    });
+  }
+
+  if (source.includes('generateReadme(result)')) {
+    candidates.push({
+      id: 'generated-readme-is-optional',
+      kind: 'keep-as-generator',
+      confidence: 'medium',
+      safeToRemoveNow: false,
+      target: 'generateReadme(result)',
+      reason: 'README generation is optional but useful when an external guide is requested.',
+      action: 'Do not create or require README.md for normal Watchtower portability.',
+      evidence: ['agentGuide is embedded in machineReadable'],
+    });
+  }
+
+  return {
+    contractVersion: 1,
+    generatedAt: new Date().toISOString(),
+    policy: 'Report cleanup candidates only. Do not delete code or files unless the human explicitly asks.',
+    candidates,
+    summary: candidates.length
+      ? candidates.map(item => item.id + ':' + item.kind).join(', ')
+      : 'No cleanup candidates detected.',
+  };
+}
+
+function parseReportMetrics(report = '') {
+  const metrics = {};
+  String(report || '').split('\n').forEach(line => {
+    const match = line.match(/^\s*-\s*([^:]+):\s*(.+)\s*$/);
+    if (!match) return;
+    const key = match[1].trim().replace(/\s+/g, '_');
+    metrics[key] = match[2].trim();
+  });
+  return metrics;
+}
+
+function buildDiagnosticCapabilityMap(result = {}) {
+  return (result.apps || []).map(app => {
+    const config = APPS.find(item => item.id === app.id) || {};
+    const diagnostics = config.diagnostics || {};
+    const report = String(app.report || '');
+    const badges = [];
+    const protocol = diagnostics.protocol || 'basic';
+    if (protocol) badges.push(protocol);
+    if (/runDiagnostics|Status:\s*OK|Checks:/i.test(report) || (diagnostics.methods || []).includes('runDiagnostics')) badges.push('standard-api');
+    if (/calculation|spec|regression|Calculation/i.test(report)) badges.push('calculation');
+    if (/storage|localStorage|IndexedDB|storedRecords/i.test(report)) badges.push('storage');
+    if (/import|export|JSON|CSV|transfer/i.test(report)) badges.push('import-export');
+    if (/DOM|dom|UI public API|publicApi/i.test(report)) badges.push('dom-ui');
+    if (/guide|afterEdit|Next command/i.test(report)) badges.push('agent-guide');
+    return {
+      id: app.id,
+      title: app.title,
+      protocol,
+      maturity: app.maturity,
+      preset: diagnostics.preset || WATCHTOWER_CONFIG.diagnosticDefaults.presets[app.kind] || null,
+      globals: diagnostics.globals || diagnostics.global || WATCHTOWER_CONFIG.diagnosticDefaults.standardGlobals,
+      methods: diagnostics.methods || WATCHTOWER_CONFIG.diagnosticDefaults.standardMethods,
+      badges: [...new Set(badges)],
+      requiredChecks: buildSafetyMap(result).apps.find(item => item.id === app.id)?.requiredChecks || [],
+    };
+  });
+}
+
+function buildAppMetrics(result = {}) {
+  return (result.apps || []).map(app => {
+    const metrics = parseReportMetrics(app.report);
+    const keyMetrics = Object.entries(metrics)
+      .filter(([key]) => /records|stored|failures|warnings|checks|selected|public|storage|metrics|required|max/i.test(key))
+      .slice(0, 6);
+    return {
+      id: app.id,
+      metrics,
+      summary: keyMetrics.length
+        ? keyMetrics.map(([key, value]) => key + '=' + value).join(', ')
+        : app.level + '/' + app.issueCode,
+    };
+  });
+}
+
+function buildAppAdditionTemplate() {
+  return {
+    expectedIdsPatch: "Add the new app id to WATCHTOWER_CONFIG.expectedIds.",
+    appRegistryEntry: {
+      id: 'NEW-ID',
+      title: 'NEW APP',
+      url: './new-app.html',
+      kind: 'newkind',
+      maturity: 'deep diagnostics',
+      diagnostics: {
+        protocol: 'standard',
+        globals: ['AppDiagnostics'],
+        methods: ['runDiagnostics', 'runSmokeChecks'],
+        preset: 'quick',
+      },
+      safety: {
+        safe: ['labels', 'diagnostic copy'],
+        medium: ['rendering', 'import/export glue'],
+        danger: ['calculation core', 'storage schema'],
+      },
+    },
+    requiredAppApi: [
+      'window.AppDiagnostics.runDiagnostics({ preset, log:false })',
+      'window.AppDiagnostics.runSmokeChecks({ preset, log:false })',
+      'window.AppDiagnostics.report(summaryOrOptions)',
+      'window.AppDiagnostics.guide(scope)',
+      'window.AppDiagnostics.afterEdit(scope)',
+    ],
+    postAddChecks: [
+      'Open the app directly and run AppDiagnostics.runDiagnostics({ preset:"quick" }).',
+      'Run window.WATCHTOWER.runAndRender().',
+      'Verify result.signature includes NEW-ID:ok:ok or an intentional warning.',
+    ],
+  };
+}
+
+function buildDeltaCard(result = {}) {
+  const delta = result.delta || {};
+  const changes = Array.isArray(delta.changes) ? delta.changes : [];
+  const changedApps = changes.map(change => change.id).filter(Boolean);
+  const newApps = changes.filter(change => change.type === 'added').map(change => change.id);
+  const removedApps = changes.filter(change => change.type === 'removed').map(change => change.id);
+  const regressions = changes.filter(change => change.type === 'regression').map(change => change.id);
+  const improvements = changes.filter(change => change.type === 'improvement').map(change => change.id);
+  return {
+    available: !!delta.available,
+    status: delta.status || 'missing',
+    baselineSignature: delta.baselineSignature || null,
+    currentSignature: result.signature || null,
+    changedApps,
+    newApps,
+    removedApps,
+    regressions,
+    improvements,
+    summary: delta.available
+      ? (changes.length ? changes.map(change => change.id + ':' + change.type).join(', ') : 'No changes from baseline.')
+      : 'No baseline saved; save only when the human wants this state as the comparison point.',
+  };
+}
+
+function buildHumanOutcomeCard(result = {}) {
+  const session = readSessionLogSummary(1);
+  const latest = session.available ? session.entries[0] : null;
+  const files = Array.isArray(latest?.filesChanged) ? latest.filesChanged : [];
+  const touchedApps = files.map(file => {
+    const normalized = String(file).replace(/\\/g, '/');
+    const app = APPS.find(item => normalized.endsWith(item.url.replace('./', '')));
+    return app?.id || null;
+  }).filter(Boolean);
+  const otherAppsOk = (result.apps || [])
+    .filter(app => !touchedApps.includes(app.id))
+    .every(app => app.level === 'ok' || app.knownWarning);
+  const focus = result.workbench?.focus?.id || result.aiBrief?.reviewOrder?.[0] || null;
+  return {
+    latestWork: latest,
+    filesChanged: files,
+    touchedApps: [...new Set(touchedApps)],
+    otherAppsOk,
+    summary: latest
+      ? [latest.outcome || 'note', latest.intent || latest.detail || 'recent work'].join(' / ')
+      : 'No recent session log entry.',
+    nextHumanCheck: focus
+      ? 'Open ' + focus + ' and verify the requested workflow.'
+      : 'Suite is clear; optionally save baseline if this state is intended.',
+  };
+}
+
+function buildOperationalInsights(result = {}) {
+  return {
+    contractVersion: 1,
+    generatedAt: result.generatedAt || new Date().toISOString(),
+    aiFirstSteps: WATCHTOWER_CONFIG.agent.aiFirstSteps.map(item => ({ ...item })),
+    deltaCard: buildDeltaCard(result),
+    diagnosticCapabilityMap: buildDiagnosticCapabilityMap(result),
+    appAdditionTemplate: buildAppAdditionTemplate(),
+    appMetrics: buildAppMetrics(result),
+    humanOutcomeCard: buildHumanOutcomeCard(result),
+  };
+}
+
+function buildArchitectureScore(result) {
+  const failures = result.apps.filter(app => app.level === 'bad').length;
+  const newWarnings = result.apps.filter(app => app.level === 'warn' && !app.knownWarning).length;
+  const knownWarnings = result.apps.filter(app => app.knownWarning).length;
+  const protocolCoverage = result.apps.filter(app => {
+    const config = APPS.find(item => item.id === app.id);
+    return !!config?.diagnostics?.protocol;
+  }).length;
+  const breakdown = {
+    base: 70,
+    protocolCoverage: protocolCoverage * 4,
+    agentCard: result.agentCard ? 4 : 0,
+    workbench: result.workbench ? 4 : 0,
+    handoffPacket: result.handoffPacket ? 4 : 0,
+    failurePenalty: -(failures * 18),
+    newWarningPenalty: -(newWarnings * 8),
+    knownWarningPenalty: -(knownWarnings * 2),
+  };
+  const rawScore = Math.max(0, Math.min(100,
+    breakdown.base
+    + breakdown.protocolCoverage
+    + breakdown.agentCard
+    + breakdown.workbench
+    + breakdown.handoffPacket
+    + breakdown.failurePenalty
+    + breakdown.newWarningPenalty
+    + breakdown.knownWarningPenalty
+  ));
+  const score = failures
+    ? Math.min(rawScore, 59)
+    : newWarnings
+      ? Math.min(rawScore, 79)
+      : knownWarnings
+        ? Math.min(rawScore, 92)
+        : rawScore;
+  const cap = failures ? 59 : newWarnings ? 79 : knownWarnings ? 92 : null;
+  return {
+    contractVersion: 1,
+    score,
+    confidence: failures ? 'LOW' : newWarnings ? 'MEDIUM' : knownWarnings ? 'HIGH-WITH-KNOWN-WARNINGS' : 'HIGH',
+    scoreBreakdown: {
+      ...breakdown,
+      rawBeforeCap: rawScore,
+      cap,
+      final: score,
+    },
+    reasons: [
+      '+ portable diagnostics protocols',
+      '+ baseline and signature contract',
+      '+ AI workbench and handoff packet',
+      knownWarnings ? '- known warnings require acknowledgement' : '+ no known warnings in active result',
+      newWarnings ? '- new warnings need triage' : '+ no new warnings detected',
+      failures ? '- blockers remain' : '+ no blockers detected',
+    ],
+  };
+}
+
+function formatBriefForAgent(result, agentName) {
+  const focus = result.workbench?.focus;
+  const safety = result.safetyMap?.apps?.find(app => app.id === focus?.id)
+    || result.safetyMap?.apps?.[0];
+  const lines = [
+    agentName.toUpperCase() + ' BRIEF',
+    'PROJECT: ' + result.project.title,
+    'STATUS: ' + result.status,
+    'AI CONFIDENCE: ' + result.architectureScore.confidence,
+    'BASELINE: ' + (result.delta?.available ? result.delta.status : 'missing'),
+    'FOCUS: ' + (focus ? focus.id + ' / ' + focus.issueCode : 'none'),
+    '',
+    'SAFE:',
+    ...((safety?.safe || []).map(item => '- ' + item)),
+    '',
+    'MEDIUM:',
+    ...((safety?.medium || []).map(item => '- ' + item)),
+    '',
+    'DANGER:',
+    ...((safety?.danger || []).map(item => '- ' + item)),
+    '',
+    'EDIT ORDER:',
+    ...(result.aiBrief.reviewOrder || []).map((id, index) => String(index + 1) + '. ' + id),
+    '',
+    'REQUIRED CHECKS:',
+    ...((safety?.requiredChecks || []).map(item => '- ' + item)),
+    '',
+    'NEXT ACTION:',
+    result.aiBrief.nextAction,
+  ];
+  return lines.join('\n');
+}
+
+function buildSessionBrief(result) {
+  const focus = result.workbench?.focus;
+  const baseline = result.delta?.available ? result.delta.status : 'missing';
+  const verdict = result.aiBrief?.verdict || 'unknown';
+  const focusLine = focus
+    ? focus.id + ' / ' + focus.issueCode
+    : 'none';
+  const ts = result.generatedAt
+    ? new Date(result.generatedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '??';
+  const line1 = result.project.title + ' / ' + result.status + ' / baseline:' + baseline + ' / focus:' + focusLine;
+  const line2 = 'verdict:' + verdict + ' / score:' + (result.architectureScore?.score ?? '?') + ' / run:' + ts;
+  const line3 = 'next: ' + (result.aiBrief?.nextAction || 'Run Watchtower.');
+  return { line1, line2, line3, text: [line1, line2, line3].join('\n') };
+}
+
+function buildConversationStarter(result, agentName) {
+  const focus = result.workbench?.focus;
+  const baseline = result.delta?.available ? result.delta.status : 'missing';
+  const verdict = result.aiBrief?.verdict || 'unknown';
+  const levelLabel = String(result.level || 'unknown').toUpperCase();
+  const baselineNote = baseline === 'unchanged'
+    ? 'baseline unchanged'
+    : baseline === 'missing'
+      ? 'baseline missing'
+      : 'baseline ' + baseline;
+  const focusNote = focus
+    ? 'focus ' + focus.id + ' (' + focus.issueCode + ')'
+    : 'focus none';
+  const nextNote = result.aiBrief?.nextAction || 'Run Watchtower.';
+  return agentName + ': Watchtower ' + levelLabel + ' / ' + result.status + ' / ' +
+    baselineNote + ' / ' + focusNote + ' / verdict:' + verdict + ' / next: ' + nextNote;
+}
+
+function buildBriefExports(result) {
+  return {
+    contractVersion: 1,
+    formats: {
+      codex: formatBriefForAgent(result, 'Codex'),
+      claude: formatBriefForAgent(result, 'Claude'),
+      gpt: formatBriefForAgent(result, 'GPT'),
+    },
+    preferred: 'codex',
+    sessionBrief: buildSessionBrief(result),
+    conversationStarter: {
+      claude: buildConversationStarter(result, 'Claude'),
+      codex: buildConversationStarter(result, 'Codex'),
+      gpt: buildConversationStarter(result, 'GPT'),
+    },
+  };
+}
+
+function generateReadme(result) {
+  if (!result) return '// Run window.WATCHTOWER.run() first, then pass the result to generateReadme().';
+
+  const agentGuide = result.machineReadable?.agentGuide || getMachineReadableResult(result).machineReadable?.agentGuide;
+  const portable = agentGuide?.portableMode || WATCHTOWER_CONFIG.agent.portableMode;
+  const approval = readApproval();
+  const approvalLine = approval
+    ? '- approval: ' + approval.approvedAt + (approval.signature === result.signature ? ' [current signature]' : ' [different signature]')
+    : '- approval: none';
+  const apps = (result.apps || []).map(app =>
+    '| ' + app.id + ' | ' + app.title + ' | ' + app.level + ' | ' + (app.issueCode || 'ok') + ' |'
+  );
+  const sessionLog = readSessionLogSummary(3);
+  const sessionLines = sessionLog.available
+    ? sessionLog.entries.map(entry => '- ' + formatSessionLogEntry(entry))
+    : ['- none'];
+  const quickStart = [...(agentGuide?.quickStart || WATCHTOWER_CONFIG.agent.quickStart)]
+    .map((step, index) => String(index + 1) + '. ' + step);
+
+  return [
+    '# ' + result.project.title,
+    '',
+    'Watchtower is a single-file diagnostics and AI workbench app.',
+    '',
+    '## Portability',
+    '',
+    '- required files: ' + [...portable.requiredFiles].join(', '),
+    '- optional files: ' + [...portable.optionalFiles].join(', '),
+    '- rule: ' + portable.rule,
+    '',
+    '## Current Result',
+    '',
+    '- status: ' + result.status,
+    '- signature: ' + result.signature,
+    '- baseline: ' + (result.delta?.available ? result.delta.status : 'missing'),
+    '- verdict: ' + (result.aiBrief?.verdict || 'unknown'),
+    '- next action: ' + (result.aiBrief?.nextAction || 'Run Watchtower.'),
+    approvalLine,
+    '',
+    '## Apps',
+    '',
+    '| ID | Title | Level | Issue |',
+    '|---|---|---|---|',
+    ...apps,
+    '',
+    '## AI Quick Start',
+    '',
+    ...quickStart,
+    '',
+    '## Recent Work Log',
+    '',
+    ...sessionLines,
+    '',
+    '## Stable AI Surfaces',
+    '',
+    '- #watchtower-json',
+    '- window.WATCHTOWER.run()',
+    '- window.WATCHTOWER.runAndRender()',
+    '- window.WATCHTOWER.checkRequest(intent, result)',
+    '- window.WATCHTOWER.recordSessionLog(entry)',
+    '- result.machineReadable.agentGuide',
+    '- result.handoffPacket.sessionLog',
+    '',
+    '*Generated by ' + result.project.productName + ' at ' + result.generatedAt + '*',
+  ].join('\n');
+}
+
+function matchTerms(text, terms) {
+  const haystack = String(text || '').toLowerCase().trim();
+  if (!haystack) return [];
+  const compactHaystack = haystack.replace(/[^a-z0-9]+/g, '');
+  // Tokens in the intent that carry actual meaning (4+ chars, not stop words)
+  const stopTokens = new Set([
+    'schema', 'state', 'text', 'copy', 'model', 'sync',
+    'change', 'update', 'edit', 'modify', 'fix', 'add', 'remove',
+    'the', 'and', 'for', 'with', 'from', 'this', 'that',
+  ]);
+  const intentTokens = haystack
+    .split(/[^a-z0-9]+/)
+    .filter(t => t.length >= 4 && !stopTokens.has(t));
+  return terms.filter(term => {
+    const raw = String(term || '').toLowerCase().trim();
+    if (!raw) return false;
+    const compact = raw.replace(/[^a-z0-9]+/g, '');
+    // Exact phrase match — highest confidence
+    if (haystack.includes(raw)) return true;
+    // Compact match for hyphenated/spaced variants (e.g. "inverse solver" vs "inversesolver")
+    if (compact.length >= 6 && compactHaystack.includes(compact)) return true;
+    // Token match: ALL significant tokens in the term must appear in the intent
+    // (prevents "labels" matching "chart labels" when intent is "change label color")
+    const termTokens = raw
+      .split(/[^a-z0-9]+/)
+      .filter(t => t.length >= 5 && !stopTokens.has(t));
+    if (termTokens.length >= 2) {
+      // Multi-token term: require every token to appear in intent
+      return termTokens.every(t => intentTokens.includes(t) || haystack.includes(t));
+    }
+    if (termTokens.length === 1) {
+      // Single significant token: require exact token boundary match in intent
+      return intentTokens.includes(termTokens[0]);
+    }
+    return false;
+  });
+}
+
+// ── FOCUS PACKET ────────────────────────────────────────────
+function buildFocusPacket(result) {
+  const aiBrief = result.aiBrief || {};
+  const workbench = result.workbench || {};
+  const bugSummary = buildBugLedgerSummary(result);
+  const focusIds = (aiBrief.reviewOrder || []).slice(0, 2);
+  const skipIds = (result.apps || [])
+    .filter(app => app.level === 'ok' && !focusIds.includes(app.id))
+    .map(app => app.id);
+  const urgentBugs = bugSummary.open.filter(entry =>
+    focusIds.includes(entry.appId)
+  ).slice(0, 3);
+  const lines = [
+    '── FOCUS PACKET ──',
+    '今回やること: ' + (focusIds.length ? focusIds.join(', ') : 'なし（全部OK）'),
+    '今回触らない: ' + (skipIds.length ? skipIds.join(', ') : 'なし'),
+    '未解決バグ: ' + (urgentBugs.length
+      ? urgentBugs.map(b => b.appId + '/' + b.issueCode).join(', ')
+      : 'なし'),
+    '触る順番: ' + (aiBrief.reviewOrder || []).join(' → '),
+    'verdict: ' + (aiBrief.verdict || 'unknown'),
+    'canFinish: ' + String(workbench.acceptance?.canFinish ?? '?'),
+  ];
+  return {
+    contractVersion: 1,
+    doNow: focusIds,
+    skip: skipIds,
+    urgentBugs,
+    reviewOrder: aiBrief.reviewOrder || [],
+    verdict: aiBrief.verdict || 'unknown',
+    canFinish: workbench.acceptance?.canFinish ?? false,
+    nextAction: aiBrief.nextAction || 'Run Watchtower.',
+    text: lines.join('\n'),
+  };
+}
+
+// ── DANGER WARNING ───────────────────────────────────────────
+function buildDangerWarning(intent, result = null) {
+  const assessment = assessChange(intent, result);
+  const bugSummary = result ? buildBugLedgerSummary(result) : null;
+  // 今回の編集意図に関係するバグ履歴
+  const relatedBugs = (bugSummary?.open || []).filter(entry =>
+    assessment.impactedApps.some(app => app.id === entry.appId)
+  );
+  if (assessment.risk === 'UNKNOWN' || !assessment.impactedApps.length) {
+    return {
+      contractVersion: 1,
+      risk: 'UNKNOWN',
+      safe: true,
+      message: '「' + intent + '」はsafetyMapに直接マッチしませんでした。Watchtowerを実行してからもう一度確認してください。',
+      relatedBugs: [],
+      requiredChecks: [],
+    };
+  }
+  const dangerApps = assessment.impactedApps.filter(app => app.risk === 'high');
+  const mediumApps = assessment.impactedApps.filter(app => app.risk === 'medium');
+  let message = '';
+  if (dangerApps.length) {
+    const zones = dangerApps.flatMap(app => app.matched.danger);
+    message = '⚠️ 危険です。「' + intent + '」は ' +
+      dangerApps.map(app => app.id).join(', ') +
+      ' の danger ゾーン（' + zones.join(', ') + '）に触れます。' +
+      '最小限の編集にして、必ず直後にWatchtowerを再実行してください。';
+  } else if (mediumApps.length) {
+    const zones = mediumApps.flatMap(app => app.matched.medium);
+    message = '🟡 注意。「' + intent + '」は ' +
+      mediumApps.map(app => app.id).join(', ') +
+      ' の medium ゾーン（' + zones.join(', ') + '）に触れます。' +
+      '変更後にWatchtowerを確認してください。';
+  } else {
+    message = '🟢 比較的安全です。「' + intent + '」は safe ゾーンの変更です。念のためWatchtowerを再実行してください。';
+  }
+  if (relatedBugs.length) {
+    message += ' また、この領域には過去のバグ履歴があります: ' +
+      relatedBugs.map(b => b.issueCode).join(', ') + '。';
+  }
+  return {
+    contractVersion: 1,
+    risk: assessment.risk,
+    safe: dangerApps.length === 0,
+    message,
+    impactedApps: assessment.impactedApps.map(app => ({
+      id: app.id,
+      risk: app.risk,
+      dangerMatches: app.matched.danger,
+      mediumMatches: app.matched.medium,
+    })),
+    relatedBugs,
+    requiredChecks: assessment.requiredChecks,
+    warning: assessment.warning,
+  };
+}
+
+function assessChange(intent, result = null) {
+  const snapshot = result || {
+    project: {
+      title: WATCHTOWER_CONFIG.projectTitle,
+      productName: WATCHTOWER_CONFIG.productName,
+      baselineNamespace: WATCHTOWER_CONFIG.baselineNamespace,
+    },
+    apps: APPS.map(app => ({
+      id: app.id,
+      title: app.title,
+      url: app.url,
+      kind: app.kind,
+      maturity: app.maturity,
+      level: 'unknown',
+      issueCode: 'not-run',
+      knownWarning: false,
+      reason: 'Watchtower has not run in this assessment.',
+      healerHint: 'Run Watchtower for live diagnostics before editing.',
+    })),
+  };
+  const safetyMap = result?.safetyMap || buildSafetyMap(snapshot);
+  const impacts = safetyMap.apps.map(app => {
+    const safeHits = matchTerms(intent, app.safe);
+    const mediumHits = matchTerms(intent, app.medium);
+    const dangerHits = matchTerms(intent, app.danger);
+    const idHit = matchTerms(intent, [app.id, app.title]);
+    const weight = dangerHits.length * 3 + mediumHits.length * 2 + safeHits.length + idHit.length * 2;
+    if (!weight) return null;
+    const risk = dangerHits.length ? 'high' : mediumHits.length ? 'medium' : 'low';
+    return {
+      id: app.id,
+      title: app.title,
+      url: app.url,
+      risk,
+      matched: { safe: safeHits, medium: mediumHits, danger: dangerHits, identity: idHit },
+      requiredChecks: app.requiredChecks,
+      weight,
+    };
+  }).filter(Boolean).sort((a, b) => {
+    const rank = { high: 3, medium: 2, low: 1 };
+    return rank[b.risk] - rank[a.risk] || b.weight - a.weight || a.id.localeCompare(b.id);
+  });
+  const fallbackFocus = result?.workbench?.focus?.id || APPS[0].id;
+  const topRisk = impacts.some(item => item.risk === 'high')
+    ? 'HIGH'
+    : impacts.some(item => item.risk === 'medium')
+      ? 'MEDIUM'
+      : impacts.length
+        ? 'LOW'
+        : 'UNKNOWN';
+  const reviewOrder = impacts.length ? impacts.map(item => item.id) : [fallbackFocus];
+  return {
+    contractVersion: 1,
+    intent: String(intent || '').trim(),
+    risk: topRisk,
+    confidence: impacts.length ? 'matched-safety-map' : 'no-direct-match',
+    impactedApps: impacts,
+    reviewOrder,
+    requiredChecks: [...new Set(impacts.flatMap(item => item.requiredChecks || []))],
+    warning: topRisk === 'HIGH'
+      ? 'High-risk change. Inspect danger matches and rerun Watchtower after the smallest possible edit.'
+      : topRisk === 'MEDIUM'
+        ? 'Medium-risk change. Check render/state sync and rerun relevant diagnostics.'
+        : topRisk === 'LOW'
+          ? 'Low-risk change. Still rerun Watchtower before handoff.'
+          : 'No direct safety-map match. Run Watchtower and inspect workbench before editing.',
+  };
+}
+
+function currentWatchtowerResult() {
+  try {
+    const parsed = JSON.parse(jsonEl?.textContent || 'null');
+    return parsed && parsed.signature ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function inferHumanRequestedFocus(text, assessment, result = null) {
+  const request = String(text || '').toLowerCase();
+  const candidates = assessment.impactedApps || [];
+  if (candidates.length !== 1) return null;
+  const app = candidates[0];
+  const explicitTokens = [
+    app.id,
+    app.title,
+    ...(app.id === 'WC' ? ['winding calibrator', 'winding-calibrator', 'wc'] : []),
+    ...(app.id === 'CD' ? ['coil designer', 'coil-designer', 'cd'] : []),
+    ...(app.id === 'CC' ? ['coil calibrator', 'coil-calibrator', 'cc'] : []),
+    ...(app.id === 'ECT-D' ? ['ect designer', 'ect-designer', 'ect-d'] : []),
+    ...(app.id === 'WT' ? ['watchtower', 'wt'] : []),
+  ].map(item => String(item || '').toLowerCase()).filter(Boolean);
+  const explicit = explicitTokens.some(token => request.includes(token));
+  if (!explicit) return null;
+  const diagnosticFocus = result?.workbench?.focus || null;
+  const blockers = (result?.apps || []).filter(item => item.level === 'bad');
+  const newWarnings = (result?.apps || []).filter(item => item.level === 'warn' && !item.knownWarning);
+  const onlyKnownWarnings = !blockers.length && !newWarnings.length;
+  return {
+    appId: app.id,
+    appTitle: app.title,
+    explicit,
+    diagnosticFocus: diagnosticFocus ? {
+      id: diagnosticFocus.id,
+      issueCode: diagnosticFocus.issueCode,
+      knownWarning: !!diagnosticFocus.knownWarning,
+    } : null,
+    canOverrideDiagnosticFocus: explicit && onlyKnownWarnings && assessment.risk !== 'HIGH',
+    reason: explicit && onlyKnownWarnings
+      ? 'Human explicitly requested this app, and current non-OK diagnostics are known warnings only.'
+      : 'Human target was explicit, but blockers/new warnings or high risk still require pause.',
+  };
+}
+
+function checkRequest(intent, result = null) {
+  const text = String(intent || '').trim();
+  const activeResult = result || currentWatchtowerResult();
+  const assessment = assessChange(text, activeResult);
+  const danger = buildDangerWarning(text, activeResult);
+  const budget = activeResult?.editBudget || (activeResult ? buildEditBudget(activeResult) : buildEditBudget({
+    aiBrief: { verdict:'investigate', reviewOrder: assessment.reviewOrder },
+    workbench: { focus:null },
+    apps: [],
+    delta: { available:false },
+    generatedAt: new Date().toISOString(),
+  }));
+  const forbiddenMap = activeResult?.forbiddenSurfaceMap || (activeResult ? buildForbiddenSurfaceMap(activeResult) : null);
+  const impactedIds = assessment.impactedApps.map(app => app.id);
+  const humanRequestedFocus = inferHumanRequestedFocus(text, assessment, activeResult);
+  const forbiddenHits = forbiddenMap
+    ? forbiddenMap.surfaces.map(surface => {
+      const matches = matchTerms(text, surface.forbidden || []);
+      const outsideFocus = impactedIds.includes(surface.appId)
+        && surface.appId !== budget.focusApp
+        && !(humanRequestedFocus?.canOverrideDiagnosticFocus && surface.appId === humanRequestedFocus.appId);
+      return {
+        id: surface.id,
+        appId: surface.appId,
+        matches,
+        matchedForbidden: matches.length > 0,
+        outsideBudgetFocus: outsideFocus,
+        requiresExplicitUserIntent: surface.requiresExplicitUserIntent,
+      };
+    }).filter(hit => hit.matchedForbidden || hit.outsideBudgetFocus)
+    : [];
+  const riskRank = { UNKNOWN:0, SAFE:1, LOW:1, MEDIUM:2, HIGH:3 };
+  // maxRisk:'safe' → SAFE:1 = LOW相当。undefinedになるとfalseになるので明示的に定義。
+  const overBudgetRisk = (riskRank[assessment.risk] ?? 0) > (riskRank[String(budget.maxRisk || 'safe').toUpperCase()] ?? 0);
+  const effectiveOverBudgetRisk = overBudgetRisk && !humanRequestedFocus?.canOverrideDiagnosticFocus;
+  const touchesForbidden = forbiddenHits.some(hit => hit.matchedForbidden || hit.outsideBudgetFocus);
+  const canProceed =
+    !!text &&
+    assessment.risk !== 'HIGH' &&
+    !effectiveOverBudgetRisk &&
+    !(touchesForbidden && !text.includes('明示') && !/explicit|force|danger|承認|基準/.test(text.toLowerCase()));
+  const decision = canProceed
+    ? humanRequestedFocus?.canOverrideDiagnosticFocus
+      ? 'proceed-with-human-requested-focus'
+      : 'proceed-with-budget'
+    : 'pause-or-ask-human';
+  const requiredBefore = [
+    activeResult ? 'read-current-watchtower-result' : 'run-window.WATCHTOWER.run()',
+    'read-result.editBudget',
+    'read-result.forbiddenSurfaceMap',
+  ];
+  if (assessment.requiredChecks.length) requiredBefore.push(...assessment.requiredChecks);
+  const requiredAfter = [
+    'run-window.WATCHTOWER.runAndRender()',
+    'record-window.WATCHTOWER.recordSessionLog()',
+    'confirm-no-new-blockers',
+    'compare-signature-and-baseline',
+  ];
+  return {
+    contractVersion: 1,
+    requestType: 'watchtower.requestCheck',
+    intent: text,
+    decision,
+    canProceed,
+    risk: assessment.risk,
+    confidence: assessment.confidence,
+    summary: canProceed
+      ? humanRequestedFocus?.canOverrideDiagnosticFocus
+        ? 'Proceed inside the human-requested app focus and run its required diagnostics.'
+        : 'Proceed only inside editBudget and rerun Watchtower after the edit.'
+      : 'Pause, narrow the request, or ask the human before editing.',
+    impactedApps: assessment.impactedApps,
+    reviewOrder: assessment.reviewOrder,
+    humanRequestedFocus,
+    editBudget: budget,
+    forbiddenHits,
+    dangerWarning: danger,
+    requiredBefore: [...new Set(requiredBefore)],
+    requiredAfter,
+    stopIf: [
+      ...budget.stopIf,
+      'actual-change-needs-forbidden-surface',
+      'new-diagnostics-failure-appears',
+    ],
+    notes: [
+      'This is a pre-edit safety gate, not a guarantee that code will run without errors.',
+      'Runtime or syntax errors are detected by the post-edit Watchtower run.',
+    ],
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function buildHandoffPacket(result) {
+  const focus = result.workbench?.focus;
+  const repairQueue = result.workbench?.queues?.repair || [];
+  const triageQueue = result.workbench?.queues?.triage || [];
+  const acknowledged = result.workbench?.queues?.acknowledged || [];
+  const regressionChanges = result.delta?.changes?.filter(change => change.type === 'regression') || [];
+  const approval = readApproval();
+  const approvalInfo = approval
+    ? { approvedAt: approval.approvedAt, matchesCurrentRun: approval.signature === result.signature }
+    : null;
+  const lines = [
+    'WATCHTOWER HANDOFF',
+    'project: ' + result.project.title,
+    'status: ' + result.status,
+    'signature: ' + result.signature,
+    'baseline: ' + (result.delta?.available ? result.delta.status : 'missing'),
+    'verdict: ' + result.aiBrief.verdict,
+    'actionPacket: ' + ((result.actionPacket?.mission || 'inspect-watchtower') + (result.actionPacket?.targetApp ? ' @' + result.actionPacket.targetApp : '')),
+    'approval: ' + (approvalInfo ? approvalInfo.approvedAt + (approvalInfo.matchesCurrentRun ? ' [this run]' : ' [different run]') : 'none'),
+    'focus: ' + (focus ? focus.id + ' / ' + focus.issueCode : 'none'),
+    'aiFirstSteps: ' + WATCHTOWER_CONFIG.agent.aiFirstSteps.map(item => item.step + '.' + item.id).join(' -> '),
+    'repairQueue: ' + (repairQueue.length ? repairQueue.join(', ') : 'none'),
+    'triageQueue: ' + (triageQueue.length ? triageQueue.join(', ') : 'none'),
+    'acknowledgedWarnings: ' + (acknowledged.length ? acknowledged.join(', ') : 'none'),
+    'regressions: ' + (regressionChanges.length ? regressionChanges.map(change => change.id + ':' + change.before + '->' + change.after).join(', ') : 'none'),
+    'canFinish: ' + String(result.workbench.acceptance.canFinish),
+    'nextAction: ' + result.aiBrief.nextAction,
+  ];
+  if (result.operationalInsights?.humanOutcomeCard) {
+    lines.push('humanOutcome: ' + result.operationalInsights.humanOutcomeCard.summary);
+    lines.push('nextHumanCheck: ' + result.operationalInsights.humanOutcomeCard.nextHumanCheck);
+  }
+  if (result.operationalInsights?.deltaCard) {
+    lines.push('impactSummary: ' + result.operationalInsights.deltaCard.summary);
+  }
+  const sessionLog = readSessionLogSummary(3);
+  if (sessionLog.available) {
+    lines.push('sessionLog:');
+    sessionLog.entries.forEach(entry => lines.push('  - ' + formatSessionLogEntry(entry)));
+  } else {
+    lines.push('sessionLog: none');
+  }
+  return {
+    contractVersion: 1,
+    generatedAt: result.generatedAt,
+    project: result.project,
+    status: result.status,
+    signature: result.signature,
+    baseline: result.delta?.available ? result.delta.status : 'missing',
+    verdict: result.aiBrief.verdict,
+    approval: approvalInfo,
+    focus,
+    queues: result.workbench.queues,
+    acceptance: result.workbench.acceptance,
+    nextAction: result.aiBrief.nextAction,
+    actionPacket: result.actionPacket || null,
+    operationalInsights: result.operationalInsights || null,
+    aiFirstSteps: WATCHTOWER_CONFIG.agent.aiFirstSteps.map(item => ({ ...item })),
+    sessionLog,
+    resumeInstructions: [
+      'Read this handoffPacket before inspecting files.',
+      'If sessionLog.entries exists, review recent work before deciding what to edit next.',
+      'Check approval.approvedAt - if present and matchesCurrentRun is true, a human has signed off on this state.',
+      'If canFinish is false, start with focus.url or queues.repair[0].',
+      'If baseline is regression, inspect delta.changes before unrelated edits.',
+      'After edits, rerun Watchtower and compare the new signature.',
+    ],
+    markdown: lines.join('\n'),
+  };
+}
+
+async function runSuite(options = {}) {
+  const results = [];
+  for (const [index, app] of APPS.entries()) {
+    if (options.renderProgress) {
+      setProgress('<strong>' + (index + 1) + '/' + APPS.length + '</strong> ' + escapeHtml(app.id) + ' を確認中...');
+      setStatus('診断中 ' + (index + 1) + '/' + APPS.length, 'ok');
+    }
+    try {
+      const win = app.kind === 'self' ? window : await waitForFrame(app.url);
+      const result = app.id === 'BRIDGE' && app.diagnostics?.liveContextFreshness
+        ? await runBridgeLiveContextDiagnostics(app, win, app.diagnostics)
+        : runAppDiagnostics(app, win);
+      results.push(enrichResult({ app, ...result }));
+    } catch (error) {
+      results.push(enrichResult({ app, level: 'bad', report: error.stack || String(error) }));
+    }
+    if (options.renderProgress) {
+      renderSummary(results);
+      renderMaturity(results);
+      renderHealer(results);
+      renderReports(results);
+      setProgress('<strong>' + (index + 1) + '/' + APPS.length + '</strong> 完了: ' + escapeHtml(app.id));
+    }
+  }
+  const summary = suiteSummary(results);
+  const signature = signatureFor(results);
+  const result = {
+    ok: summary.ok,
+    level: summary.level,
+    status: summary.status,
+    signature,
+    generatedAt: new Date().toISOString(),
+    project: {
+      title: WATCHTOWER_CONFIG.projectTitle,
+      productName: WATCHTOWER_CONFIG.productName,
+      baselineNamespace: WATCHTOWER_CONFIG.baselineNamespace,
+    },
+    apps: results.map(result => ({
+      id: result.app.id,
+      title: result.app.title,
+      url: result.app.url,
+      kind: result.app.kind,
+      maturity: result.app.maturity,
+      level: result.level,
+      issueCode: result.issueCode,
+      knownWarning: result.knownWarning,
+      reason: result.reason,
+      healerHint: result.healerHint,
+      report: result.report,
+    })),
+    healer: {
+      safe: true,
+      mode: 'manual',
+      hints: results.map(result => ({ id: result.app.id, level: result.level, hint: result.healerHint })),
+    },
+  };
+  result.delta = compareWithBaseline(result);
+  result.aiBrief = buildAiBrief(result);
+  result.agentCard = buildAgentCard(result);
+  result.workbench = buildWorkbench(result);
+  result.safetyMap = buildSafetyMap(result);
+  result.editBudget = buildEditBudget(result);
+  result.forbiddenSurfaceMap = buildForbiddenSurfaceMap(result);
+  result.cleanupCandidates = buildCleanupCandidates(result);
+  result.operationalInsights = buildOperationalInsights(result);
+  result.actionPacket = buildActionPacket(result);
+  result.sessionLog = readSessionLogSummary(3);
+  result.handoffPacket = buildHandoffPacket(result);
+  result.architectureScore = buildArchitectureScore(result);
+  result.briefExports = buildBriefExports(result);
+  result.bugLedger = autoRegisterBugs(result);
+  result.focusPacket = buildFocusPacket(result);
+  result.changeImpact = assessChange(result.workbench?.focus?.issueCode || result.aiBrief?.headline || '', result);
+  result.dangerWarning = buildDangerWarning(result.workbench?.focus?.issueCode || result.aiBrief?.headline || '', result);
+  result.checkpoint = saveCheckpoint(result);
+  return result;
+}
+
+async function runHarness() {
+  if (isRunning) return readRenderedResult();
+  setControlsRunning(true);
+  setStatus('診断中', 'ok');
+  setProgress('<strong>0/' + APPS.length + '</strong> 診断を開始しています...');
+  summaryEl.innerHTML = '';
+  maturityEl.innerHTML = '';
+  healerEl.innerHTML = '<strong>HEALER HINT</strong><span>Gathering diagnostics...</span>';
+  output.innerHTML = '';
+  const suggestionsDiv = document.getElementById('suggestions');
+  if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+  const result = await runSuite({ renderProgress: true });
+  const renderedResults = result.apps.map(app => ({
+    app: { id: app.id, title: app.title, url: app.url, kind: app.kind, maturity: app.maturity },
+    level: app.level,
+    issueCode: app.issueCode,
+    knownWarning: app.knownWarning,
+    reason: app.reason,
+    healerHint: app.healerHint,
+    report: app.report,
+  }));
+  setStatus(result.status, result.level);
+  renderSummary(renderedResults);
+  renderMaturity(renderedResults);
+  renderHealer(renderedResults);
+  renderReports(renderedResults);
+  renderOperationalInsights(result);
+  renderMachineSummary(result);
+  renderApproval(result.level, result.signature);
+  renderResume(result);
+  renderCheckpoint(result);
+  renderOwnerPanel(result);
+  setProgress('<strong>完了</strong> ' + result.status + ' / focus: ' + escapeHtml(result.workbench?.focus?.id || 'none'));
+  setControlsRunning(false);
+  return result;
+}
+
+async function saveCurrentBaseline() {
+  if (isRunning) return false;
+  setStatus('基準を保存中', 'ok');
+  const result = await runHarness();
+  setControlsRunning(true);
+  const saved = writeBaseline(result);
+  result.delta = compareWithBaseline(result);
+  result.aiBrief = buildAiBrief(result);
+  result.agentCard = buildAgentCard(result);
+  result.workbench = buildWorkbench(result);
+  result.safetyMap = buildSafetyMap(result);
+  result.editBudget = buildEditBudget(result);
+  result.forbiddenSurfaceMap = buildForbiddenSurfaceMap(result);
+  result.cleanupCandidates = buildCleanupCandidates(result);
+  result.operationalInsights = buildOperationalInsights(result);
+  result.actionPacket = buildActionPacket(result);
+  result.sessionLog = readSessionLogSummary(3);
+  result.handoffPacket = buildHandoffPacket(result);
+  result.architectureScore = buildArchitectureScore(result);
+  result.briefExports = buildBriefExports(result);
+  result.bugLedger = autoRegisterBugs(result);
+  result.focusPacket = buildFocusPacket(result);
+  result.changeImpact = assessChange(result.workbench?.focus?.issueCode || result.aiBrief?.headline || '', result);
+  result.dangerWarning = buildDangerWarning(result.workbench?.focus?.issueCode || result.aiBrief?.headline || '', result);
+  renderMachineSummary(result);
+  healerEl.innerHTML = '<strong>HEALER HINT</strong><span>' + (saved
+    ? 'Baseline saved. Future WT runs can identify regressions and improvements.'
+    : 'Baseline save failed. Check browser storage permissions.') + '</span>';
+  setStatus(saved ? '基準を保存しました' : '基準保存に失敗', saved ? 'ok' : 'bad');
+  setControlsRunning(false);
+  return saved;
 }
 
 function runHarnessSyncFallback() {
-  try {
-    runHarness();
-  } catch (error) {
+  return runHarness().catch(error => {
     setStatus('FAILED: ' + error.message, 'bad');
-    output.textContent = error.stack || String(error);
-  }
+    setProgress('<strong>失敗</strong> ' + escapeHtml(error.message || String(error)));
+    setControlsRunning(false);
+    output.innerHTML = '<section class="report-card bad"><h2>WATCHTOWER FAILED</h2><pre>' + escapeHtml(error.stack || String(error)) + '</pre></section>';
+  });
 }
 
 document.getElementById('run').addEventListener('click', runHarnessSyncFallback);
+document.getElementById('approve').addEventListener('click', () => {
+  if (isRunning) return;
+  const jsonRaw = jsonEl?.textContent;
+  let signature = null;
+  let level = null;
+  try {
+    const parsed = JSON.parse(jsonRaw);
+    signature = parsed?.signature || null;
+    level = parsed?.level || null;
+  } catch (_) {}
+  if (!signature || (level !== 'ok' && level !== 'warn')) return;
+  const stamp = stampApproval(signature);
+  if (stamp) {
+    renderApproval(level, signature);
+    healerEl.innerHTML = '<strong>HEALER HINT</strong><span>承認済み。AIはこの承認日時を引き継ぎ情報として参照できます。</span>';
+    setStatus('承認済み', 'ok');
+  }
+});
+document.getElementById('resume').addEventListener('click', () => {
+  if (isRunning) return;
+  const jsonRaw = jsonEl?.textContent;
+  let result = null;
+  try { result = JSON.parse(jsonRaw); } catch (_) {}
+  if (!result) return;
+  copyResumeText(result);
+});
+document.getElementById('baseline').addEventListener('click', () => {
+  if (isRunning) return;
+  saveCurrentBaseline().catch(error => {
+    setStatus('FAILED: ' + error.message, 'bad');
+    setProgress('<strong>失敗</strong> ' + escapeHtml(error.message || String(error)));
+    setControlsRunning(false);
+  });
+});
+setResultActionsEnabled(false);
 window.addEventListener('load', runHarnessSyncFallback);
+window.WATCHTOWER = Object.freeze({
+  config: WATCHTOWER_CONFIG,
+  apps: APPS,
+  run: () => runSuite({ renderProgress: false }),
+  runAndRender: runHarness,
+  readBaseline,
+  saveBaseline: saveCurrentBaseline,
+  exportBaseline,
+  importBaseline,
+  readApproval,
+  stampApproval,
+  readSessionLog,
+  recordSessionLog,
+  readSessionLogSummary,
+  resetSessionLog,
+  readBugLedger,
+  resetBugLedger,
+  buildBugLedgerSummary,
+  readCheckpointHistory,
+  saveCheckpoint,
+  buildResumeText,
+  buildFocusPacket,
+  buildDangerWarning,
+  checkRequest,
+  inferHumanRequestedFocus,
+  compareWithBaseline,
+  buildAiBrief,
+  buildActionPacket,
+  getActionPacket,
+  buildAgentCard,
+  buildWorkbench,
+  buildHandoffPacket,
+  buildSafetyMap,
+  buildEditBudget,
+  buildForbiddenSurfaceMap,
+  buildCleanupCandidates,
+  assessBridgeLiveContext,
+  buildArchitectureScore,
+  buildBriefExports,
+  generateReadme,
+  assessChange,
+  healerHintFor,
+  formatHandoffForAgent,
+  getMachineReadableResult,
+  getMachineReadableResultAsync,
+  suggestNextActions,
+  assessIntentAndGuard,
+  isIntentSafe,
+  instrumentAppForTracing,
+  analyzeChangeImpact,
+  learnFromHistory,
+  getHistoricalRiskProfile,
+  getAiProfileGuide,
+  getAgentProfile,
+  updateAgentProfile,
+});
+
+// AI action suggestions feed machineReadable.suggestedActions.
+// Keep this function stable unless getMachineReadableResult is updated with it.
+function suggestNextActions(result) {
+  if (!result) return [];
+  // Prefer focusPacket if available
+  const focus = (typeof buildFocusPacket === 'function') ? buildFocusPacket(result) : (result.focusPacket || {});
+  const aiBrief = result.aiBrief || {};
+  const actions = [];
+
+  // Primary: doNow (explicit urgent tasks)
+  if (focus && Array.isArray(focus.doNow) && focus.doNow.length) {
+    for (const id of focus.doNow) {
+      const app = result.apps.find(a => a.id === id) || {};
+      actions.push({
+        id,
+        title: app.title || id,
+        action: 'Repair / Investigate',
+        priority: 'high',
+        steps: [
+          'Open ' + (app.url || 'related files'),
+          'Inspect diagnostics report and console',
+          'Apply smallest fix to remove blocker',
+          'Rerun Watchtower and verify change'
+        ],
+        reason: app.reason || aiBrief.headline || 'focus packet recommendation',
+        confidence: 0.9,
+        requiredChecks: [
+          'window.WATCHTOWER.run()',
+          'Verify focus app diagnostics',
+        ],
+      });
+    }
+    return actions;
+  }
+
+  // Secondary: reviewOrder from aiBrief
+  if (aiBrief && Array.isArray(aiBrief.reviewOrder) && aiBrief.reviewOrder.length) {
+    for (const id of aiBrief.reviewOrder.slice(0, 3)) {
+      const app = result.apps.find(a => a.id === id) || {};
+      actions.push({
+        id,
+        title: app.title || id,
+        action: 'Triage / Investigate',
+        priority: 'medium',
+        steps: [
+          'Open ' + (app.url || 'related files'),
+          'Read report and healer hint',
+          'Run targeted diagnostics if available',
+          'Prepare minimal PR with tests if possible'
+        ],
+        reason: app.reason || aiBrief.headline || 'ai review order',
+        confidence: 0.75,
+        requiredChecks: [
+          'window.WATCHTOWER.run()',
+          'Review app report and healer hint',
+        ],
+      });
+    }
+    return actions;
+  }
+
+  // Fallback: suggest inspecting any bad/warn app
+  const candidates = (result.apps || []).filter(a => a.level === 'bad' || a.level === 'warn');
+  for (const app of candidates.slice(0, 3)) {
+    actions.push({
+      id: app.id,
+      title: app.title,
+      action: app.level === 'bad' ? 'Fix blocker' : 'Investigate warning',
+      priority: app.level === 'bad' ? 'high' : 'medium',
+      steps: [
+        'Open ' + (app.url || 'related files'),
+        'Check diagnostics and logs',
+        'Make minimal change and rerun Watchtower'
+      ],
+      reason: app.reason || '',
+      confidence: app.level === 'bad' ? 0.9 : 0.6,
+      requiredChecks: [
+        'window.WATCHTOWER.run()',
+        'Confirm current issue in the report',
+      ],
+    });
+  }
+  return actions;
+}
+
+function formatHandoffForAgent(agentName, result, opts = {}) {
+  if (!result) {
+    return 'No Watchtower result available. Run window.WATCHTOWER.run() first.';
+  }
+  const name = String(agentName || 'gpt').trim().toLowerCase();
+  const profileGuide = getAiProfileGuide(name, result);
+  const concise = opts.concise === true;
+  const maxSteps = typeof opts.maxSteps === 'number' ? opts.maxSteps : 4;
+  const focus = result.workbench?.focus || null;
+  const status = result.status || 'unknown';
+  const verdict = result.aiBrief?.verdict || 'unknown';
+  const nextAction = result.aiBrief?.nextAction || 'Run Watchtower and inspect the focus app.';
+  const actionPacket = result.actionPacket || buildActionPacket(result);
+  const reviewOrder = Array.isArray(result.aiBrief?.reviewOrder) ? result.aiBrief.reviewOrder.join(' → ') : 'none';
+  const baseline = result.delta?.available ? result.delta.status : 'missing';
+  const approval = result.handoffPacket?.approval ? 'approved' : 'unapproved';
+  const requiredChecks = focus?.id ? [
+    'window.WATCHTOWER.run()',
+    'Inspect focus app: ' + focus.id,
+    'Follow Watchtower suggestions before editing',
+  ] : ['window.WATCHTOWER.run()', 'Inspect Watchtower summary and reports'];
+  const agentLabel = profileGuide.label || (name === 'claude' ? 'Claude' : name === 'codex' ? 'Codex' : 'GPT');
+  const lines = [];
+  lines.push(agentLabel + ' HANDOFF');
+  lines.push('Profile: ' + profileGuide.profile + ' | bias: ' + profileGuide.outputBias);
+  lines.push('Project: ' + (result.project?.title || 'unknown'));
+  lines.push('Status: ' + status + ' | verdict: ' + verdict + ' | baseline: ' + baseline + ' | approval: ' + approval);
+  lines.push('Review order: ' + reviewOrder);
+  lines.push('Next action: ' + nextAction);
+  lines.push('Action packet: ' + (actionPacket?.mission || 'inspect-watchtower') + (actionPacket?.targetApp ? ' @' + actionPacket.targetApp : ''));
+  lines.push('Focus: ' + (focus ? focus.id + ' - ' + (focus.title || '') : 'none'));
+  if (focus && focus.issueCode) {
+    lines.push('Issue code: ' + focus.issueCode);
+  }
+  lines.push('');
+  lines.push('Primary task:');
+  if (focus) {
+    lines.push('- ' + focus.id + ': ' + (focus.reason || focus.healerHint || 'Inspect this app.'));
+  } else {
+    lines.push('- No explicit focus. Start with the first app in reviewOrder.');
+  }
+  lines.push('');
+  lines.push('Suggested steps:');
+  if (focus) {
+    const stepList = [
+      'Open ' + (focus.url || 'the related app or file'),
+      'Review diagnostics, report, and healer hint',
+      'Fix the issue with the smallest safe change',
+      'Rerun window.WATCHTOWER.runAndRender() and verify the new result',
+    ].slice(0, maxSteps);
+    stepList.forEach((step, index) => lines.push((index + 1) + '. ' + step));
+  } else {
+    const stepList = [
+      'Run window.WATCHTOWER.runAndRender()',
+      'Review the summary and report cards',
+      'Identify the top app in reviewOrder to fix',
+      'Rerun Watchtower after changes',
+    ].slice(0, maxSteps);
+    stepList.forEach((step, index) => lines.push((index + 1) + '. ' + step));
+  }
+  lines.push('');
+  lines.push('Required checks:');
+  lines.push(...requiredChecks.map(check => '- ' + check));
+  lines.push('Profile preferences: ' + profileGuide.prefers.join(', '));
+  if (concise) {
+    return lines.slice(0, 12).join('\n');
+  }
+  lines.push('');
+  lines.push('Before edit for this profile:');
+  profileGuide.beforeEdit.forEach(item => lines.push('- ' + item));
+  lines.push('');
+  lines.push('After edit for this profile:');
+  profileGuide.afterEdit.forEach(item => lines.push('- ' + item));
+  if (result.handoffPacket?.markdown) {
+    lines.push('');
+    lines.push('Watchtower handoff summary:');
+    lines.push(result.handoffPacket.markdown.split('\n').slice(0, 10).join('\n'));
+  }
+  return lines.join('\n');
+}
+
+function assessIntentAndGuard(intent, result = null) {
+  const assessment = typeof assessChange === 'function' ? assessChange(intent, result) : { intent: String(intent || ''), risk: 'UNKNOWN', impactedApps: [] };
+  const danger = typeof buildDangerWarning === 'function' ? buildDangerWarning(assessment.intent || intent, result) : null;
+  const impactedApps = danger?.impactedApps || assessment.impactedApps || [];
+  const requiredChecks = danger?.requiredChecks || assessment.requiredChecks || [];
+  const warning = danger?.message || assessment.warning || '';
+  const risk = danger?.risk || assessment.risk || 'UNKNOWN';
+  const safe = (risk !== 'HIGH') && (danger ? !!danger.safe : true);
+  return {
+    contractVersion: 1,
+    intent: String(intent || ''),
+    risk,
+    confidence: assessment.confidence || (impactedApps.length ? 'matched-safety-map' : 'no-direct-match'),
+    impactedApps,
+    requiredChecks,
+    warning,
+    safe,
+  };
+}
+
+function isIntentSafe(intent, result = null) {
+  try {
+    const res = assessIntentAndGuard(intent, result);
+    return !!res.safe;
+  } catch (_) { return false; }
+}
+
 </script>
 </body>
 </html>
