@@ -876,6 +876,31 @@ details.section[open] > summary.section-title::after { content:'▲'; }
   font-weight:900;
   letter-spacing:.4px;
 }
+.occupancy-meter {
+  display:inline-flex;
+  width:74px;
+  height:7px;
+  margin-left:6px;
+  vertical-align:middle;
+}
+.occupancy-meter-track {
+  display:block;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  border:1px solid rgba(139,148,158,.34);
+  border-radius:999px;
+  background:rgba(13,17,23,.72);
+}
+.occupancy-meter-fill {
+  display:block;
+  width:var(--occupancy-width, 0%);
+  height:100%;
+  border-radius:inherit;
+  background:var(--accent2);
+}
+.occupancy-meter.warn .occupancy-meter-fill { background:var(--gold); }
+.occupancy-meter.bad .occupancy-meter-fill { background:var(--accent3); }
 .spec-export-actions {
   display:flex;
   gap:8px;
@@ -1097,10 +1122,6 @@ details.section[open] > summary.section-title::after { content:'▲'; }
   <h1>COIL DESIGNER</h1>
   <span class="header-sub">渦電流探傷プローブ用<br>コイル設計ツール</span>
 </div>
-
-<nav class="tabs" aria-label="COIL DESIGNER tabs">
-  <button class="tab active" id="tabBtn-coil" type="button" onclick="UI.switchMainTab('coil')"><span class="tab-icon">C</span>コイル設計</button>
-</nav>
 
 <main class="app">
   <div id="tab-coil" class="tab-panel active">
@@ -4275,6 +4296,21 @@ const Render = (() => {
     return 'text-good';
   }
 
+  function previewFillTone(fillPct) {
+    if (fillPct >= 95) return 'bad';
+    if (fillPct >= 80) return 'warn';
+    return 'good';
+  }
+
+  function previewFillMeter(fillPct) {
+    const pct = Number(fillPct);
+    const safePct = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
+    const label = Number.isFinite(pct) ? format(pct, 1) + ' %' : '-';
+    return '<span class="occupancy-meter ' + previewFillTone(pct) + '" aria-label="占有率 ' + label + '">' +
+      '<span class="occupancy-meter-track"><span class="occupancy-meter-fill" style="--occupancy-width:' +
+      safePct.toFixed(1) + '%"></span></span></span>';
+  }
+
   function previewLayerClass(usedLayers, maxLayers) {
     if (usedLayers > maxLayers) return 'text-bad';
     if (maxLayers > 0 && usedLayers / maxLayers >= 0.8) return 'text-warn';
@@ -4339,7 +4375,7 @@ const Render = (() => {
       lines.push(previewLine('外側幅', format(fwd.coilW, 2) + ' mm') + ' / ' + previewLine('最大', format(maxRect.w, 2) + ' mm'));
     }
 
-    lines.push(previewLine('占有率', format(fwd.fill_pct, 1) + ' %', previewFillClass(fwd.fill_pct)));
+    lines.push(previewLine('占有率', format(fwd.fill_pct, 1) + ' %' + previewFillMeter(fwd.fill_pct), previewFillClass(fwd.fill_pct)));
     lines.push(previewLine('残りすき間', format(fwd.gap_mm, 2) + ' mm', previewGapClass(fwd.gap_mm)));
     lines.push(previewLine('収まり', status, previewStatusClass(status)));
     lines.push(previewSeparator());
@@ -5119,7 +5155,11 @@ const AppDiagnostics = (() => {
     const calculationBlock = blockBetween(checkedSource, 'const Calculation', 'const ECTBridge');
     const renderBlock = blockBetween(checkedSource, 'const Render', 'const UI = Render');
     const publicHandlerBlock = blockBetween(checkedSource, 'function init()', 'return ({');
-    const diagnosticsBlock = blockBetween(checkedSource, 'const AppDiagnostics', "if ('serviceWorker'");
+    const diagnosticsStart = checkedSource.indexOf('const AppDiagnostics');
+    const serviceWorkerStart = checkedSource.lastIndexOf("if ('serviceWorker' in navigator");
+    const diagnosticsBlock = diagnosticsStart > -1 && serviceWorkerStart > diagnosticsStart
+      ? checkedSource.slice(diagnosticsStart, serviceWorkerStart)
+      : '';
     const storageBlock = blockBetween(checkedSource, 'const Storage', 'const AppState');
 
     if (calculationBlock && /\b(Render|UI)\s*\./.test(calculationBlock)) failures.push('Calculation calls Render/UI');

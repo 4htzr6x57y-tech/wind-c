@@ -432,8 +432,8 @@ body {
 
 <div class="tabs">
   <div class="tab active" onclick="UI.switchTab('nav')"><span class="tab-icon">🔍</span>探傷ナビ</div>
-  <div class="tab" onclick="UI.switchTab('ferrite')"><span class="tab-icon">🧲</span>フェライト</div>
   <div class="tab" onclick="UI.switchTab('cable')"><span class="tab-icon">L</span>ケーブル</div>
+  <div class="tab" onclick="UI.switchTab('ferrite')"><span class="tab-icon">🧲</span>フェライト</div>
 </div>
 
 <div id="tab-nav" class="content active">
@@ -795,7 +795,7 @@ const UI = (() => {
     longCableM: 2,
   };
 
-  const TAB_IDS = ['nav', 'ferrite', 'cable'];
+  const TAB_IDS = ['nav', 'cable', 'ferrite'];
   const setText = (id, val, isHtml = false) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -2015,6 +2015,364 @@ const UI = (() => {
     toggleConfigResult, copyCoilJSON, fFilter, reflectCableFromNav, calculateCable, init
   });
 })();
+
+const ECT_SOURCE_TEXT = document.currentScript?.textContent || '';
+
+const AppDiagnostics = (() => {
+  const REQUIRED_IDS = Object.freeze([
+    'nav-depth', 'nav-liftoff', 'nav-crack', 'nav-result',
+    'f-list', 'cable-config', 'cable-freq', 'cable-env',
+  ]);
+  const PUBLIC_API = Object.freeze([
+    'switchTab', 'navSelMag', 'navSelSat', 'navSelConfig', 'navCalc',
+    'toggleConfigResult', 'copyCoilJSON', 'fFilter', 'reflectCableFromNav',
+    'calculateCable', 'init',
+  ]);
+  const PRESETS = Object.freeze({
+    edit: ['dom', 'publicApi', 'source', 'self'],
+    quick: ['dom', 'publicApi', 'calculation', 'flow', 'self'],
+    full: ['dom', 'publicApi', 'calculation', 'flow', 'source', 'self'],
+  });
+  const BUDGETS = Object.freeze({
+    maxPublicApi: 14,
+    maxScopes: 7,
+    maxChecks: 8,
+  });
+  const CHANGE_SCOPES = Object.freeze({
+    nav: {
+      preset: 'quick',
+      keywords: ['nav', 'material', 'depth', 'crack', '探傷', '材料', '深さ', '傷'],
+      zones: ['Physics', 'EctState', 'UI nav calculation'],
+      steps: ['Keep physical formulas in Physics', 'Update nav rendering through UI helpers', 'Run AppDiagnostics.afterEdit("nav")'],
+    },
+    ferrite: {
+      preset: 'quick',
+      keywords: ['ferrite', 'filter', 'material card', 'フェライト', '材質', 'フィルタ'],
+      zones: ['FERRITES data', 'renderFerrite'],
+      steps: ['Keep ferrite edits in the data/render area', 'Confirm filter buttons still work', 'Run quick diagnostics'],
+    },
+    cable: {
+      preset: 'quick',
+      keywords: ['cable', 'awg', 'capacitance', 'ケーブル', '容量', '長さ'],
+      zones: ['Cable constants', 'calculateCableSelection', 'renderCableResult'],
+      steps: ['Keep cable formulas isolated', 'Check recommended structure/length output', 'Run quick diagnostics'],
+    },
+    render: {
+      preset: 'full',
+      keywords: ['ui', 'render', 'button', 'tab', 'label', '表示', 'ボタン', 'タブ', '文言'],
+      zones: ['DOM ids', 'UI render helpers'],
+      steps: ['Preserve required ids', 'Avoid changing physics output', 'Run full diagnostics if navigation changes'],
+    },
+    diagnostics: {
+      preset: 'edit',
+      keywords: ['diagnostics', 'report', 'guide', '診断', 'レポート', 'ガイド'],
+      zones: ['AppDiagnostics'],
+      steps: ['Keep diagnostics read-only', 'Update self tests with new API', 'Run edit diagnostics'],
+    },
+  });
+
+  function check(condition, message, failures) {
+    if (!condition) failures.push(message);
+  }
+
+  function checkDom() {
+    const failures = [];
+    REQUIRED_IDS.forEach(id => check(!!document.getElementById(id), 'Missing DOM id: ' + id, failures));
+    check(document.title === 'ECT DESIGNER', 'Unexpected document title', failures);
+    check(!!document.body?.textContent?.trim(), 'Body text is empty', failures);
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkPublicApi() {
+    const failures = [];
+    const extra = Object.keys(UI).filter(name => !PUBLIC_API.includes(name));
+    PUBLIC_API.forEach(name => check(typeof UI[name] === 'function', 'Missing UI.' + name, failures));
+    return { ok: failures.length === 0, failures, required: PUBLIC_API.length, extra };
+  }
+
+  function checkSmokeCalculation() {
+    const failures = [];
+    const depth = Physics.skinDepth_mm(100000, 1, 5.8e7);
+    const freq = Physics.optimalFrequency_Hz(0.001, 1, 5.8e7);
+    check(Number.isFinite(depth) && depth > 0, 'Skin depth should be positive', failures);
+    check(Number.isFinite(freq.fOpt) && freq.fOpt > 0, 'Optimal frequency should be positive', failures);
+    check(freq.fLo < freq.fOpt && freq.fOpt < freq.fHi, 'Frequency band should bracket fOpt', failures);
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkFlow() {
+    const failures = [];
+    ['nav', 'ferrite', 'cable'].forEach(id => {
+      check(!!document.getElementById('tab-' + id), 'Missing content panel: ' + id, failures);
+    });
+    check(document.querySelectorAll('.tab').length >= 3, 'Missing tab buttons', failures);
+    check(!!document.querySelector('.content.active'), 'No active content panel', failures);
+    check(!!document.querySelector('.tab.active'), 'No active tab button', failures);
+    return { ok: failures.length === 0, failures };
+  }
+
+  function checkSource(source = ECT_SOURCE_TEXT) {
+    const failures = [];
+    const warnings = [];
+    if (!source) warnings.push('source text unavailable');
+    ['const Physics', 'const EctState', 'const UI', 'const AppDiagnostics'].forEach(token => {
+      check(source.includes(token), 'Missing source token: ' + token, failures);
+    });
+    if (source && !/window\.AppDiagnostics\s*=\s*AppDiagnostics/.test(source)) failures.push('AppDiagnostics export missing');
+    if (source && !/window\.UI\s*=\s*UI/.test(source)) failures.push('UI export missing');
+    return { ok: failures.length === 0, failures, warnings };
+  }
+
+  function checkSelf() {
+    const failures = [];
+    check(Object.keys(PRESETS).length >= 3, 'diagnostic presets missing', failures);
+    check(Object.keys(CHANGE_SCOPES).length >= 4, 'change scopes missing', failures);
+    check(typeof report === 'function', 'report missing', failures);
+    check(typeof guide === 'function', 'guide missing', failures);
+    check(typeof recommend === 'function', 'recommend missing', failures);
+    check(typeof inventory === 'function', 'inventory missing', failures);
+    check(budget().ok === true, 'diagnostics budget exceeded', failures);
+    return { ok: failures.length === 0, failures };
+  }
+
+  function normalizePreset(preset) {
+    return PRESETS[preset] ? preset : 'quick';
+  }
+
+  function runCheck(name, options = {}) {
+    if (name === 'dom') return checkDom();
+    if (name === 'publicApi') return checkPublicApi();
+    if (name === 'calculation') return checkSmokeCalculation();
+    if (name === 'flow') return checkFlow();
+    if (name === 'source') return checkSource(options.source);
+    if (name === 'self') return checkSelf();
+    return { ok: false, failures: ['Unknown check: ' + name] };
+  }
+
+  function runDiagnostics(options = {}) {
+    const preset = normalizePreset(options.preset);
+    const selectedChecks = options.checks || PRESETS[preset];
+    const results = {
+      contractVersion: 1,
+      app: 'ECT-D',
+      preset,
+      selectedChecks,
+      checks: {},
+      failures: [],
+      warnings: [],
+      metrics: {},
+    };
+    selectedChecks.forEach(name => {
+      const checked = runCheck(name, options);
+      results.checks[name] = checked;
+      results[name] = checked;
+      if (checked.failures?.length) {
+        checked.failures.forEach(message => results.failures.push({ check:name, message }));
+      }
+      if (checked.warnings?.length) {
+        checked.warnings.forEach(message => results.warnings.push({ check:name, message }));
+      }
+    });
+    results.ok = results.failures.length === 0;
+    results.metrics = {
+      requiredIds: REQUIRED_IDS.length,
+      publicApi: PUBLIC_API.length,
+      scopes: Object.keys(CHANGE_SCOPES).length,
+      checks: selectedChecks.length,
+    };
+    results.nextSteps = suggestNextSteps(results);
+    results.report = report(results);
+    if (options.log) console.log('[ECT-D diagnostics]', results.ok ? 'OK' : 'FAILED', results);
+    return results;
+  }
+
+  function runSmokeChecks(options = {}) {
+    return runDiagnostics({ ...options, preset: options.preset || 'quick' });
+  }
+
+  function route(text = '') {
+    const input = String(text || '').toLowerCase();
+    const scored = Object.entries(CHANGE_SCOPES).map(([scope, plan]) => ({
+      scope,
+      plan,
+      score: plan.keywords.reduce((sum, keyword) => sum + (input.includes(String(keyword).toLowerCase()) ? 1 : 0), 0),
+    })).sort((a, b) => b.score - a.score);
+    const best = scored[0]?.score > 0 ? scored[0] : { scope:'render', plan:CHANGE_SCOPES.render, score:0 };
+    return { scope: best.scope, preset: best.plan.preset, confidence: best.score > 0 ? 'matched-keyword' : 'fallback-render' };
+  }
+
+  function guide(scopeOrText = 'render') {
+    const routed = CHANGE_SCOPES[scopeOrText] ? { scope:scopeOrText, preset:CHANGE_SCOPES[scopeOrText].preset, confidence:'explicit-scope' } : route(scopeOrText);
+    const plan = CHANGE_SCOPES[routed.scope];
+    return {
+      contractVersion: 1,
+      scope: routed.scope,
+      preset: plan.preset,
+      confidence: routed.confidence,
+      zones: plan.zones,
+      steps: plan.steps,
+      verify: 'AppDiagnostics.afterEdit("' + routed.scope + '")',
+    };
+  }
+
+  function afterEdit(scopeOrText = 'render') {
+    const g = guide(scopeOrText);
+    const summary = runDiagnostics({ preset:g.preset });
+    return {
+      contractVersion: 1,
+      scope: g.scope,
+      preset: g.preset,
+      ok: summary.ok,
+      failures: summary.failures,
+      warnings: summary.warnings,
+      nextCommand: summary.ok ? 'Run Watchtower after the edit.' : 'Fix failures, then rerun AppDiagnostics.afterEdit("' + g.scope + '").',
+      report: report(summary),
+    };
+  }
+
+  function inventory(format = 'object') {
+    const data = {
+      contractVersion: 1,
+      app: 'ECT-D',
+      publicApi: [...PUBLIC_API],
+      diagnosticsApi: [
+        'runDiagnostics', 'runSmokeChecks', 'report', 'route', 'guide',
+        'afterEdit', 'recommend', 'inventory', 'budget', 'prunePlan',
+      ],
+      presets: Object.keys(PRESETS),
+      scopes: Object.keys(CHANGE_SCOPES),
+      budgets: BUDGETS,
+    };
+    if (format !== 'markdown') return data;
+    return [
+      '# ECT-D Diagnostics Inventory',
+      '- Public API: ' + data.publicApi.length,
+      '- Diagnostics API: ' + data.diagnosticsApi.length,
+      '- Presets: ' + data.presets.join(', '),
+      '- Scopes: ' + data.scopes.join(', '),
+      '- Budgets: publicApi ' + data.publicApi.length + '/' + BUDGETS.maxPublicApi +
+        ', scopes ' + data.scopes.length + '/' + BUDGETS.maxScopes +
+        ', checks ' + Math.max(...Object.values(PRESETS).map(items => items.length)) + '/' + BUDGETS.maxChecks,
+    ].join('\n');
+  }
+
+  function budget(format = 'object') {
+    const inv = inventory();
+    const maxChecks = Math.max(...Object.values(PRESETS).map(items => items.length));
+    const warnings = [];
+    if (inv.publicApi.length > BUDGETS.maxPublicApi) warnings.push('public API exceeds budget');
+    if (inv.scopes.length > BUDGETS.maxScopes) warnings.push('scope count exceeds budget');
+    if (maxChecks > BUDGETS.maxChecks) warnings.push('preset check count exceeds budget');
+    const data = { contractVersion:1, ok:warnings.length === 0, warnings, budgets:BUDGETS, inventory:inv, maxChecks };
+    if (format !== 'markdown') return data;
+    return [
+      '# ECT-D Diagnostics Budget',
+      '- Status: ' + (data.ok ? 'OK' : 'WARN'),
+      ...(warnings.length ? warnings.map(item => '- ' + item) : ['- No budget warnings']),
+    ].join('\n');
+  }
+
+  function prunePlan(format = 'object') {
+    const status = budget();
+    const suggestions = [
+      { target:'diagnostics API', action:'Prefer recommend(), guide(), and afterEdit() before adding another public helper.' },
+      { target:'presets', action:'Add checks to existing edit/quick/full presets before creating new presets.' },
+      { target:'scopes', action:'Merge new guidance into nav/ferrite/cable/render/diagnostics unless a new zone truly exists.' },
+    ];
+    if (!status.ok) suggestions.unshift({ target:'budget warnings', action:status.warnings.join(' / ') });
+    const data = { contractVersion:1, ok:status.ok, suggestions, budget:status };
+    if (format !== 'markdown') return data;
+    return [
+      '# ECT-D Diagnostics Prune Plan',
+      ...suggestions.map(item => '- ' + item.target + ': ' + item.action),
+    ].join('\n');
+  }
+
+  function recommend(requestText = '') {
+    const routed = route(requestText);
+    const lower = String(requestText || '').toLowerCase();
+    const budgetStatus = budget();
+    const helper = /after|done|verify|確認|検証|終わ|変更後/.test(lower)
+      ? 'afterEdit'
+      : /budget|prune|trim|増えすぎ|畳む|軽く/.test(lower)
+        ? 'prunePlan'
+        : /inventory|api|一覧|棚卸/.test(lower)
+          ? 'inventory'
+          : 'guide';
+    const command = helper === 'afterEdit'
+      ? 'AppDiagnostics.afterEdit("' + routed.scope + '")'
+      : helper === 'prunePlan'
+        ? 'AppDiagnostics.prunePlan("markdown")'
+        : helper === 'inventory'
+          ? 'AppDiagnostics.inventory("markdown")'
+          : 'AppDiagnostics.guide("' + routed.scope + '")';
+    return {
+      contractVersion: 1,
+      request: String(requestText || ''),
+      scope: routed.scope,
+      preset: routed.preset,
+      helper,
+      command,
+      confidence: routed.confidence,
+      budgetOk: budgetStatus.ok,
+      budgetWarnings: budgetStatus.warnings,
+    };
+  }
+
+  function suggestNextSteps(results) {
+    const steps = [];
+    if (!results.ok) {
+      steps.push('Inspect failed checks before editing adjacent ECT-D behavior.');
+      steps.push('Use AppDiagnostics.guide(scope) to keep the fix in one zone.');
+    } else {
+      steps.push('Keep the next ECT-D edit small and rerun the matching preset.');
+      steps.push('Run Watchtower after ECT-D changes.');
+    }
+    return steps;
+  }
+
+  function report(results = runDiagnostics()) {
+    return [
+      '# ECT-D Diagnostics Report',
+      '- Status: ' + (results.ok ? 'OK' : 'FAILED'),
+      '- Preset: ' + (results.preset || 'quick'),
+      '- Checks: ' + (results.selectedChecks || []).join(', '),
+      '- Failures: ' + (results.failures?.length || 0),
+      '- Warnings: ' + (results.warnings?.length || 0),
+      '',
+      '## Failures',
+      ...(results.failures?.length ? results.failures.map(item => '- ' + item.check + ': ' + item.message) : ['- None']),
+      '',
+      '## Warnings',
+      ...(results.warnings?.length ? results.warnings.map(item => '- ' + item.check + ': ' + item.message) : ['- None']),
+      '',
+      '## Next Steps',
+      ...(results.nextSteps || suggestNextSteps(results)).map(step => '- ' + step),
+    ].join('\n');
+  }
+
+  return {
+    runDiagnostics,
+    runSmokeChecks,
+    report,
+    route,
+    guide,
+    afterEdit,
+    recommend,
+    inventory,
+    budget,
+    prunePlan,
+    checkDom,
+    checkPublicApi,
+    checkSmokeCalculation,
+    checkFlow,
+    checkSource,
+    checkSelf,
+  };
+})();
+
+window.UI = UI;
+window.AppDiagnostics = AppDiagnostics;
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => {

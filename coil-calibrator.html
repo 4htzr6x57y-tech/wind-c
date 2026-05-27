@@ -1663,6 +1663,54 @@ const UI = (() => {
   Console-only self checks for edit-time confidence.
 */
 const AppDiagnostics = (() => {
+  const PRESETS = Object.freeze({
+    edit: Object.freeze(['publicApi', 'validation', 'calculation', 'dom', 'renderGuards', 'runtimeSafety', 'sourceGuards']),
+    quick: Object.freeze(['publicApi', 'validation', 'calculation', 'dom', 'renderGuards', 'runtimeSafety', 'sourceGuards', 'transfer', 'stateGuards']),
+    full: Object.freeze(['publicApi', 'validation', 'calculation', 'dom', 'renderGuards', 'runtimeSafety', 'sourceGuards', 'storage', 'transfer', 'siege', 'stateGuards']),
+    storage: Object.freeze(['storage', 'transfer', 'stateGuards']),
+  });
+
+  const CHECK_LABELS = Object.freeze({
+    publicApi: 'UI public API',
+    validation: 'Validation',
+    calculation: 'Calculation specs',
+    dom: 'DOM contract',
+    renderGuards: 'Render guards',
+    runtimeSafety: 'Runtime safety',
+    sourceGuards: 'Source guards',
+    storage: 'Storage',
+    transfer: 'Transfer',
+    siege: 'Siege tests',
+    stateGuards: 'State guards',
+  });
+
+  const GUIDE = Object.freeze({
+    edit: Object.freeze({
+      preset: 'edit',
+      anchors: Object.freeze(['const Render', 'const UI', 'const AppDiagnostics']),
+      zones: Object.freeze(['Render zone', 'Public UI API zone', 'Diagnostics zone']),
+      danger: Object.freeze(['Calculation zone', 'Storage zone', 'Transfer zone']),
+    }),
+    calculation: Object.freeze({
+      preset: 'full',
+      anchors: Object.freeze(['const Calculation', 'const SpecCatalog', 'const SiegeTests']),
+      zones: Object.freeze(['Calculation zone', 'Spec catalog zone', 'Siege test zone']),
+      danger: Object.freeze(['estimate formulas', 'validation constraints']),
+    }),
+    storage: Object.freeze({
+      preset: 'storage',
+      anchors: Object.freeze(['const Storage', 'const Transfer', 'CONFIG.persistedInputIds']),
+      zones: Object.freeze(['Storage zone', 'Transfer zone', 'State zone']),
+      danger: Object.freeze(['localStorage schema', 'import/export payloads']),
+    }),
+    render: Object.freeze({
+      preset: 'quick',
+      anchors: Object.freeze(['const Render', 'renderTargetZTuner', 'drawTargetChart']),
+      zones: Object.freeze(['Render zone']),
+      danger: Object.freeze(['chart canvas', 'diagnostics panel']),
+    }),
+  });
+
   const REQUIRED_ZONES = Object.freeze([
     'CONFIG zone',
     'Shared helpers',
@@ -1863,6 +1911,84 @@ const AppDiagnostics = (() => {
     return { ok: failures.length === 0, failures };
   }
 
+  function resolvePreset(preset = 'quick') {
+    return PRESETS[preset] ? preset : 'full';
+  }
+
+  function runCheck(name) {
+    const runners = {
+      publicApi: checkPublicApi,
+      validation: checkValidation,
+      calculation: checkCalculation,
+      dom: checkDom,
+      renderGuards: checkRenderGuards,
+      runtimeSafety: checkRuntimeSafety,
+      sourceGuards: checkSourceGuards,
+      storage: checkStorage,
+      transfer: checkTransfer,
+      siege: checkSiegeTests,
+      stateGuards: checkState,
+    };
+    const fn = runners[name];
+    if (!fn) return { ok: false, failures: ['Unknown diagnostic check: ' + name] };
+    const result = fn();
+    return { ...result, check: name, label: CHECK_LABELS[name] || name };
+  }
+
+  function collectFailures(results) {
+    return Object.values(results)
+      .filter(value => value && value.ok === false)
+      .flatMap(value => (value.failures || []).map(message => ({
+        check: value.check || 'unknown',
+        label: value.label || value.check || 'unknown',
+        message,
+      })));
+  }
+
+  function suggestNextSteps(summary) {
+    if (summary.failures?.length) {
+      return summary.failures.slice(0, 3).map(failure => ({
+        id: 'fix-' + failure.check,
+        title: failure.label + 'を確認',
+        detail: failure.message,
+      }));
+    }
+    if (summary.preset !== 'full') {
+      return [{ id: 'run-full', title: '挙動を変えたらfull診断', detail: '計算・保存・転送に触れた場合は AppDiagnostics.runDiagnostics({ preset: "full" }) を実行。' }];
+    }
+    return [{ id: 'keep-small', title: '次も小さく編集', detail: 'CCは計算・保存・転送の結合が強いので、変更範囲を絞って診断を回す。' }];
+  }
+
+  function runDiagnostics(options = {}) {
+    const preset = resolvePreset(options.preset || options.mode || 'quick');
+    const selectedChecks = options.checks || PRESETS[preset];
+    const results = {};
+    selectedChecks.forEach(name => {
+      results[name] = runCheck(name);
+    });
+    const failures = collectFailures(results);
+    const summary = {
+      preset,
+      selectedChecks: [...selectedChecks],
+      checks: results,
+      ok: failures.length === 0,
+      failures,
+      warnings: [],
+      metrics: {
+        selectedChecks: selectedChecks.length,
+        publicApi: UI_PUBLIC_API.length,
+        tunerPoints: AppState.getTunerPoints().length,
+        specs: SpecCatalog.run().results.length,
+        siege: SiegeTests.run().results.length,
+      },
+      nextSteps: [],
+      state: AppState.snapshot(),
+    };
+    summary.nextSteps = suggestNextSteps(summary);
+    if (options.log !== false) console.log('[CC diagnostics]', summary.ok ? 'OK' : 'FAILED', summary);
+    return summary;
+  }
+
   function runSmokeChecks(options = {}) {
     const results = {
       publicApi: checkPublicApi(),
@@ -1883,7 +2009,7 @@ const AppDiagnostics = (() => {
     return results;
   }
 
-  function report(options = {}) {
+  function legacyReport(options = {}) {
     const results = runSmokeChecks({ log: options.log });
     return [
       'CC diagnostics: ' + (results.ok ? 'OK' : 'FAILED'),
@@ -1902,7 +2028,103 @@ const AppDiagnostics = (() => {
     ].join('\n');
   }
 
-  return { runSmokeChecks, report, checkPublicApi, checkValidation, checkCalculation, checkDom, checkRenderGuards, checkRuntimeSafety, checkSourceGuards, checkStorage, checkTransfer, checkSiegeTests, checkState };
+  function report(summaryOrOptions = {}) {
+    if (!summaryOrOptions.selectedChecks) return legacyReport(summaryOrOptions);
+    const summary = summaryOrOptions;
+    const lines = [
+      '# CC Diagnostics Report',
+      '',
+      '- Status: ' + (summary.ok ? 'OK' : 'NG'),
+      '- Preset: ' + summary.preset,
+      '- Checks: ' + summary.selectedChecks.join(', '),
+      '- Failures: ' + summary.failures.length,
+      '- Next command: AppDiagnostics.afterEdit("' + summary.preset + '")',
+      '',
+      '## Failures',
+    ];
+    if (summary.failures.length) {
+      summary.failures.forEach(failure => lines.push('- ' + failure.label + ': ' + failure.message));
+    } else {
+      lines.push('- None');
+    }
+    lines.push('', '## Next Steps');
+    summary.nextSteps.forEach(step => lines.push('- ' + step.title + ': ' + step.detail));
+    lines.push('', '## Metrics');
+    Object.entries(summary.metrics || {}).forEach(([key, value]) => lines.push('- ' + key + ': ' + value));
+    return lines.join('\n');
+  }
+
+  function guide(scope = 'edit') {
+    const key = GUIDE[scope] ? scope : 'edit';
+    return {
+      scope: key,
+      ...GUIDE[key],
+      firstCommand: 'AppDiagnostics.runDiagnostics({ preset: "' + GUIDE[key].preset + '" })',
+      afterEdit: 'AppDiagnostics.afterEdit("' + key + '")',
+    };
+  }
+
+  function route(requestText = '') {
+    const text = String(requestText).toLowerCase();
+    if (/storage|localstorage|import|export|保存|読込|転送/.test(text)) return guide('storage');
+    if (/calc|formula|estimate|spec|計算|推定|式/.test(text)) return guide('calculation');
+    if (/render|chart|label|表示|見た目|グラフ/.test(text)) return guide('render');
+    return guide('edit');
+  }
+
+  function afterEdit(scope = 'edit', options = {}) {
+    const plan = guide(scope);
+    const summary = runDiagnostics({ ...options, preset: options.preset || plan.preset, log: options.log });
+    return {
+      ok: summary.ok,
+      command: 'AppDiagnostics.runDiagnostics({ preset: "' + summary.preset + '" })',
+      report: report(summary),
+      summary,
+    };
+  }
+
+  function brief(scope = 'edit') {
+    const plan = guide(scope);
+    return 'CC scope=' + plan.scope + ' preset=' + plan.preset + ' anchors=' + plan.anchors.join(', ');
+  }
+
+  function inventory(format = 'object') {
+    const data = {
+      presets: Object.fromEntries(Object.entries(PRESETS).map(([key, value]) => [key, value.length])),
+      scopes: Object.keys(GUIDE),
+      publicApi: UI_PUBLIC_API.length,
+      checks: Object.keys(CHECK_LABELS),
+    };
+    if (format === 'markdown') {
+      return ['# CC Diagnostics Inventory', '- presets: ' + Object.keys(PRESETS).join(', '), '- scopes: ' + Object.keys(GUIDE).join(', '), '- checks: ' + Object.keys(CHECK_LABELS).join(', ')].join('\n');
+    }
+    return data;
+  }
+
+  function budget(format = 'object') {
+    const data = {
+      ok: UI_PUBLIC_API.length <= 16 && Object.keys(CHECK_LABELS).length <= 14,
+      publicApi: UI_PUBLIC_API.length,
+      checks: Object.keys(CHECK_LABELS).length,
+      maxPublicApi: 16,
+      maxChecks: 14,
+    };
+    if (format === 'markdown') {
+      return ['# CC Diagnostics Budget', '- status: ' + (data.ok ? 'OK' : 'WARN'), '- publicApi: ' + data.publicApi + '/' + data.maxPublicApi, '- checks: ' + data.checks + '/' + data.maxChecks].join('\n');
+    }
+    return data;
+  }
+
+  function prunePlan(format = 'object') {
+    const data = [
+      { target: 'diagnostics panel controls', reason: 'keep human-facing controls stable and minimal' },
+      { target: 'legacy report format', reason: 'keep until WT harness users no longer need it' },
+    ];
+    if (format === 'markdown') return ['# CC Diagnostics Prune Plan', ...data.map(item => '- ' + item.target + ': ' + item.reason)].join('\n');
+    return data;
+  }
+
+  return { runDiagnostics, runSmokeChecks, report, guide, route, afterEdit, brief, inventory, budget, prunePlan, checkPublicApi, checkValidation, checkCalculation, checkDom, checkRenderGuards, checkRuntimeSafety, checkSourceGuards, checkStorage, checkTransfer, checkSiegeTests, checkState };
 })();
 
 /*
